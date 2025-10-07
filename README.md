@@ -19,88 +19,49 @@ The Somnia AI Agent Framework is a production-ready infrastructure for building,
 - 📈 **Metrics & Analytics**: Track agent performance, success rates, and execution times
 - 🎨 **Flexible Architecture**: Support for any AI model or processing logic
 - 🔐 **Secure & Decentralized**: Built on Somnia's high-performance blockchain
-- 🌐 **IPFS Integration**: Decentralized metadata storage for agent configurations
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Application Layer                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Web dApp   │  │   CLI Tool   │  │  Monitoring  │          │
-│  │  Dashboard   │  │              │  │   Dashboard  │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Somnia AI Agent SDK                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ AgentBuilder │  │ MetricsCollector│ │ AgentMonitor│          │
-│  │              │  │              │  │              │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Contract   │  │  IPFS Manager│  │   WebSocket  │          │
-│  │   Utils      │  │              │  │    Server    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Somnia Blockchain Layer                        │
-│  ┌──────────────────────┐  ┌──────────────────────┐            │
-│  │   AgentRegistry      │  │   AgentManager       │            │
-│  │   Smart Contract     │  │   Smart Contract     │            │
-│  │                      │  │                      │            │
-│  │ - Register agents    │  │ - Create tasks       │            │
-│  │ - Track metrics      │  │ - Manage payments    │            │
-│  │ - Store metadata     │  │ - Task queue         │            │
-│  └──────────────────────┘  └──────────────────────┘            │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Somnia Network (Testnet)                       │
-│              https://dream-rpc.somnia.network                    │
-│                    Chain ID: 50311                               │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 📦 Installation
+## 🚀 Quick Start (5 minutes)
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/somnia-ai.git
-cd somnia-ai
-
-# Install dependencies
+# 1. Install
 npm install
-
-# Copy environment variables
 cp .env.example .env
 
-# Edit .env with your configuration
-# - Add your private key
-# - Configure RPC URL (default: https://dream-rpc.somnia.network)
-```
+# 2. Get test tokens from Discord
+# Join https://discord.gg/somnia, go to #dev-chat
+# Tag @emma_odia and request STT tokens
 
-## 🚀 Quick Start
+# 3. Add your PRIVATE_KEY to .env
 
-### 1. Deploy Smart Contracts
-
-First, deploy the framework's smart contracts to Somnia Testnet:
-
-```bash
-# Build contracts
+# 4. Deploy contracts
 npm run build
-
-# Deploy to Somnia Testnet
 npm run deploy:contracts
 
-# Contract addresses will be automatically saved to .env
+# 5. Run example
+ts-node examples/simple-agent.ts
 ```
 
-**Note**: You need STT (Somnia Test Tokens). Join the [Somnia Discord](https://discord.gg/somnia) and request test tokens in the #dev-chat channel by tagging @emma_odia or email [email protected].
+## 📦 Core Components
 
-### 2. Create Your First Agent
+### 1. Smart Contracts
+
+- **AgentRegistry.sol** - Agent registration, metrics tracking, lifecycle management
+- **AgentManager.sol** - Task queue, payment escrow, execution tracking
+
+### 2. TypeScript SDK
+
+- **SomniaAgentSDK** - Main SDK for contract interaction
+- **AgentBuilder** - Fluent API for agent creation
+- **DeployedAgent** - Active agent management
+
+### 3. Monitoring System
+
+- **MonitoringClient** - SDK wrapper for monitoring API (NEW! ⭐)
+- **MetricsCollector** - Performance tracking with alerts
+- **AgentMonitor** - Real-time monitoring with events
+- **Monitoring Server** - REST API + WebSocket
+
+## 💻 Usage Example
 
 ```typescript
 import { SomniaAgentSDK, AgentBuilder } from 'somnia-ai-agent-framework';
@@ -128,81 +89,31 @@ const agent = await AgentBuilder.quick(
   .connectSDK(sdk)
   .build();
 
-console.log('Agent deployed with ID:', agent.getAgentId());
+console.log('Agent deployed:', agent.getAgentId());
 
 // Execute a task
 const result = await agent.execute({ data: 'test' });
 console.log('Result:', result);
 ```
 
-### 3. Start Monitoring Server
+## 📚 Documentation
 
-```bash
-# Start the monitoring server (REST API + WebSocket)
-npm run start:monitor
-```
+- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start guide
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Detailed deployment instructions
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and diagrams
+- **[HACKATHON_SUBMISSION.md](HACKATHON_SUBMISSION.md)** - Hackathon submission details
 
-The monitoring server will be available at:
-- REST API: `http://localhost:3001`
-- WebSocket: `ws://localhost:3001`
+## 🔧 API Reference
 
-## 📖 Documentation
-
-### Core Components
-
-#### 1. **AgentRegistry Smart Contract**
-
-Manages agent registration and metadata on-chain.
-
-```solidity
-// Register a new agent
-function registerAgent(
-  string memory _name,
-  string memory _description,
-  string memory _ipfsMetadata,
-  string[] memory _capabilities
-) external returns (uint256)
-
-// Record execution metrics
-function recordExecution(
-  uint256 _agentId,
-  bool _success,
-  uint256 _executionTime
-) external
-```
-
-#### 2. **AgentManager Smart Contract**
-
-Handles task creation, execution, and payment management.
-
-```solidity
-// Create a task with payment
-function createTask(
-  uint256 _agentId,
-  string memory _taskData
-) external payable returns (uint256)
-
-// Complete a task and receive payment
-function completeTask(
-  uint256 _taskId,
-  string memory _result
-) external
-```
-
-#### 3. **SomniaAgentSDK**
-
-TypeScript SDK for interacting with the framework.
+### SomniaAgentSDK
 
 ```typescript
-// Initialize SDK
-const sdk = new SomniaAgentSDK(config);
-
 // Register an agent
 const agentId = await sdk.registerAgent({
   name: 'Agent Name',
   description: 'Description',
-  capabilities: ['capability1', 'capability2'],
-  metadata: { /* custom metadata */ }
+  capabilities: ['capability1'],
+  metadata: { /* custom */ }
 });
 
 // Get agent metrics
@@ -216,190 +127,54 @@ const taskId = await sdk.createTask({
 });
 ```
 
-#### 4. **AgentBuilder**
+### Monitoring
 
-Fluent API for building agents with ease.
+```bash
+# Start monitoring server
+npm run start:monitor
 
-```typescript
-const agent = await new AgentBuilder()
-  .withName('My Agent')
-  .withDescription('Agent description')
-  .withCapabilities(['capability1', 'capability2'])
-  .withExecutor({
-    initialize: async () => { /* setup */ },
-    execute: async (input) => { /* main logic */ },
-    cleanup: async () => { /* cleanup */ }
-  })
-  .connectSDK(sdk)
-  .build();
-```
+# Use MonitoringClient SDK (NEW!)
+import { MonitoringClient } from 'somnia-ai-agent-framework';
 
-#### 5. **Monitoring System**
-
-Real-time monitoring with metrics collection and alerts.
-
-```typescript
-const metricsCollector = new MetricsCollector(sdk, {
-  minSuccessRate: 80,
-  maxAverageExecutionTime: 5000,
+const monitoring = new MonitoringClient({
+  baseUrl: 'http://localhost:3001',
+  autoConnect: true
 });
 
-const monitor = new AgentMonitor(sdk, metricsCollector, {
-  updateInterval: 30000,
-  autoStart: true,
-});
+// REST API methods
+const health = await monitoring.getHealth();
+const metrics = await monitoring.getAgentMetrics('1');
+const aggregated = await monitoring.getAggregatedMetrics();
 
-// Listen for metrics
-monitor.on('metrics:collected', (metrics) => {
-  console.log('Agent metrics:', metrics);
-});
-
-// Listen for alerts
-monitor.on('alert:critical', (alert) => {
-  console.log('Critical alert:', alert);
+// WebSocket real-time updates
+monitoring.on('metrics', (data) => {
+  console.log('Agent metrics:', data);
 });
 ```
 
-## 🎯 Examples
+## 🌐 Network Information
 
-### Example 1: Simple Calculator Agent
-
-```bash
-npm run dev
-# or
-ts-node examples/simple-agent.ts
-```
-
-### Example 2: AI Agent with OpenAI
-
-```bash
-# Set OPENAI_API_KEY in .env
-ts-node examples/ai-agent-with-openai.ts
-```
-
-### Example 3: Monitoring Dashboard
-
-```bash
-ts-node examples/monitoring-example.ts
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Somnia Network
-SOMNIA_RPC_URL=https://dream-rpc.somnia.network
-SOMNIA_CHAIN_ID=50311
-
-# Wallet
-PRIVATE_KEY=your_private_key_here
-
-# Contract Addresses (auto-filled after deployment)
-AGENT_REGISTRY_ADDRESS=0x...
-AGENT_MANAGER_ADDRESS=0x...
-
-# Monitoring
-PORT=3000
-MONITORING_PORT=3001
-
-# Optional: AI Integration
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-## 📊 Deployed Contracts
-
-After deployment, you'll find contract addresses in:
-- `deployments/latest.json`
-- `.env` file (auto-updated)
-
-### Testnet Deployment
-
-**Network**: Somnia Testnet  
-**Chain ID**: 50311  
-**RPC URL**: https://dream-rpc.somnia.network  
-**Explorer**: https://explorer.somnia.network
-
-**Contract Addresses** (update after deployment):
-- `AgentRegistry`: [View on Explorer](https://explorer.somnia.network)
-- `AgentManager`: [View on Explorer](https://explorer.somnia.network)
-
-## 🧪 Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-```
-
-## 📝 API Reference
-
-### REST API Endpoints
-
-```
-GET  /health                      - Health check
-GET  /api/agents                  - List monitored agents
-POST /api/agents/:agentId         - Add agent to monitoring
-DELETE /api/agents/:agentId       - Remove agent from monitoring
-GET  /api/agents/:agentId/metrics - Get agent metrics
-GET  /api/agents/:agentId/history - Get metrics history
-GET  /api/metrics/aggregated      - Get aggregated metrics
-POST /api/monitor/start           - Start monitoring
-POST /api/monitor/stop            - Stop monitoring
-POST /api/monitor/collect         - Force metrics collection
-```
-
-### WebSocket Events
-
-```typescript
-// Client -> Server
-{ type: 'subscribe', agentId: '1' }
-{ type: 'unsubscribe', agentId: '1' }
-{ type: 'getMetrics', agentId: '1' }
-
-// Server -> Client
-{ type: 'connected', timestamp, agents }
-{ type: 'metrics', data: {...} }
-{ type: 'aggregated', data: {...} }
-{ type: 'alert', data: {...} }
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! This is an open-source project designed to help the Somnia community.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+**Somnia Testnet**:
+- RPC URL: https://dream-rpc.somnia.network
+- Chain ID: 50311
+- Currency: STT
+- Explorer: https://explorer.somnia.network
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- [Somnia Network](https://docs.somnia.network/) for the high-performance blockchain infrastructure
+- [Somnia Network](https://docs.somnia.network/) for the blockchain infrastructure
 - Infrastructure partners: Ankr, DIA, Protofire, Ormi
-- The open-source community
 
 ## 🔗 Links
 
-- **Documentation**: https://docs.somnia.network/
+- **Documentation**: https://docs.somnia.network/developer/infrastructure-dev-tools
 - **Discord**: https://discord.gg/somnia
-- **Explorer**: https://explorer.somnia.network
-- **Faucet**: Request test tokens in Discord #dev-chat
-
-## 📞 Support
-
-- Create an issue on GitHub
-- Join our [Discord](https://discord.gg/somnia)
-- Email: [email protected]
+- **Get Test Tokens**: Tag @emma_odia in #dev-chat
 
 ---
 
 Built with ❤️ for the Somnia Hackathon | **Infra Agents Track**
-

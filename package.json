@@ -9,11 +9,18 @@
     "dev": "ts-node src/index.ts",
     "test": "jest",
     "deploy:contracts": "hardhat run scripts/deploy.ts --network somnia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "verify": "hardhat verify --network somnia",
     "start:monitor": "ts-node src/monitoring/server.ts",
-    "start:dashboard": "cd dashboard && npm run dev",
-    "lint": "eslint src --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "lint": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"contracts/**/*.sol\" \"scripts/**/*.ts\" \"examples/**/*.ts\"",
+    "clean": "rm -rf dist cache artifacts",
+    "example:basic": "ts-node examples/1-basic-agent.ts",
+    "example:openai": "ts-node examples/2-llm-agent-openai.ts",
+    "example:claude": "ts-node examples/3-llm-agent-claude.ts",
+    "example:events": "ts-node examples/4-event-driven-agent.ts",
+    "example:tasks": "ts-node examples/5-task-management.ts",
+    "example:client": "ts-node examples/monitoring-client-example.ts"
   },
   "keywords": [
     "somnia",
@@ -29,7 +36,6 @@
   "license": "MIT",
   "dependencies": {
     "ethers": "^6.9.0",
-    "viem": "^2.7.0",
     "express": "^4.18.2",
     "ws": "^8.14.2",
     "dotenv": "^16.3.1",
@@ -37,8 +43,8 @@
     "winston": "^3.11.0",
     "zod": "^3.22.4",
     "openai": "^4.20.1",
-    "cors": "^2.8.5",
-    "ipfs-http-client": "^60.0.1"
+    "@anthropic-ai/sdk": "^0.20.0",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -50,9 +56,9 @@
     "hardhat": "^2.19.2",
     "typescript": "^5.3.2",
     "ts-node": "^10.9.1",
-    "@typescript-eslint/eslint-plugin": "^6.13.0",
-    "@typescript-eslint/parser": "^6.13.0",
-    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
     "prettier": "^3.1.0",
     "jest": "^29.7.0",
     "@types/jest": "^29.5.8",
