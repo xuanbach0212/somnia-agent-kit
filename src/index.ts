@@ -3,14 +3,29 @@
  * Main SDK entry point
  */
 
-export * from './monitoring/AgentMonitor';
-export * from './monitoring/MetricsCollector';
-export * from './sdk/AgentBuilder';
-export * from './sdk/SomniaAgentSDK';
-export * from './sdk/types';
+// Core exports
+export { SomniaClient } from './core/SomniaClient';
+export { SomniaAgent } from './core/SomniaAgent';
+export { LLMProvider } from './core/LLMProvider';
+
+// LLM Providers (core feature)
+export { OpenAIProvider } from './llm/OpenAIProvider';
+export { AnthropicProvider } from './llm/AnthropicProvider';
+export { MockProvider } from './llm/MockProvider';
+
+// Monitoring (keep existing)
+export { AgentMonitor } from './monitoring/AgentMonitor';
+export { MetricsCollector } from './monitoring/MetricsCollector';
+export { MonitoringClient } from './monitoring/MonitoringClient';
+
+// Utils
+export { Logger } from './utils/logger';
+export { IPFSManager } from './utils/ipfs';
 export * from './utils/contracts';
-export * from './utils/ipfs';
+
+// Types
+export * from './core/types';
+export * from './llm/types';
 
 // Re-export for convenience
-export { SomniaAgentSDK as default } from './sdk/SomniaAgentSDK';
-
+export { SomniaClient as default } from './core/SomniaClient';
