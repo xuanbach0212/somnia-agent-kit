@@ -32,10 +32,7 @@ export abstract class LLMProvider {
    * @param options - Generation options
    * @returns Generated text
    */
-  abstract generate(
-    prompt: string,
-    options?: GenerateOptions
-  ): Promise<string>;
+  abstract generate(prompt: string, options?: GenerateOptions): Promise<string>;
 
   /**
    * Chat completion with message history

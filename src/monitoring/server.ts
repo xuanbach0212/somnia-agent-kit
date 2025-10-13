@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import { Server } from 'http';
 import WebSocket from 'ws';
-import { SomniaAgentSDK } from '../sdk/SomniaAgentSDK';
+import { SomniaClient } from '../core/SomniaClient';
 import { Logger } from '../utils/logger';
 import { AgentMonitor } from './AgentMonitor';
 import { MetricsCollector } from './MetricsCollector';
@@ -16,18 +16,24 @@ dotenv.config();
 
 const logger = new Logger('MonitoringServer');
 
-// Initialize SDK
-const sdk = new SomniaAgentSDK({
-  rpcUrl: process.env.SOMNIA_RPC_URL,
-  chainId: Number(process.env.SOMNIA_CHAIN_ID),
-  privateKey: process.env.PRIVATE_KEY,
-  agentRegistryAddress: process.env.AGENT_REGISTRY_ADDRESS,
-  agentManagerAddress: process.env.AGENT_MANAGER_ADDRESS,
-});
+// Initialize client
+const client = new SomniaClient();
+client
+  .connect({
+    rpcUrl: process.env.SOMNIA_RPC_URL || 'https://dream-rpc.somnia.network',
+    privateKey: process.env.PRIVATE_KEY,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS || '',
+      agentManager: process.env.AGENT_MANAGER_ADDRESS || '',
+    },
+  })
+  .catch((error) => {
+    logger.error(`Failed to connect: ${error}`);
+  });
 
 // Initialize monitoring components
-const metricsCollector = new MetricsCollector(sdk);
-const monitor = new AgentMonitor(sdk, metricsCollector, {
+const metricsCollector = new MetricsCollector(client);
+const monitor = new AgentMonitor(client, metricsCollector, {
   updateInterval: 30000,
   autoStart: true,
 });
@@ -212,4 +218,3 @@ process.on('SIGINT', () => {
 });
 
 export { app, server, wss };
-

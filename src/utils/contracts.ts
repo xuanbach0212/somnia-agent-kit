@@ -93,4 +93,3 @@ export async function estimateGas(
 ): Promise<bigint> {
   return contract[method].estimateGas(...args);
 }
-

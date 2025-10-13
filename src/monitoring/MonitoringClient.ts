@@ -446,4 +446,3 @@ export class MonitoringClient extends EventEmitter {
     }
   }
 }
-

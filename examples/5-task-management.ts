@@ -82,7 +82,9 @@ async function main() {
     console.log(`  Agent: ${task.agentId}`);
     console.log(`  Requester: ${task.requester}`);
     console.log(`  Reward: ${ethers.formatEther(task.reward)} SOMNIA`);
-    console.log(`  Status: ${['Pending', 'InProgress', 'Completed', 'Failed', 'Cancelled'][task.status]}`);
+    console.log(
+      `  Status: ${['Pending', 'InProgress', 'Completed', 'Failed', 'Cancelled'][task.status]}`
+    );
     console.log(`  Created: ${new Date(task.createdAt * 1000).toISOString()}`);
     console.log();
   }
@@ -155,7 +157,9 @@ async function main() {
   console.log('✅ Task cancelled successfully');
 
   const cancelledTask = await client.getTask(cancelTaskId);
-  console.log(`Task status: ${['Pending', 'InProgress', 'Completed', 'Failed', 'Cancelled'][cancelledTask.status]}`);
+  console.log(
+    `Task status: ${['Pending', 'InProgress', 'Completed', 'Failed', 'Cancelled'][cancelledTask.status]}`
+  );
 
   // 10. Check balance
   const address = await client.getSignerAddress();

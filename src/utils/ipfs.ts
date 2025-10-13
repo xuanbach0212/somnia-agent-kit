@@ -3,7 +3,14 @@
  */
 
 import axios from 'axios';
-import { IPFSConfig } from '../sdk/types';
+
+export interface IPFSConfig {
+  gateway?: string;
+  uploadUrl?: string;
+  host?: string;
+  port?: number;
+  protocol?: string;
+}
 
 export class IPFSManager {
   private config: IPFSConfig;
@@ -15,7 +22,7 @@ export class IPFSManager {
       port: 5001,
       protocol: 'https',
     };
-    
+
     // Use public IPFS gateway for retrieval
     this.gatewayUrl = 'https://ipfs.io/ipfs/';
   }
@@ -30,10 +37,10 @@ export class IPFSManager {
       // In production, implement actual IPFS upload using ipfs-http-client or similar
       const jsonString = JSON.stringify(data);
       const hash = this.generateMockIPFSHash(jsonString);
-      
+
       // Store in memory cache for demo
       this.cacheData(hash, data);
-      
+
       return hash;
     } catch (error) {
       throw new Error(`Failed to upload to IPFS: ${error}`);
@@ -55,7 +62,7 @@ export class IPFSManager {
       const response = await axios.get(`${this.gatewayUrl}${hash}`, {
         timeout: 10000,
       });
-      
+
       return response.data;
     } catch (error) {
       throw new Error(`Failed to retrieve from IPFS: ${error}`);
@@ -107,11 +114,10 @@ export class IPFSManager {
         responseType: 'arraybuffer',
         timeout: 10000,
       });
-      
+
       return Buffer.from(response.data);
     } catch (error) {
       throw new Error(`Failed to retrieve file from IPFS: ${error}`);
     }
   }
 }
-

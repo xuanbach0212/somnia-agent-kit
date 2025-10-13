@@ -64,10 +64,14 @@ export class OpenAIProvider extends LLMProvider {
         temperature: options?.temperature || 0.7,
         top_p: options?.topP,
         stop: options?.stopSequences,
-        stream: options?.stream || false,
+        stream: false,
       });
 
-      return response.choices[0]?.message?.content || '';
+      if ('choices' in response) {
+        return response.choices[0]?.message?.content || '';
+      }
+
+      throw new Error('Unexpected response format from OpenAI');
     } catch (error) {
       throw new Error(
         `OpenAI chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`

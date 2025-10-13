@@ -56,7 +56,10 @@ async function main() {
       context.logger.info(`Processing Claude task: ${task || 'general'}`);
 
       try {
-        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+        const messages: Array<{
+          role: 'system' | 'user' | 'assistant';
+          content: string;
+        }> = [];
 
         // Add system prompt if provided
         if (systemPrompt) {
@@ -138,9 +141,7 @@ async function main() {
       console.log(result.result?.response);
       console.log('─'.repeat(80));
       console.log(`\n⏱️  Execution time: ${result.executionTime}ms`);
-      console.log(
-        `📊 Estimated tokens: ${result.result?.tokensEstimated || 'N/A'}`
-      );
+      console.log(`📊 Estimated tokens: ${result.result?.tokensEstimated || 'N/A'}`);
     } else {
       console.error(`❌ Error: ${result.error}`);
     }

@@ -1,307 +1,456 @@
-# Migration Guide - SDK v2.0
+# Migration Guide: v1.x → v2.0
 
-This guide helps you migrate from the old SDK architecture to the new refactored version.
+This guide helps you upgrade from v1.x to v2.0 of the Somnia AI Agent Framework.
 
-## What Changed?
+## 🎯 Overview of Changes
 
-### Architecture Overview
+Version 2.0 is a major refactor with breaking changes but improved developer experience:
 
-**Old:**
+### Key Improvements
+
+1. **Native LLM Support** - Built-in OpenAI, Anthropic, and Mock providers
+2. **Modular Architecture** - Separation of `SomniaClient` (low-level) and `SomniaAgent` (high-level)
+3. **Fluent API** - Chainable configuration methods
+4. **Event System** - Rich events for monitoring agent lifecycle
+5. **Better Types** - Comprehensive TypeScript support
+6. **Testing Ready** - Mock provider for unit testing
+
+---
+
+## 📦 Package Changes
+
+### Dependencies
+
+**Removed:**
+- `viem` (replaced by ethers.js v6)
+
+**Added:**
+- `@anthropic-ai/sdk` - Anthropic Claude integration
+- `openai` - OpenAI GPT integration
+
+**Updated:**
+- `eslint` - 9.0.0 → 8.57.0 (for compatibility)
+
+### Installation
+
+```bash
+# Remove old node_modules
+rm -rf node_modules package-lock.json
+
+# Install new dependencies
+npm install
+
+# If you use LLMs, install their SDKs
+npm install openai @anthropic-ai/sdk
 ```
-AgentBuilder + DeployedAgent + SomniaAgentSDK
-```
 
-**New:**
-```
-SomniaClient (low-level) + SomniaAgent (high-level) + LLM (core)
-```
+---
 
-## Key Changes
+## 🔄 API Changes
 
-### 1. Import Changes
+### 1. SDK Initialization
 
-**Old:**
+**Before (v1.x):**
 ```typescript
-import { SomniaAgentSDK, AgentBuilder } from '@somnia/sdk';
-```
+import { SomniaAgentSDK } from './sdk/SomniaAgentSDK';
 
-**New:**
-```typescript
-import { SomniaClient, SomniaAgent, OpenAIProvider } from '@somnia/sdk';
-```
-
-### 2. Client Initialization
-
-**Old:**
-```typescript
 const sdk = new SomniaAgentSDK({
-  rpcUrl: 'https://...',
-  privateKey: '0x...',
-  agentRegistryAddress: '0x...',
-  agentManagerAddress: '0x...',
+  rpcUrl: process.env.SOMNIA_RPC_URL,
+  chainId: Number(process.env.SOMNIA_CHAIN_ID),
+  privateKey: process.env.PRIVATE_KEY,
+  agentRegistryAddress: process.env.AGENT_REGISTRY_ADDRESS,
+  agentManagerAddress: process.env.AGENT_MANAGER_ADDRESS,
 });
 ```
 
-**New:**
+**After (v2.0):**
 ```typescript
+import { SomniaClient } from './core/SomniaClient';
+
 const client = new SomniaClient();
 await client.connect({
-  rpcUrl: 'https://...',
-  privateKey: '0x...',
+  rpcUrl: process.env.SOMNIA_RPC_URL,
+  privateKey: process.env.PRIVATE_KEY,
   contracts: {
-    agentRegistry: '0x...',
-    agentManager: '0x...',
+    agentRegistry: process.env.AGENT_REGISTRY_ADDRESS,
+    agentManager: process.env.AGENT_MANAGER_ADDRESS,
   },
 });
 ```
 
-### 3. Agent Creation
+**Changes:**
+- `SomniaAgentSDK` → `SomniaClient`
+- Constructor takes no arguments (lazy initialization)
+- Explicit `connect()` method (async)
+- `contracts` nested object instead of flat properties
+- No `chainId` needed (auto-detected from RPC)
 
-**Old:**
+---
+
+### 2. Agent Creation
+
+**Before (v1.x):**
 ```typescript
+import { AgentBuilder } from './sdk/AgentBuilder';
+
 const agent = await AgentBuilder.quick(
-  'Agent Name',
-  'Description',
+  'My Agent',
+  'Agent description',
   {
     execute: async (input) => {
-      return { success: true, result: input };
+      return { success: true, result: 'done' };
     },
   }
 )
-  .addCapability('capability')
+  .addCapability('task1')
   .connectSDK(sdk)
   .build();
+
+// Agent is automatically registered and active
 ```
 
-**New:**
+**After (v2.0):**
 ```typescript
+import { SomniaAgent } from './core/SomniaAgent';
+
 const agent = new SomniaAgent(client)
   .configure({
-    name: 'Agent Name',
-    description: 'Description',
-    capabilities: ['capability'],
+    name: 'My Agent',
+    description: 'Agent description',
+    capabilities: ['task1'],
   })
   .withExecutor(async (input, context) => {
-    return { success: true, result: input };
+    return { success: true, result: 'done' };
   });
 
-const agentId = await agent.register();
+// Explicit lifecycle control
+await agent.register();
+await agent.start();
 ```
 
-### 4. LLM Integration
+**Changes:**
+- `AgentBuilder.quick()` → `new SomniaAgent(client)`
+- `.addCapability()` → `capabilities: []` array in config
+- `.connectSDK()` → pass client to constructor
+- `.build()` → separate `register()` and `start()` calls
+- Executor receives `context` with utilities (logger, IPFS, LLM)
 
-**Old:**
-LLM was optional and not part of core
+---
 
-**New:**
-LLM is a core feature:
+### 3. LLM Integration
 
+**Before (v1.x):**
 ```typescript
-import { OpenAIProvider } from '@somnia/sdk';
+// No built-in LLM support - you had to integrate manually
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: '...' });
+
+const agent = await AgentBuilder.quick('AI Agent', 'desc', {
+  execute: async (input) => {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: input.prompt }],
+    });
+    return { success: true, result: response.choices[0].message.content };
+  },
+}).connectSDK(sdk).build();
+```
+
+**After (v2.0):**
+```typescript
+import { OpenAIProvider } from './llm/OpenAIProvider';
+
+const llm = new OpenAIProvider({
+  apiKey: process.env.OPENAI_API_KEY,
+  model: 'gpt-4o',
+});
 
 const agent = new SomniaAgent(client)
-  .configure({...})
-  .withLLM(new OpenAIProvider({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4',
-  }))
+  .configure({
+    name: 'AI Agent',
+    description: 'AI-powered agent',
+    capabilities: ['chat'],
+  })
+  .withLLM(llm)
   .withExecutor(async (input, context) => {
-    // LLM is available in context
-    const response = await context.llm.chat([...]);
+    // Access LLM via context
+    const response = await context.llm!.chat([
+      { role: 'user', content: input.prompt },
+    ]);
     return { success: true, result: { response } };
   });
 ```
 
-### 5. Executor Function Signature
+**Changes:**
+- Built-in `OpenAIProvider`, `AnthropicProvider`, `MockProvider`
+- Standardized interface across all LLMs
+- LLM available in executor context
+- No need to import SDK-specific packages
+- Mock provider for testing
 
-**Old:**
+---
+
+### 4. Event Handling
+
+**Before (v1.x):**
 ```typescript
-execute: async (input: any) => Promise<ExecutionResult>
+// Limited event support
+// Had to manually poll or subscribe to blockchain events
+sdk.getAgentRegistryContract().on('AgentExecuted', (agentId) => {
+  console.log('Agent executed:', agentId);
+});
 ```
 
-**New:**
+**After (v2.0):**
 ```typescript
-executor: async (input: any, context: ExecutorContext) => Promise<ExecutionResult>
-
-// Context includes:
-// - llm: LLMProvider (if configured)
-// - agentId: string
-// - logger: Logger
-// - ipfs: IPFSManager
-```
-
-### 6. Lifecycle Management
-
-**New feature in v2.0:**
-
-```typescript
-// Start agent (activates + listens for tasks)
-await agent.start();
-
-// Stop agent
-await agent.stop();
-
-// Restart agent
-await agent.restart();
-
-// Check state
-agent.getState(); // 'idle' | 'running' | 'stopped' | 'error'
-```
-
-### 7. Event System
-
-**New feature in v2.0:**
-
-```typescript
+// Rich event system built into SomniaAgent
 agent.on('agent:registered', (agentId) => {
-  console.log(`Agent registered: ${agentId}`);
+  console.log('Agent registered:', agentId);
+});
+
+agent.on('agent:started', () => {
+  console.log('Agent started');
+});
+
+agent.on('task:created', (task) => {
+  console.log('New task:', task);
 });
 
 agent.on('task:completed', ({ taskId, result }) => {
-  console.log(`Task completed: ${taskId}`);
+  console.log('Task completed:', taskId, result);
+});
+
+agent.on('task:failed', ({ taskId, error }) => {
+  console.error('Task failed:', taskId, error);
 });
 
 agent.on('metrics:updated', (metrics) => {
-  console.log(`Metrics: ${metrics}`);
+  console.log('Metrics:', metrics);
+});
+
+agent.on('error', (error) => {
+  console.error('Agent error:', error);
 });
 ```
 
-### 8. Task Management
+**Changes:**
+- Built-in EventEmitter in `SomniaAgent`
+- Lifecycle events (registered, started, stopped)
+- Task events (created, started, completed, failed)
+- Metrics events (real-time updates)
+- Standardized event naming (`category:action`)
 
-**Old (via SDK):**
+---
+
+### 5. Monitoring
+
+**Before (v1.x):**
 ```typescript
-const taskId = await sdk.createTask({ agentId, taskData, reward });
-await sdk.completeTask(taskId, result);
+import { MetricsCollector } from './monitoring/MetricsCollector';
+
+const collector = new MetricsCollector(sdk);
+const metrics = await collector.collectAgentMetrics('1');
 ```
 
-**New (via Client):**
+**After (v2.0):**
 ```typescript
-// Low-level control
-const taskId = await client.createTask({ agentId, taskData, reward });
-await client.startTask(taskId);
-await client.completeTask(taskId, result);
+import { MonitoringClient } from './monitoring/MonitoringClient';
 
-// High-level (via Agent)
-await agent.start(); // Auto-listens for tasks
-// Tasks are processed automatically
+const monitoring = new MonitoringClient({
+  baseUrl: 'http://localhost:3001',
+  autoConnect: true,
+});
+
+// REST API
+const metrics = await monitoring.getAgentMetrics('1');
+const aggregated = await monitoring.getAggregatedMetrics();
+
+// WebSocket
+monitoring.on('metrics', (data) => {
+  console.log('Metrics update:', data);
+});
 ```
 
-### 9. Direct Contract Calls
+**Changes:**
+- New `MonitoringClient` wraps all monitoring APIs
+- REST + WebSocket in single client
+- Auto-reconnection support
+- Typed events
 
-**Old:**
+---
+
+### 6. Task Management
+
+**Before (v1.x):**
 ```typescript
-await sdk.registerAgent(config);
-await sdk.getAgent(agentId);
-await sdk.getAgentMetrics(agentId);
+// Create task
+const taskId = await sdk.createTask({
+  agentId: '1',
+  taskData: 'Task description',
+  reward: ethers.parseEther('0.1'),
+});
+
+// Complete task (manual)
+await sdk.completeTask(taskId, 'Result');
 ```
 
-**New:**
+**After (v2.0):**
 ```typescript
-// Via Client (low-level)
-await client.registerAgent(params);
-await client.getAgent(agentId);
-await client.getAgentMetrics(agentId);
+// Create task (same)
+const taskId = await client.createTask({
+  agentId: '1',
+  taskData: { prompt: 'Task description' },
+  reward: ethers.parseEther('0.1'),
+});
 
-// Via Agent (high-level)
-await agent.register();
-await agent.getDetails();
-await agent.getMetrics();
+// Agent auto-processes tasks when running
+await agent.start(); // Listens and auto-processes
+
+// Or manually process specific task
+const result = await agent.processTask(taskId);
 ```
 
-## Migration Steps
+**Changes:**
+- Tasks can be objects (auto-serialized)
+- Agent auto-listens and processes when started
+- Manual processing still available via `processTask()`
+- Automatic metrics recording
+- Automatic payment handling (complete/fail)
 
-### Step 1: Update Dependencies
+---
 
-```bash
-npm install @anthropic-ai/sdk@^0.20.0
+### 7. IPFS
+
+**Before (v1.x):**
+```typescript
+import { IPFSManager } from './utils/ipfs';
+
+const ipfs = new IPFSManager();
+const hash = await ipfs.upload({ data: 'hello' });
+const data = await ipfs.fetch(hash);
 ```
 
-### Step 2: Update Imports
-
-Replace all old imports with new ones:
+**After (v2.0):**
 ```typescript
-// Remove
-import { SomniaAgentSDK, AgentBuilder } from '@somnia/sdk';
-
-// Add
-import { SomniaClient, SomniaAgent, OpenAIProvider } from '@somnia/sdk';
-```
-
-### Step 3: Update Client Initialization
-
-Change SDK initialization to Client:
-```typescript
-const client = new SomniaClient();
-await client.connect(config);
-```
-
-### Step 4: Update Agent Creation
-
-Replace AgentBuilder with SomniaAgent:
-```typescript
+// Available in executor context
 const agent = new SomniaAgent(client)
-  .configure({...})
-  .withExecutor((input, context) => {...});
+  .withExecutor(async (input, context) => {
+    // Upload to IPFS
+    const hash = await context.ipfs.upload({ data: 'hello' });
+    
+    // Fetch from IPFS
+    const data = await context.ipfs.fetch(hash);
+    
+    return { success: true, result: data };
+  });
 
-await agent.register();
+// Or use client directly
+const hash = await client.uploadToIPFS({ data: 'hello' });
+const data = await client.fetchFromIPFS(hash);
 ```
 
-### Step 5: Add LLM (Optional)
+**Changes:**
+- IPFS available in executor context
+- Also available via client
+- Same API, more accessible
 
-If using AI capabilities:
+---
+
+### 8. Type Imports
+
+**Before (v1.x):**
 ```typescript
-.withLLM(new OpenAIProvider({ apiKey: '...' }))
+import { SDKConfig, AgentData, AgentMetrics } from './sdk/types';
 ```
 
-### Step 6: Update Executor Function
-
-Add context parameter:
+**After (v2.0):**
 ```typescript
-.withExecutor(async (input, context) => {
-  // Use context.llm, context.logger, etc.
-})
+// Core types
+import { ClientConfig, AgentConfig, AgentData, AgentMetrics } from './core/types';
+
+// LLM types
+import { LLMConfig, ChatMessage, GenerateOptions } from './llm/types';
+
+// Or import from index
+import type { ClientConfig, AgentConfig } from './index';
 ```
 
-### Step 7: Add Event Handlers (Optional)
+**Changes:**
+- `SDKConfig` → `ClientConfig`
+- Types organized by module (`core/types`, `llm/types`)
+- All types exported from index
 
+---
+
+## 🧪 Testing Changes
+
+**Before (v1.x):**
 ```typescript
-agent.on('task:completed', (result) => {
-  // Handle completion
-});
+// No mock support - had to use real APIs or mock manually
 ```
 
-## Complete Example Migration
-
-### Before (Old SDK)
+**After (v2.0):**
 ```typescript
-import { SomniaAgentSDK, AgentBuilder } from '@somnia/sdk';
+import { MockProvider } from './llm/MockProvider';
+
+// Use in tests without API costs
+const mockLLM = new MockProvider({});
+
+const agent = new SomniaAgent(client)
+  .withLLM(mockLLM)
+  .withExecutor(async (input, context) => {
+    const response = await context.llm!.generate(input.prompt);
+    // Returns: "Mock response to: [input.prompt]"
+    expect(response).toContain('Mock response');
+  });
+```
+
+---
+
+## 📝 Example Migration
+
+Here's a complete example migration:
+
+### Before (v1.x)
+
+```typescript
+import { SomniaAgentSDK, AgentBuilder } from './sdk';
+import OpenAI from 'openai';
 
 const sdk = new SomniaAgentSDK({
   rpcUrl: process.env.SOMNIA_RPC_URL,
+  chainId: 50311,
   privateKey: process.env.PRIVATE_KEY,
   agentRegistryAddress: process.env.AGENT_REGISTRY_ADDRESS,
   agentManagerAddress: process.env.AGENT_MANAGER_ADDRESS,
 });
 
-const agent = await AgentBuilder.quick(
-  'My Agent',
-  'Description',
-  {
-    execute: async (input) => {
-      return { success: true, result: input };
-    },
-  }
-)
-  .addCapability('task-processing')
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const agent = await AgentBuilder.quick('AI Agent', 'Desc', {
+  execute: async (input) => {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: input.prompt }],
+    });
+    return { 
+      success: true, 
+      result: response.choices[0].message.content 
+    };
+  },
+})
+  .addCapability('chat')
   .connectSDK(sdk)
   .build();
 
-const result = await agent.execute(input);
+console.log('Agent ID:', agent.getAgentId());
 ```
 
-### After (New SDK)
+### After (v2.0)
+
 ```typescript
-import { SomniaClient, SomniaAgent } from '@somnia/sdk';
+import { SomniaClient, SomniaAgent, OpenAIProvider } from './index';
 
 const client = new SomniaClient();
 await client.connect({
@@ -313,35 +462,102 @@ await client.connect({
   },
 });
 
+const llm = new OpenAIProvider({
+  apiKey: process.env.OPENAI_API_KEY,
+  model: 'gpt-4o',
+});
+
 const agent = new SomniaAgent(client)
   .configure({
-    name: 'My Agent',
-    description: 'Description',
-    capabilities: ['task-processing'],
+    name: 'AI Agent',
+    description: 'Desc',
+    capabilities: ['chat'],
+    autoStart: true,
   })
+  .withLLM(llm)
   .withExecutor(async (input, context) => {
-    return { success: true, result: input };
+    const response = await context.llm!.chat([
+      { role: 'user', content: input.prompt },
+    ]);
+    return { success: true, result: { response } };
   });
 
-await agent.register();
-await agent.start(); // Auto-listens for tasks
+// Set up events
+agent.on('agent:registered', (agentId) => {
+  console.log('Agent ID:', agentId);
+});
 
-// Or process manually
-const result = await agent.processTask(taskId);
+agent.on('task:completed', ({ taskId, result }) => {
+  console.log('Task completed:', taskId);
+});
+
+// Register and start
+await agent.register();
+await agent.start();
 ```
 
-## Benefits of v2.0
+---
 
-1. **Clearer Separation**: SomniaClient (low-level) vs SomniaAgent (high-level)
-2. **LLM as Core**: First-class support for AI with OpenAI, Anthropic, Mock providers
-3. **Event-Driven**: Built-in EventEmitter for reactive programming
-4. **Lifecycle Management**: start/stop/restart with state tracking
-5. **Better Context**: Executor receives context with LLM, logger, IPFS
-6. **Type Safety**: Improved TypeScript types throughout
-7. **Flexibility**: Use Client directly for fine-grained control or Agent for convenience
+## ✅ Migration Checklist
 
-## Need Help?
+- [ ] Update imports: `SomniaAgentSDK` → `SomniaClient`
+- [ ] Update imports: `AgentBuilder` → `SomniaAgent`
+- [ ] Change SDK initialization to use `connect()` method
+- [ ] Update agent creation to use fluent API
+- [ ] Change `.build()` to `.register()` + `.start()`
+- [ ] Update executor signature to include `context` parameter
+- [ ] If using OpenAI/Anthropic, use built-in providers
+- [ ] Add event listeners for agent lifecycle
+- [ ] Update type imports (core/types, llm/types)
+- [ ] Test with `MockProvider` before deploying
 
-- Check [examples/](./examples/) for complete working examples
-- See [README.md](./README.md) for full documentation
-- Review [examples/README.md](./examples/README.md) for example-specific docs
+---
+
+## 🆘 Common Issues
+
+### Issue: "Cannot find module '../sdk/SomniaAgentSDK'"
+
+**Solution:** Update imports to new paths:
+```typescript
+// Old
+import { SomniaAgentSDK } from './sdk/SomniaAgentSDK';
+
+// New
+import { SomniaClient } from './core/SomniaClient';
+```
+
+### Issue: "Property 'build' does not exist"
+
+**Solution:** Replace `.build()` with explicit lifecycle:
+```typescript
+// Old
+const agent = await builder.build();
+
+// New
+const agent = new SomniaAgent(client).configure({...});
+await agent.register();
+await agent.start();
+```
+
+### Issue: "Executor function not working"
+
+**Solution:** Update executor signature:
+```typescript
+// Old
+{ execute: async (input) => {...} }
+
+// New
+.withExecutor(async (input, context) => {...})
+```
+
+---
+
+## 📚 Resources
+
+- [API Reference](./API_REFERENCE.md) - Complete v2.0 API docs
+- [Examples](./examples/) - Updated example code
+- [README](./README.md) - Quick start guide
+
+---
+
+**Need help?** Open an issue on GitHub or ask in the Somnia Discord #dev-chat channel.

@@ -68,7 +68,7 @@ async function main() {
   console.log('\n📝 Updating .env file...');
   const envPath = path.join(__dirname, '..', '.env');
   let envContent = '';
-  
+
   if (fs.existsSync(envPath)) {
     envContent = fs.readFileSync(envPath, 'utf-8');
   } else {
@@ -111,4 +111,3 @@ main()
     console.error('❌ Deployment failed:', error);
     process.exit(1);
   });
-

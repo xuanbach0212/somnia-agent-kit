@@ -4,10 +4,7 @@
  */
 
 import { ethers } from 'ethers';
-import {
-  getAgentManagerContract,
-  getAgentRegistryContract,
-} from '../utils/contracts';
+import { getAgentManagerContract, getAgentRegistryContract } from '../utils/contracts';
 import { IPFSManager } from '../utils/ipfs';
 import { Logger } from '../utils/logger';
 import {
@@ -122,7 +119,7 @@ export class SomniaClient {
       blockNumber: receipt.blockNumber,
       gasUsed: receipt.gasUsed,
       status: receipt.status || 0,
-      logs: receipt.logs,
+      logs: [...receipt.logs],
     };
   }
 
@@ -191,8 +188,7 @@ export class SomniaClient {
     this.logger.info(`Registering agent: ${params.name}`);
 
     // Upload metadata to IPFS
-    const ipfsHash =
-      params.ipfsMetadata || (await this.ipfsManager.uploadJSON({}));
+    const ipfsHash = params.ipfsMetadata || (await this.ipfsManager.uploadJSON({}));
 
     // Register on-chain
     const tx = await this.agentRegistry!.registerAgent(
@@ -226,10 +222,7 @@ export class SomniaClient {
     return agentId;
   }
 
-  async updateAgent(
-    agentId: string,
-    params: UpdateAgentParams
-  ): Promise<void> {
+  async updateAgent(agentId: string, params: UpdateAgentParams): Promise<void> {
     this.ensureConnected();
     if (!this.signer) {
       throw new Error('Signer required');
@@ -294,11 +287,7 @@ export class SomniaClient {
       `Recording execution for agent ${agentId}: success=${success}, time=${executionTime}ms`
     );
 
-    const tx = await this.agentRegistry!.recordExecution(
-      agentId,
-      success,
-      executionTime
-    );
+    const tx = await this.agentRegistry!.recordExecution(agentId, success, executionTime);
     await tx.wait();
   }
 
@@ -307,9 +296,7 @@ export class SomniaClient {
     this.logger.info(`Fetching agent: ${agentId}`);
 
     const agentData = await this.agentRegistry!.getAgent(agentId);
-    const capabilities = await this.agentRegistry!.getAgentCapabilities(
-      agentId
-    );
+    const capabilities = await this.agentRegistry!.getAgentCapabilities(agentId);
 
     return {
       id: agentId,

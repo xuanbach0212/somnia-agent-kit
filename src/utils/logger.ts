@@ -10,7 +10,7 @@ export class Logger {
 
   constructor(context: string) {
     this.context = context;
-    
+
     this.logger = winston.createLogger({
       level: process.env.LOG_LEVEL || 'info',
       format: winston.format.combine(
@@ -22,12 +22,12 @@ export class Logger {
       ),
       transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ 
-          filename: 'logs/error.log', 
-          level: 'error' 
+        new winston.transports.File({
+          filename: 'logs/error.log',
+          level: 'error',
         }),
-        new winston.transports.File({ 
-          filename: 'logs/combined.log' 
+        new winston.transports.File({
+          filename: 'logs/combined.log',
         }),
       ],
     });
@@ -49,4 +49,3 @@ export class Logger {
     this.logger.debug(message, meta);
   }
 }
-

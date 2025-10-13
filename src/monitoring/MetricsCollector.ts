@@ -2,8 +2,8 @@
  * Metrics Collector for monitoring AI agents on Somnia
  */
 
-import { SomniaAgentSDK } from '../sdk/SomniaAgentSDK';
-import { AgentMetrics } from '../sdk/types';
+import { SomniaClient } from '../core/SomniaClient';
+import { AgentMetrics } from '../core/types';
 import { Logger } from '../utils/logger';
 
 export interface CollectedMetrics {
@@ -21,13 +21,13 @@ export interface MetricsThresholds {
 }
 
 export class MetricsCollector {
-  private sdk: SomniaAgentSDK;
+  private client: SomniaClient;
   private logger: Logger;
   private thresholds: MetricsThresholds;
   private metricsHistory: Map<string, CollectedMetrics[]> = new Map();
 
-  constructor(sdk: SomniaAgentSDK, thresholds?: MetricsThresholds) {
-    this.sdk = sdk;
+  constructor(client: SomniaClient, thresholds?: MetricsThresholds) {
+    this.client = client;
     this.logger = new Logger('MetricsCollector');
     this.thresholds = thresholds || {
       minSuccessRate: 80,
@@ -42,7 +42,7 @@ export class MetricsCollector {
   async collectAgentMetrics(agentId: string): Promise<CollectedMetrics> {
     this.logger.info(`Collecting metrics for agent: ${agentId}`);
 
-    const metrics = await this.sdk.getAgentMetrics(agentId);
+    const metrics = await this.client.getAgentMetrics(agentId);
     const alerts: string[] = [];
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
 
@@ -54,7 +54,8 @@ export class MetricsCollector {
       alerts.push(
         `Success rate (${metrics.successRate.toFixed(2)}%) is below threshold (${this.thresholds.minSuccessRate}%)`
       );
-      status = metrics.successRate < this.thresholds.minSuccessRate / 2 ? 'critical' : 'warning';
+      status =
+        metrics.successRate < this.thresholds.minSuccessRate / 2 ? 'critical' : 'warning';
     }
 
     // Check average execution time
@@ -73,10 +74,7 @@ export class MetricsCollector {
       metrics.totalExecutions > 0
         ? (metrics.failedExecutions / metrics.totalExecutions) * 100
         : 0;
-    if (
-      this.thresholds.maxFailureRate &&
-      failureRate > this.thresholds.maxFailureRate
-    ) {
+    if (this.thresholds.maxFailureRate && failureRate > this.thresholds.maxFailureRate) {
       alerts.push(
         `Failure rate (${failureRate.toFixed(2)}%) exceeds threshold (${this.thresholds.maxFailureRate}%)`
       );
@@ -116,7 +114,7 @@ export class MetricsCollector {
    */
   async collectMultipleAgents(agentIds: string[]): Promise<CollectedMetrics[]> {
     this.logger.info(`Collecting metrics for ${agentIds.length} agents`);
-    
+
     const results = await Promise.allSettled(
       agentIds.map((id) => this.collectAgentMetrics(id))
     );
@@ -160,7 +158,10 @@ export class MetricsCollector {
     const warningAgents = allMetrics.filter((m) => m.status === 'warning').length;
     const criticalAgents = allMetrics.filter((m) => m.status === 'critical').length;
 
-    const totalSuccessRate = allMetrics.reduce((sum, m) => sum + m.metrics.successRate, 0);
+    const totalSuccessRate = allMetrics.reduce(
+      (sum, m) => sum + m.metrics.successRate,
+      0
+    );
     const averageSuccessRate = totalAgents > 0 ? totalSuccessRate / totalAgents : 0;
 
     const totalExecutions = allMetrics.reduce(
@@ -191,4 +192,3 @@ export class MetricsCollector {
     }
   }
 }
-

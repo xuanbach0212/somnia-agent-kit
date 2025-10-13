@@ -3,7 +3,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { SomniaAgentSDK } from '../sdk/SomniaAgentSDK';
+import { SomniaClient } from '../core/SomniaClient';
 import { Logger } from '../utils/logger';
 import { CollectedMetrics, MetricsCollector } from './MetricsCollector';
 
@@ -14,7 +14,7 @@ export interface MonitorConfig {
 }
 
 export class AgentMonitor extends EventEmitter {
-  private sdk: SomniaAgentSDK;
+  private client: SomniaClient;
   private metricsCollector: MetricsCollector;
   private logger: Logger;
   private config: MonitorConfig;
@@ -23,12 +23,12 @@ export class AgentMonitor extends EventEmitter {
   private monitoredAgents: Set<string> = new Set();
 
   constructor(
-    sdk: SomniaAgentSDK,
+    client: SomniaClient,
     metricsCollector: MetricsCollector,
     config?: MonitorConfig
   ) {
     super();
-    this.sdk = sdk;
+    this.client = client;
     this.metricsCollector = metricsCollector;
     this.logger = new Logger('AgentMonitor');
     this.config = {
@@ -78,7 +78,7 @@ export class AgentMonitor extends EventEmitter {
     }
 
     this.logger.info('Stopping agent monitor...');
-    
+
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = undefined;
@@ -188,4 +188,3 @@ export class AgentMonitor extends EventEmitter {
     await this.collectMetrics();
   }
 }
-

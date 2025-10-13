@@ -135,9 +135,7 @@ async function main() {
       console.log(`\n✅ Response:`);
       console.log(result.result?.response);
       console.log(`\n⏱️  Execution time: ${result.executionTime}ms`);
-      console.log(
-        `📊 Estimated tokens: ${result.result?.tokensEstimated || 'N/A'}`
-      );
+      console.log(`📊 Estimated tokens: ${result.result?.tokensEstimated || 'N/A'}`);
     } else {
       console.error(`❌ Error: ${result.error}`);
     }

@@ -15,7 +15,6 @@ import {
   ExecutorContext,
   ExecutorFunction,
   TaskData,
-  TaskStatus,
   UpdateAgentParams,
 } from './types';
 
@@ -73,9 +72,7 @@ export class SomniaAgent extends EventEmitter {
 
   async start(): Promise<void> {
     if (!this.agentId) {
-      throw new Error(
-        'Agent not registered. Call register() before starting.'
-      );
+      throw new Error('Agent not registered. Call register() before starting.');
     }
 
     if (this.state === 'running') {
@@ -251,11 +248,7 @@ export class SomniaAgent extends EventEmitter {
       const executionTime = Date.now() - startTime;
 
       // Record execution on-chain
-      await this.client.recordExecution(
-        this.agentId,
-        result.success,
-        executionTime
-      );
+      await this.client.recordExecution(this.agentId, result.success, executionTime);
 
       // Complete task if successful
       if (result.success) {
@@ -274,8 +267,7 @@ export class SomniaAgent extends EventEmitter {
       };
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       // Record failed execution
       await this.client.recordExecution(this.agentId, false, executionTime);
@@ -318,11 +310,12 @@ export class SomniaAgent extends EventEmitter {
     const pollingInterval = this.config?.pollingInterval || 5000; // 5 seconds default
 
     // Subscribe to TaskCreated events for this agent
-    this.client.subscribeToEvent('TaskCreated', async (...args) => {
-      const [taskId, agentId] = args;
+    this.client.subscribeToEvent('TaskCreated', async (...args: any[]) => {
+      const taskId = args[0];
+      const agentId = args[1];
 
       // Check if task is for this agent
-      if (agentId.toString() === this.agentId && this.state === 'running') {
+      if (agentId && agentId.toString() === this.agentId && this.state === 'running') {
         // Check if already processed
         if (this.processedTasks.has(taskId.toString())) {
           return;

@@ -4,13 +4,7 @@
  */
 
 import { LLMProvider } from '../core/LLMProvider';
-import {
-  ChatMessage,
-  ChatOptions,
-  GenerateOptions,
-  LLMConfig,
-  ModelInfo,
-} from './types';
+import { ChatMessage, ChatOptions, GenerateOptions, LLMConfig, ModelInfo } from './types';
 
 export class MockProvider extends LLMProvider {
   private responseDelay: number;
@@ -101,10 +95,7 @@ Conversation context:
 
   private mockResponse?: string;
 
-  async generateWithMock(
-    prompt: string,
-    options?: GenerateOptions
-  ): Promise<string> {
+  async generateWithMock(prompt: string, options?: GenerateOptions): Promise<string> {
     await this.delay();
     return this.mockResponse || (await this.generate(prompt, options));
   }
