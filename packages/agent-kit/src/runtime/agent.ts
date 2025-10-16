@@ -1,10 +1,18 @@
 /**
  * Agent Lifecycle Management
  * Handles agent creation, registration, execution, and termination
+ * Orchestrates Trigger → Planner → Executor → Storage → Policy flow
  */
 
 import { ethers } from 'ethers';
 import type { AgentRegistry, AgentExecutor } from '../../../../contracts/typechain-types';
+import { Trigger, TriggerConfig } from './trigger';
+import { Planner } from './planner';
+import { Executor } from './executor';
+import { Storage, StorageBackend } from './storage';
+import { Policy } from './policy';
+import { EventEmitter } from '../core/utils';
+import type { Logger } from '../monitor/logger';
 
 export enum AgentState {
   Created = 'created',
@@ -32,10 +40,26 @@ export interface AgentTask {
   createdAt: number;
 }
 
+export interface AgentOptions {
+  logger?: Logger;
+  storageBackend?: StorageBackend;
+}
+
+interface AgentEvents {
+  started: { agentId: string | null };
+  stopped: { agentId: string | null };
+  'event:received': any;
+  'tasks:planned': { tasks: any[] };
+  'tasks:executed': { results: any[] };
+  'results:stored': { taskId: string };
+  error: { error: any; event?: any };
+}
+
 /**
  * Agent class for managing autonomous agent lifecycle
+ * Orchestrates runtime modules: Trigger, Planner, Executor, Storage, Policy
  */
-export class Agent {
+export class Agent extends EventEmitter<AgentEvents> {
   private state: AgentState = AgentState.Created;
   private config: AgentConfig;
   private registryContract: AgentRegistry | null = null;
@@ -43,8 +67,25 @@ export class Agent {
   private agentAddress: string | null = null;
   private tasks: Map<string, AgentTask> = new Map();
 
-  constructor(config: AgentConfig) {
+  // Runtime modules
+  private trigger: Trigger;
+  private planner: Planner;
+  private executor: Executor;
+  private storage: Storage;
+  private policy: Policy;
+  private logger?: Logger;
+
+  constructor(config: AgentConfig, options?: AgentOptions) {
+    super();
     this.config = config;
+    this.logger = options?.logger;
+
+    // Initialize runtime modules
+    this.trigger = new Trigger();
+    this.planner = new Planner();
+    this.executor = new Executor();
+    this.storage = new Storage(options?.storageBackend || StorageBackend.Memory);
+    this.policy = new Policy();
   }
 
   /**
@@ -109,6 +150,65 @@ export class Agent {
     }
 
     this.state = AgentState.Active;
+    await this.run();
+  }
+
+  /**
+   * Main event processing loop
+   * Subscribes to trigger events and processes them
+   */
+  private async run(): Promise<void> {
+    if (!this.isActive()) {
+      throw new Error('Agent must be active to run');
+    }
+
+    // Subscribe to trigger events
+    this.trigger.on('triggered', async (data: any) => {
+      await this.onEvent(data);
+    });
+
+    this.emit('started', { agentId: this.agentAddress });
+    this.logger?.info('Agent started', {
+      agentId: this.agentAddress,
+      name: this.config.name,
+    });
+  }
+
+  /**
+   * Event handler - orchestrates the event → plan → execute flow
+   * @param event Event data from trigger
+   */
+  private async onEvent(event: any): Promise<void> {
+    try {
+      this.emit('event:received', event);
+      this.logger?.debug('Event received', { event });
+
+      // 1. Check policy permissions
+      if (event.sender && !this.policy.checkPermission(event.sender, 'execute')) {
+        this.logger?.warn('Permission denied', { sender: event.sender });
+        return;
+      }
+
+      // 2. Plan tasks using planner
+      const tasks = await this.planner.plan(event.goal || event.data, event.context);
+      this.emit('tasks:planned', { tasks });
+      this.logger?.info('Tasks planned', { taskCount: tasks.length });
+
+      // 3. Execute tasks using executor
+      const results = await this.executor.executeAll(tasks);
+      this.emit('tasks:executed', { results });
+      this.logger?.info('Tasks executed', { resultCount: results.length });
+
+      // 4. Store results
+      const taskId = event.id || `event-${Date.now()}`;
+      await this.storage.set(`task:${taskId}`, results);
+      this.emit('results:stored', { taskId });
+      this.logger?.debug('Results stored', { taskId });
+
+    } catch (error) {
+      this.emit('error', { error, event });
+      this.logger?.error('Event processing failed', { error, event });
+    }
   }
 
   /**
@@ -129,6 +229,12 @@ export class Agent {
     if (this.state === AgentState.Terminated) {
       throw new Error('Agent is already terminated');
     }
+
+    // Cleanup triggers
+    this.trigger.cleanup();
+
+    this.emit('stopped', { agentId: this.agentAddress });
+    this.logger?.info('Agent stopped', { agentId: this.agentAddress });
 
     this.state = AgentState.Stopped;
   }
@@ -221,5 +327,100 @@ export class Agent {
    */
   isRegistered(): boolean {
     return this.state !== AgentState.Created && this.agentAddress !== null;
+  }
+
+  /**
+   * Register a trigger for the agent
+   * @param config Trigger configuration
+   * @returns Trigger ID
+   */
+  registerTrigger(config: Omit<TriggerConfig, 'id' | 'createdAt'>): string {
+    return this.trigger.register(config);
+  }
+
+  /**
+   * Enable a registered trigger
+   * @param triggerId Trigger ID
+   */
+  enableTrigger(triggerId: string): void {
+    this.trigger.enable(triggerId);
+  }
+
+  /**
+   * Disable a registered trigger
+   * @param triggerId Trigger ID
+   */
+  disableTrigger(triggerId: string): void {
+    this.trigger.disable(triggerId);
+  }
+
+  /**
+   * Get all registered triggers
+   * @returns Array of trigger configs
+   */
+  getTriggers(): TriggerConfig[] {
+    return this.trigger.getAllTriggers();
+  }
+
+  /**
+   * Get agent status including runtime module info
+   * @returns Agent status object
+   */
+  getStatus() {
+    return {
+      state: this.state,
+      address: this.agentAddress,
+      config: {
+        name: this.config.name,
+        description: this.config.description,
+        owner: this.config.owner,
+      },
+      runtime: {
+        taskCount: this.tasks.size,
+        triggerCount: this.trigger.getAllTriggers().length,
+        isActive: this.isActive(),
+        isRegistered: this.isRegistered(),
+      },
+    };
+  }
+
+  /**
+   * Get trigger module (for advanced usage)
+   * @returns Trigger instance
+   */
+  getTriggerModule(): Trigger {
+    return this.trigger;
+  }
+
+  /**
+   * Get planner module (for advanced usage)
+   * @returns Planner instance
+   */
+  getPlannerModule(): Planner {
+    return this.planner;
+  }
+
+  /**
+   * Get executor module (for advanced usage)
+   * @returns Executor instance
+   */
+  getExecutorModule(): Executor {
+    return this.executor;
+  }
+
+  /**
+   * Get storage module (for advanced usage)
+   * @returns Storage instance
+   */
+  getStorageModule(): Storage {
+    return this.storage;
+  }
+
+  /**
+   * Get policy module (for advanced usage)
+   * @returns Policy instance
+   */
+  getPolicyModule(): Policy {
+    return this.policy;
   }
 }
