@@ -67,7 +67,7 @@ export class ChainClient {
   /**
    * Get signer
    */
-  getSigner(): ethers.Wallet {
+  getSigner(): ethers.Wallet | ethers.Signer {
     return this.signerManager.getSigner();
   }
 
@@ -255,13 +255,13 @@ export class ChainClient {
 
   /**
    * Get listener count for an event
+   * Note: This method may have type compatibility issues with some ethers.js versions
    * @param event Event name (optional, returns total if not provided)
    */
-  listenerCount(event?: string): number {
+  listenerCount(event?: string): any {
     if (event) {
       return this.provider.listenerCount(event);
     }
-    // Get total listener count across all events
     return this.provider.listenerCount();
   }
 

@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import type { ChainClient } from './chainClient';
 import type {
   AgentRegistry,
   AgentManager,
@@ -51,6 +52,31 @@ export class SomniaContracts {
   }
 
   /**
+   * Create SomniaContracts from ChainClient
+   * Factory method for easier instantiation
+   *
+   * @param client ChainClient instance
+   * @param addresses Contract addresses
+   * @returns SomniaContracts instance
+   *
+   * @example
+   * const contracts = SomniaContracts.fromChainClient(chainClient, {
+   *   agentRegistry: '0x...',
+   *   agentExecutor: '0x...',
+   * });
+   */
+  static fromChainClient(
+    client: ChainClient,
+    addresses: ContractAddresses
+  ): SomniaContracts {
+    return new SomniaContracts(
+      client.getProvider(),
+      addresses,
+      client.getSigner()
+    );
+  }
+
+  /**
    * Initialize contract instances
    */
   async initialize(): Promise<void> {
@@ -97,9 +123,18 @@ export class SomniaContracts {
    */
   get AgentRegistry(): AgentRegistry {
     if (!this.instances) {
-      throw new Error('Contracts not initialized. Call initialize() first.');
+      throw new Error(
+        'Contracts not initialized. Call await contracts.initialize() before accessing contract instances.'
+      );
     }
     return this.instances.agentRegistry;
+  }
+
+  /**
+   * Get AgentRegistry contract instance (lowercase alias)
+   */
+  get registry(): AgentRegistry {
+    return this.AgentRegistry;
   }
 
   /**
@@ -107,12 +142,23 @@ export class SomniaContracts {
    */
   get AgentManager(): AgentManager {
     if (!this.instances) {
-      throw new Error('Contracts not initialized. Call initialize() first.');
+      throw new Error(
+        'Contracts not initialized. Call await contracts.initialize() before accessing contract instances.'
+      );
     }
     if (!this.instances.agentManager) {
-      throw new Error('AgentManager contract not configured');
+      throw new Error(
+        'AgentManager contract not configured. Add agentManager address to contract configuration.'
+      );
     }
     return this.instances.agentManager;
+  }
+
+  /**
+   * Get AgentManager contract instance (lowercase alias)
+   */
+  get manager(): AgentManager {
+    return this.AgentManager;
   }
 
   /**
@@ -120,9 +166,18 @@ export class SomniaContracts {
    */
   get AgentExecutor(): AgentExecutor {
     if (!this.instances) {
-      throw new Error('Contracts not initialized. Call initialize() first.');
+      throw new Error(
+        'Contracts not initialized. Call await contracts.initialize() before accessing contract instances.'
+      );
     }
     return this.instances.agentExecutor;
+  }
+
+  /**
+   * Get AgentExecutor contract instance (lowercase alias)
+   */
+  get executor(): AgentExecutor {
+    return this.AgentExecutor;
   }
 
   /**
@@ -130,12 +185,23 @@ export class SomniaContracts {
    */
   get AgentVault(): AgentVault {
     if (!this.instances) {
-      throw new Error('Contracts not initialized. Call initialize() first.');
+      throw new Error(
+        'Contracts not initialized. Call await contracts.initialize() before accessing contract instances.'
+      );
     }
     if (!this.instances.agentVault) {
-      throw new Error('AgentVault contract not configured');
+      throw new Error(
+        'AgentVault contract not configured. Add agentVault address to contract configuration.'
+      );
     }
     return this.instances.agentVault;
+  }
+
+  /**
+   * Get AgentVault contract instance (lowercase alias)
+   */
+  get vault(): AgentVault {
+    return this.AgentVault;
   }
 
   /**

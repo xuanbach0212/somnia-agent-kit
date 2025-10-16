@@ -109,8 +109,20 @@ export class SomniaAgentKit {
 }
 
 // Re-export types and utilities
-export type { AgentKitConfig, NetworkConfig, ContractAddresses } from './core/config';
-export { SOMNIA_NETWORKS, validateConfig } from './core/config';
+export type {
+  AgentKitConfig,
+  NetworkConfig,
+  ContractAddresses,
+  LLMProviderConfig,
+} from './core/config';
+export {
+  SOMNIA_NETWORKS,
+  validateConfig,
+  DEFAULT_CONFIG,
+  loadFromEnv,
+  loadConfig,
+  createConfigFromEnv,
+} from './core/config';
 export { sleep, retry, isValidAddress, shortAddress } from './core/utils';
 export { SomniaContracts } from './core/contracts';
 export type { ContractInstances } from './core/contracts';
