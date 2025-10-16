@@ -1,7 +1,40 @@
 /**
  * Event Triggers and Conditions
  * Defines conditions that trigger agent actions
+ * Includes specialized trigger classes: OnChainTrigger, IntervalTrigger, WebhookTrigger
  */
+
+import type { ChainClient } from '../core/chainClient';
+import type { ethers } from 'ethers';
+
+// =============================================================================
+// Base Trigger Interface
+// =============================================================================
+
+/**
+ * Base interface for all trigger types
+ */
+export interface ITrigger {
+  /**
+   * Start the trigger and begin listening/executing
+   * @param callback Function to call when trigger fires
+   */
+  start(callback: (data: any) => void): Promise<void>;
+
+  /**
+   * Stop the trigger and cleanup resources
+   */
+  stop(): Promise<void>;
+
+  /**
+   * Check if trigger is currently running
+   */
+  isRunning(): boolean;
+}
+
+// =============================================================================
+// Trigger Types and Enums
+// =============================================================================
 
 export enum TriggerType {
   Time = 'time',
@@ -37,8 +70,280 @@ export interface TriggerConfig {
   lastTriggeredAt?: number;
 }
 
+// =============================================================================
+// Specialized Trigger Classes
+// =============================================================================
+
+/**
+ * OnChainTrigger - Listens to blockchain events via ChainClient
+ *
+ * @example
+ * const trigger = new OnChainTrigger(
+ *   chainClient,
+ *   agentRegistry,
+ *   'AgentRegistered',
+ *   { owner: '0x...' }
+ * );
+ * await trigger.start((event) => {
+ *   console.log('Agent registered:', event.args);
+ * });
+ */
+export class OnChainTrigger implements ITrigger {
+  private running: boolean = false;
+  private callback?: (data: any) => void;
+
+  constructor(
+    private client: ChainClient,
+    private contract: ethers.Contract,
+    private eventName: string,
+    private filter?: any
+  ) {}
+
+  async start(callback: (data: any) => void): Promise<void> {
+    if (this.running) {
+      throw new Error('OnChainTrigger is already running');
+    }
+
+    this.callback = callback;
+    this.running = true;
+
+    // Listen to contract events
+    const listener = (...args: any[]) => {
+      const event = args[args.length - 1]; // Last arg is the event object
+      if (this.callback) {
+        this.callback({
+          eventName: this.eventName,
+          args: event.args,
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          address: event.address,
+        });
+      }
+    };
+
+    if (this.filter) {
+      this.contract.on(this.contract.filters[this.eventName](this.filter), listener);
+    } else {
+      this.contract.on(this.eventName, listener);
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+
+    this.contract.removeAllListeners(this.eventName);
+    this.running = false;
+    this.callback = undefined;
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+}
+
+/**
+ * IntervalTrigger - Executes callback at regular intervals
+ *
+ * @example
+ * const trigger = new IntervalTrigger(60000, {
+ *   startImmediately: true,
+ *   maxExecutions: 100
+ * });
+ * await trigger.start(() => {
+ *   console.log('Interval triggered');
+ * });
+ */
+export class IntervalTrigger implements ITrigger {
+  private running: boolean = false;
+  private interval?: NodeJS.Timeout;
+  private executions: number = 0;
+
+  constructor(
+    private intervalMs: number,
+    private options?: {
+      startImmediately?: boolean;
+      maxExecutions?: number;
+    }
+  ) {}
+
+  async start(callback: (data: any) => void): Promise<void> {
+    if (this.running) {
+      throw new Error('IntervalTrigger is already running');
+    }
+
+    this.running = true;
+    this.executions = 0;
+
+    // Execute immediately if requested
+    if (this.options?.startImmediately) {
+      callback({ execution: this.executions++, timestamp: Date.now() });
+    }
+
+    // Start interval
+    this.interval = setInterval(() => {
+      if (this.options?.maxExecutions && this.executions >= this.options.maxExecutions) {
+        this.stop();
+        return;
+      }
+
+      callback({
+        execution: this.executions++,
+        timestamp: Date.now(),
+      });
+    }, this.intervalMs);
+  }
+
+  async stop(): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = undefined;
+    }
+
+    this.running = false;
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  getExecutionCount(): number {
+    return this.executions;
+  }
+}
+
+/**
+ * WebhookTrigger - Receives HTTP POST webhooks
+ *
+ * Note: Requires express package. Install with: npm install express @types/express
+ *
+ * @example
+ * const trigger = new WebhookTrigger({
+ *   port: 3000,
+ *   path: '/webhook',
+ *   secret: 'my-secret-key'
+ * });
+ * await trigger.start((data) => {
+ *   console.log('Webhook received:', data.body);
+ * });
+ */
+export class WebhookTrigger implements ITrigger {
+  private running: boolean = false;
+  private server?: any; // Express app
+  private httpServer?: any;
+
+  constructor(
+    private options: {
+      port: number;
+      path: string;
+      secret?: string;
+      verifySignature?: (body: any, signature: string, secret: string) => boolean;
+    }
+  ) {}
+
+  async start(callback: (data: any) => void): Promise<void> {
+    if (this.running) {
+      throw new Error('WebhookTrigger is already running');
+    }
+
+    try {
+      // Dynamic import of express (optional dependency)
+      const express = await import('express').catch(() => {
+        throw new Error(
+          'WebhookTrigger requires express. Install with: npm install express @types/express'
+        );
+      });
+
+      const app = express.default();
+      app.use(express.json());
+
+      // Webhook endpoint
+      app.post(this.options.path, (req: any, res: any) => {
+        // Verify signature if secret is provided
+        if (this.options.secret && req.headers['x-webhook-signature']) {
+          const signature = req.headers['x-webhook-signature'];
+          const verifyFn = this.options.verifySignature || this.defaultVerifySignature;
+
+          if (!verifyFn(req.body, signature, this.options.secret)) {
+            res.status(401).json({ error: 'Invalid signature' });
+            return;
+          }
+        }
+
+        // Call callback with webhook data
+        callback({
+          body: req.body,
+          headers: req.headers,
+          timestamp: Date.now(),
+        });
+
+        res.status(200).json({ success: true });
+      });
+
+      // Start server
+      this.server = app;
+      this.httpServer = await new Promise((resolve) => {
+        const server = app.listen(this.options.port, () => {
+          resolve(server);
+        });
+      });
+
+      this.running = true;
+    } catch (error) {
+      throw new Error(`Failed to start WebhookTrigger: ${error}`);
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+
+    if (this.httpServer) {
+      await new Promise<void>((resolve) => {
+        this.httpServer.close(() => resolve());
+      });
+      this.httpServer = undefined;
+    }
+
+    this.server = undefined;
+    this.running = false;
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  private defaultVerifySignature(body: any, signature: string, secret: string): boolean {
+    // Simple HMAC verification (can be overridden)
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(JSON.stringify(body));
+    const expected = hmac.digest('hex');
+    return signature === expected;
+  }
+
+  getPort(): number {
+    return this.options.port;
+  }
+
+  getPath(): string {
+    return this.options.path;
+  }
+}
+
+// =============================================================================
+// Trigger Manager Class
+// =============================================================================
+
 /**
  * Trigger class for managing event triggers
+ * Can also create specialized trigger instances via factory methods
  */
 export class Trigger {
   private triggers: Map<string, TriggerConfig> = new Map();
@@ -304,5 +609,84 @@ export class Trigger {
     this.intervals.clear();
     this.listeners.clear();
     this.triggers.clear();
+  }
+
+  // =============================================================================
+  // Factory Methods for Specialized Triggers
+  // =============================================================================
+
+  /**
+   * Create an OnChainTrigger for listening to blockchain events
+   * @param client ChainClient instance
+   * @param contract Contract instance
+   * @param eventName Event name to listen for
+   * @param filter Optional event filter
+   * @returns OnChainTrigger instance
+   *
+   * @example
+   * const onChainTrigger = trigger.createOnChainTrigger(
+   *   chainClient,
+   *   agentRegistry,
+   *   'AgentRegistered'
+   * );
+   * await onChainTrigger.start((event) => {
+   *   console.log('New agent:', event.args.agentId);
+   * });
+   */
+  createOnChainTrigger(
+    client: ChainClient,
+    contract: ethers.Contract,
+    eventName: string,
+    filter?: any
+  ): OnChainTrigger {
+    return new OnChainTrigger(client, contract, eventName, filter);
+  }
+
+  /**
+   * Create an IntervalTrigger for time-based execution
+   * @param intervalMs Interval in milliseconds
+   * @param options Optional configuration
+   * @returns IntervalTrigger instance
+   *
+   * @example
+   * const intervalTrigger = trigger.createIntervalTrigger(60000, {
+   *   startImmediately: true
+   * });
+   * await intervalTrigger.start(() => {
+   *   console.log('Every minute');
+   * });
+   */
+  createIntervalTrigger(
+    intervalMs: number,
+    options?: {
+      startImmediately?: boolean;
+      maxExecutions?: number;
+    }
+  ): IntervalTrigger {
+    return new IntervalTrigger(intervalMs, options);
+  }
+
+  /**
+   * Create a WebhookTrigger for receiving HTTP webhooks
+   * @param options Webhook configuration
+   * @returns WebhookTrigger instance
+   *
+   * @example
+   * const webhookTrigger = trigger.createWebhookTrigger({
+   *   port: 3000,
+   *   path: '/webhook',
+   *   secret: 'my-secret'
+   * });
+   * await webhookTrigger.start((data) => {
+   *   console.log('Webhook:', data.body);
+   * });
+   */
+  createWebhookTrigger(options: {
+    port: number;
+    path: string;
+    secret?: string;
+    verifySignature?: (body: any, signature: string, secret: string) => boolean;
+  }): WebhookTrigger {
+    return new WebhookTrigger(options);
   }
 }
