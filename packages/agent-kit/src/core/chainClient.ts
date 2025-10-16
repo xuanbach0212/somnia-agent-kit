@@ -12,6 +12,11 @@ export class ChainClient {
   private config: AgentKitConfig;
   private connected: boolean = false;
 
+  // Block number cache
+  private currentBlockNumber?: number;
+  private blockNumberTimestamp?: number;
+  private readonly blockNumberCacheDuration = 2000; // 2 seconds
+
   constructor(config: AgentKitConfig) {
     validateConfig(config);
     this.config = config;
@@ -67,11 +72,32 @@ export class ChainClient {
   }
 
   /**
-   * Get current block number
+   * Get current block number (with optional caching)
    */
-  async getBlockNumber(): Promise<number> {
+  async getBlockNumber(useCache: boolean = true): Promise<number> {
     this.ensureConnected();
-    return await this.provider.getBlockNumber();
+
+    // Check cache if enabled
+    if (useCache && this.currentBlockNumber && this.blockNumberTimestamp) {
+      const cacheAge = Date.now() - this.blockNumberTimestamp;
+      if (cacheAge < this.blockNumberCacheDuration) {
+        return this.currentBlockNumber;
+      }
+    }
+
+    // Fetch fresh block number
+    const blockNumber = await this.provider.getBlockNumber();
+    this.currentBlockNumber = blockNumber;
+    this.blockNumberTimestamp = Date.now();
+
+    return blockNumber;
+  }
+
+  /**
+   * Force refresh block number (bypass cache)
+   */
+  async refreshBlockNumber(): Promise<number> {
+    return await this.getBlockNumber(false);
   }
 
   /**
@@ -139,6 +165,23 @@ export class ChainClient {
   }
 
   /**
+   * Get transaction details
+   */
+  async getTransaction(
+    txHash: string
+  ): Promise<ethers.TransactionResponse | null> {
+    this.ensureConnected();
+    return await this.provider.getTransaction(txHash);
+  }
+
+  /**
+   * Get transaction details (alias for getTransaction)
+   */
+  async getTx(txHash: string): Promise<ethers.TransactionResponse | null> {
+    return await this.getTransaction(txHash);
+  }
+
+  /**
    * Get contract instance
    */
   getContract(
@@ -161,9 +204,73 @@ export class ChainClient {
   }
 
   /**
+   * Subscribe to provider events
+   * @param event Event name (e.g., 'block', 'pending', 'error')
+   * @param handler Event handler function
+   *
+   * @example
+   * chainClient.on('block', (blockNumber) => {
+   *   console.log('New block:', blockNumber);
+   * });
+   */
+  on(event: string, handler: ethers.Listener): void {
+    this.ensureConnected();
+    this.provider.on(event, handler);
+  }
+
+  /**
+   * Unsubscribe from provider events
+   * @param event Event name
+   * @param handler Event handler to remove (optional, removes all if not provided)
+   */
+  off(event: string, handler?: ethers.Listener): void {
+    if (handler) {
+      this.provider.off(event, handler);
+    } else {
+      this.provider.removeAllListeners(event);
+    }
+  }
+
+  /**
+   * Subscribe to provider event (one time)
+   * @param event Event name
+   * @param handler Event handler function
+   */
+  once(event: string, handler: ethers.Listener): void {
+    this.ensureConnected();
+    this.provider.once(event, handler);
+  }
+
+  /**
+   * Remove all event listeners
+   * @param event Event name (optional, removes all events if not provided)
+   */
+  removeAllListeners(event?: string): void {
+    if (event) {
+      this.provider.removeAllListeners(event);
+    } else {
+      this.provider.removeAllListeners();
+    }
+  }
+
+  /**
+   * Get listener count for an event
+   * @param event Event name (optional, returns total if not provided)
+   */
+  listenerCount(event?: string): number {
+    if (event) {
+      return this.provider.listenerCount(event);
+    }
+    // Get total listener count across all events
+    return this.provider.listenerCount();
+  }
+
+  /**
    * Disconnect from network
    */
   disconnect(): void {
+    // Remove all event listeners before disconnecting
+    this.removeAllListeners();
     this.connected = false;
   }
 
