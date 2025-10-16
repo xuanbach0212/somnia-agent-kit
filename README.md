@@ -36,8 +36,8 @@ The Somnia AI Agent Framework is a production-ready infrastructure for building,
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/yourusername/somnia-ai-agent-framework.git
-cd somnia-ai-agent-framework
+git clone https://github.com/yourusername/somnia-agent-kit.git
+cd somnia-agent-kit
 npm install
 
 # 2. Set up environment
@@ -145,7 +145,7 @@ npm run example:basic
 ### Example 1: Basic Agent
 
 ```typescript
-import { SomniaClient, SomniaAgent } from 'somnia-ai-agent-framework';
+import { SomniaClient, SomniaAgent } from 'somnia-agent-kit';
 
 const client = new SomniaClient();
 await client.connect({...});
@@ -168,7 +168,7 @@ await agent.start();
 ### Example 2: AI Agent with OpenAI
 
 ```typescript
-import { SomniaClient, SomniaAgent, OpenAIProvider } from 'somnia-ai-agent-framework';
+import { SomniaClient, SomniaAgent, OpenAIProvider } from 'somnia-agent-kit';
 
 const llm = new OpenAIProvider({
   apiKey: process.env.OPENAI_API_KEY,
@@ -227,7 +227,7 @@ await agent.start();
 ### Example 4: Using Anthropic Claude
 
 ```typescript
-import { AnthropicProvider } from 'somnia-ai-agent-framework';
+import { AnthropicProvider } from 'somnia-agent-kit';
 
 const llm = new AnthropicProvider({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -268,7 +268,7 @@ console.log('Task result:', result);
 ### Example 6: Monitoring
 
 ```typescript
-import { MonitoringClient } from 'somnia-ai-agent-framework';
+import { MonitoringClient } from 'somnia-agent-kit';
 
 const monitoring = new MonitoringClient({
   baseUrl: 'http://localhost:3001',
@@ -378,7 +378,7 @@ npm run example:client     # Monitoring client
 npm test
 
 # Use MockProvider for testing
-import { MockProvider } from 'somnia-ai-agent-framework';
+import { MockProvider } from 'somnia-agent-kit';
 
 const mockLLM = new MockProvider({});
 const agent = new SomniaAgent(client)
