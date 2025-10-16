@@ -9,7 +9,7 @@ import type { AgentRegistry, AgentExecutor } from '../../../../contracts/typecha
 import { Trigger, TriggerConfig } from './trigger';
 import { Planner } from './planner';
 import { Executor } from './executor';
-import { Storage, StorageBackend } from './storage';
+import { IStorage, MemoryStorage, FileStorage, StorageBackend } from './storage';
 import { Policy } from './policy';
 import { EventEmitter } from '../core/utils';
 import type { Logger } from '../monitor/logger';
@@ -43,6 +43,7 @@ export interface AgentTask {
 export interface AgentOptions {
   logger?: Logger;
   storageBackend?: StorageBackend;
+  storagePath?: string; // Path for FileStorage (default: './data')
 }
 
 interface AgentEvents {
@@ -71,7 +72,7 @@ export class Agent extends EventEmitter<AgentEvents> {
   private trigger: Trigger;
   private planner: Planner;
   private executor: Executor;
-  private storage: Storage;
+  private storage: IStorage;
   private policy: Policy;
   private logger?: Logger;
 
@@ -84,7 +85,13 @@ export class Agent extends EventEmitter<AgentEvents> {
     this.trigger = new Trigger();
     this.planner = new Planner();
     this.executor = new Executor();
-    this.storage = new Storage(options?.storageBackend || StorageBackend.Memory);
+
+    // Initialize storage based on backend type
+    const backend = options?.storageBackend || StorageBackend.Memory;
+    this.storage = backend === StorageBackend.File
+      ? new FileStorage(options?.storagePath || './data')
+      : new MemoryStorage();
+
     this.policy = new Policy();
   }
 
@@ -199,9 +206,12 @@ export class Agent extends EventEmitter<AgentEvents> {
       this.emit('tasks:executed', { results });
       this.logger?.info('Tasks executed', { resultCount: results.length });
 
-      // 4. Store results
+      // 4. Store event and actions
+      await this.storage.saveEvent(event);
+      for (let i = 0; i < tasks.length; i++) {
+        await this.storage.saveAction(tasks[i], results[i]);
+      }
       const taskId = event.id || `event-${Date.now()}`;
-      await this.storage.set(`task:${taskId}`, results);
       this.emit('results:stored', { taskId });
       this.logger?.debug('Results stored', { taskId });
 

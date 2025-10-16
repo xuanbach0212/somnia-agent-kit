@@ -1,9 +1,16 @@
 /**
  * Task Execution Engine
  * Executes planned tasks with error handling and retry logic
+ * Supports both on-chain and off-chain actions
  */
 
-import type { ExecutionPlan, PlanStep } from './planner';
+import { ethers } from 'ethers';
+import type { ExecutionPlan, PlanStep, Action } from './planner';
+import type { ChainClient } from '../core/chainClient';
+import type { SomniaContracts } from '../core/contracts';
+
+// Type alias for transaction receipt
+export type TxReceipt = ethers.TransactionReceipt;
 
 export enum ExecutionStatus {
   Idle = 'idle',
@@ -20,6 +27,8 @@ export interface ExecutionResult {
   error?: string;
   retryCount?: number;
   duration: number;
+  txReceipt?: TxReceipt; // Transaction receipt for on-chain actions
+  dryRun?: boolean; // Indicates if this was a dry-run execution
 }
 
 export interface ExecutionContext {
@@ -36,6 +45,7 @@ export interface ExecutorConfig {
   retryDelay?: number;
   timeout?: number;
   enableParallel?: boolean;
+  dryRun?: boolean; // If true, simulate execution without sending transactions
 }
 
 /**
@@ -45,13 +55,22 @@ export class Executor {
   private config: ExecutorConfig;
   private contexts: Map<string, ExecutionContext> = new Map();
   private handlers: Map<string, (params: any) => Promise<any>> = new Map();
+  private chainClient?: ChainClient;
+  private contracts?: SomniaContracts;
 
-  constructor(config: ExecutorConfig = {}) {
+  constructor(
+    chainClient?: ChainClient,
+    contracts?: SomniaContracts,
+    config: ExecutorConfig = {}
+  ) {
+    this.chainClient = chainClient;
+    this.contracts = contracts;
     this.config = {
       maxRetries: config.maxRetries || 3,
       retryDelay: config.retryDelay || 1000,
       timeout: config.timeout || 30000,
       enableParallel: config.enableParallel !== false,
+      dryRun: config.dryRun || false,
     };
 
     // Register default handlers
@@ -69,9 +88,124 @@ export class Executor {
   }
 
   /**
-   * Execute a plan
+   * Execute a single action
+   * @param action Action to execute
+   * @returns Execution result with optional transaction receipt
    */
-  async execute(plan: ExecutionPlan): Promise<ExecutionContext> {
+  async execute(action: Action): Promise<ExecutionResult> {
+    const startTime = Date.now();
+    const actionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      // Get handler for this action type
+      const handler = this.handlers.get(action.type);
+      if (!handler) {
+        return {
+          stepId: actionId,
+          status: ExecutionStatus.Failed,
+          error: `No handler registered for action: ${action.type}`,
+          duration: Date.now() - startTime,
+          dryRun: this.config.dryRun,
+        };
+      }
+
+      // Dry-run mode: simulate without executing
+      if (this.config.dryRun) {
+        console.log(`[DRY-RUN] Would execute ${action.type} with params:`, action.params);
+        return {
+          stepId: actionId,
+          status: ExecutionStatus.Success,
+          result: { simulated: true, action },
+          duration: Date.now() - startTime,
+          dryRun: true,
+        };
+      }
+
+      // Execute with timeout and retry logic
+      let retryCount = 0;
+      let lastError: Error | null = null;
+
+      while (retryCount <= (this.config.maxRetries || 0)) {
+        try {
+          const result = await this.executeWithTimeout(
+            handler(action.params),
+            this.config.timeout!
+          );
+
+          return {
+            stepId: actionId,
+            status: ExecutionStatus.Success,
+            result,
+            retryCount,
+            duration: Date.now() - startTime,
+            txReceipt: result?.txReceipt, // Extract tx receipt if present
+          };
+        } catch (error) {
+          lastError = error as Error;
+
+          if (retryCount >= (this.config.maxRetries || 0)) {
+            break;
+          }
+
+          retryCount++;
+          await this.sleep(this.config.retryDelay! * retryCount);
+        }
+      }
+
+      return {
+        stepId: actionId,
+        status: ExecutionStatus.Failed,
+        error: lastError?.message || 'Unknown error',
+        retryCount,
+        duration: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        stepId: actionId,
+        status: ExecutionStatus.Failed,
+        error: (error as Error).message,
+        duration: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Execute multiple actions (batch execution)
+   * @param actions Array of actions to execute
+   * @returns Array of execution results
+   */
+  async executeAll(actions: Action[]): Promise<ExecutionResult[]> {
+    if (actions.length === 0) {
+      return [];
+    }
+
+    // Parallel execution if enabled
+    if (this.config.enableParallel) {
+      return await Promise.all(
+        actions.map((action) => this.execute(action))
+      );
+    }
+
+    // Sequential execution
+    const results: ExecutionResult[] = [];
+    for (const action of actions) {
+      const result = await this.execute(action);
+      results.push(result);
+
+      // Stop on first failure if not in parallel mode
+      if (result.status === ExecutionStatus.Failed) {
+        break;
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Execute a plan (legacy method for backward compatibility)
+   * @deprecated Use execute(action) or executeAll(actions) instead
+   */
+  async executePlan(plan: ExecutionPlan): Promise<ExecutionContext> {
     const context: ExecutionContext = {
       taskId: plan.taskId,
       results: new Map(),
@@ -211,36 +345,160 @@ export class Executor {
   }
 
   /**
-   * Register default handlers
+   * Register default handlers with real blockchain integration
    */
   private registerDefaultHandlers(): void {
     // Validation handlers
     this.registerHandler('validate_address', async (params) => {
-      if (!params.address || !/^0x[a-fA-F0-9]{40}$/.test(params.address)) {
-        throw new Error('Invalid address');
+      const valid = ethers.isAddress(params.address);
+      if (!valid) {
+        throw new Error(`Invalid address: ${params.address}`);
       }
-      return { valid: true };
+      return { valid: true, address: params.address };
     });
 
     this.registerHandler('validate_contract', async (params) => {
-      // In real implementation, this would check if address is a contract
-      if (!params.address || !/^0x[a-fA-F0-9]{40}$/.test(params.address)) {
-        throw new Error('Invalid contract address');
+      if (!ethers.isAddress(params.address)) {
+        throw new Error(`Invalid contract address: ${params.address}`);
       }
-      return { valid: true };
+
+      // Check if it's a contract (has code)
+      if (this.chainClient) {
+        const provider = this.chainClient.getProvider();
+        const code = await provider.getCode(params.address);
+        if (code === '0x') {
+          throw new Error(`Address is not a contract: ${params.address}`);
+        }
+        return { valid: true, address: params.address, hasCode: true };
+      }
+
+      return { valid: true, address: params.address };
     });
 
-    // Placeholder handlers for other actions
+    // Balance handlers
     this.registerHandler('check_balance', async (params) => {
-      return { sufficient: true };
+      if (!this.chainClient) {
+        throw new Error('ChainClient not configured');
+      }
+
+      const provider = this.chainClient.getProvider();
+      const signerManager = this.chainClient.getSignerManager();
+
+      const address = params.address || (await signerManager.getAddress());
+      const balance = await provider.getBalance(address);
+      const required = params.amount ? ethers.parseEther(String(params.amount)) : 0n;
+
+      return {
+        address,
+        balance: balance.toString(),
+        balanceEther: ethers.formatEther(balance),
+        required: required.toString(),
+        sufficient: balance >= required,
+      };
     });
 
+    // Transfer handlers
+    this.registerHandler('execute_transfer', async (params) => {
+      if (!this.chainClient) {
+        throw new Error('ChainClient not configured');
+      }
+
+      const signer = this.chainClient.getSignerManager().getSigner();
+      const tx = await signer.sendTransaction({
+        to: params.to,
+        value: ethers.parseEther(String(params.amount)),
+      });
+
+      const receipt = await tx.wait();
+
+      return {
+        txHash: receipt?.hash,
+        txReceipt: receipt,
+        from: await signer.getAddress(),
+        to: params.to,
+        amount: params.amount,
+      };
+    });
+
+    // Gas estimation
     this.registerHandler('estimate_gas', async (params) => {
-      return { gasLimit: 100000 };
+      if (!this.chainClient) {
+        throw new Error('ChainClient not configured');
+      }
+
+      const provider = this.chainClient.getProvider();
+      let gasEstimate: bigint;
+
+      if (params.contract && params.method) {
+        // Estimate for contract call (placeholder - needs contract instance)
+        gasEstimate = 100000n;
+      } else {
+        // Estimate for simple transfer
+        gasEstimate = await provider.estimateGas({
+          to: params.to || ethers.ZeroAddress,
+          value: params.value ? ethers.parseEther(String(params.value)) : 0n,
+        });
+      }
+
+      return {
+        gasLimit: gasEstimate.toString(),
+        gasLimitNumber: Number(gasEstimate),
+      };
     });
 
+    // Token operations
+    this.registerHandler('approve_token', async (params) => {
+      // Placeholder - needs ERC20 contract integration
+      return {
+        action: 'approve_token',
+        token: params.token,
+        spender: params.spender,
+        amount: params.amount,
+      };
+    });
+
+    // Swap operations
     this.registerHandler('get_quote', async (params) => {
-      return { rate: 1.0, amount: params.amount };
+      // Placeholder - needs DEX integration
+      return {
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+        amountOut: params.amountIn, // 1:1 mock rate
+        rate: 1.0,
+      };
+    });
+
+    this.registerHandler('execute_swap', async (params) => {
+      // Placeholder - needs DEX integration
+      return {
+        action: 'execute_swap',
+        tokenIn: params.tokenIn,
+        tokenOut: params.tokenOut,
+        amountIn: params.amountIn,
+        amountOut: params.amountOut,
+      };
+    });
+
+    // Contract calls
+    this.registerHandler('call_contract', async (params) => {
+      if (!this.chainClient) {
+        throw new Error('ChainClient not configured');
+      }
+
+      // Placeholder - needs specific contract integration
+      return {
+        action: 'call_contract',
+        contract: params.contract,
+        method: params.method,
+        args: params.args,
+      };
+    });
+
+    // Generic execute handler
+    this.registerHandler('execute', async (params) => {
+      // Generic execution - just return params
+      return { executed: true, params };
     });
   }
 
