@@ -51,7 +51,7 @@ describe('SomniaAgentKit', () => {
 
     const networkInfo = kit.getNetworkInfo();
     expect(networkInfo.name).toBe('Somnia Dream Testnet');
-    expect(networkInfo.chainId).toBe(50311);
+    expect(networkInfo.chainId).toBe(50312);
   });
 });
 

@@ -40,7 +40,7 @@ export const SOMNIA_NETWORKS = {
   },
   testnet: {
     rpcUrl: 'https://dream-rpc.somnia.network',
-    chainId: 50311,
+    chainId: 50312,
     name: 'Somnia Dream Testnet',
   },
   devnet: {

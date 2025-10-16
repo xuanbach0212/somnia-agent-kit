@@ -69,10 +69,13 @@ export class SomniaContracts {
     client: ChainClient,
     addresses: ContractAddresses
   ): SomniaContracts {
+    const signerManager = client.getSignerManager();
+    const signer = signerManager.hasSigner() ? signerManager.getSigner() : undefined;
+
     return new SomniaContracts(
       client.getProvider(),
       addresses,
-      client.getSigner()
+      signer
     );
   }
 
