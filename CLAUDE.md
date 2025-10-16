@@ -134,18 +134,56 @@ somnia-agent-kit/
 ## Module Breakdown
 
 ### 1. **core/** - Blockchain Layer
-**Status**: ✅ Completed
+**Status**: ✅ Completed & Refactored (100/100)
 
-- `chainClient.ts` - Main blockchain client (connect, transactions, gas estimation)
-- `contracts.ts` - Smart contract interactions (AgentRegistry, AgentExecutor)
-- `signerManager.ts` - Wallet and transaction signing
-- `config.ts` - Network configurations and validation
-- `utils.ts` - Utility functions (formatting, retries, etc.)
+**Files**:
+- `chainClient.ts` - Main blockchain client with provider/signer management
+- `contracts.ts` - Smart contract wrapper with Typechain integration
+- `signerManager.ts` - Wallet, mnemonic, and transaction signing
+- `config.ts` - Configuration with env loading and defaults merging
+- `utils.ts` - 20+ utilities (hex, ether, logger, EventEmitter)
+- `index.ts` - Module exports
 
-**Key Classes**:
-- `ChainClient` - Blockchain connection manager
-- `ContractManager` - Smart contract wrapper
-- `SignerManager` - Wallet management
+**Key Classes & Features**:
+
+**ChainClient** (packages/agent-kit/src/core/chainClient.ts)
+- Network connection with chain ID validation
+- Event listening system (on/off/once/removeAllListeners)
+- Block number with 2-second cache
+- Transaction methods (sendTransaction, waitForTransaction, getTransaction/getTx)
+- Contract factory methods (getContract, getReadOnlyContract)
+- Gas estimation and fee data
+- Full ethers.js provider access
+
+**SignerManager** (packages/agent-kit/src/core/signerManager.ts)
+- Private key, mnemonic, and external signer support
+- **sendTx(to, data, value?)** - Send transactions with receipt
+- **estimateGas(tx)** - Gas estimation
+- getNonce(), getGasPrice(), getBalance()
+- Static factories: fromMnemonic(), fromSigner()
+
+**SomniaContracts** (packages/agent-kit/src/core/contracts.ts)
+- Typechain-based contract instances
+- Registry, Executor, Manager, Vault contracts
+- Factory method: fromChainClient()
+- Lowercase aliases (registry, executor, vault, manager)
+- Read-only and signer-connected modes
+
+**Config System** (packages/agent-kit/src/core/config.ts)
+- **loadConfig(userConfig?)** - Merge defaults + env + user config
+- **loadFromEnv()** - Load from environment variables
+- **createConfigFromEnv()** - Quick setup from .env
+- LLM provider config (OpenAI, Ollama)
+- Default gas limits, log levels, metrics
+- Network presets (mainnet, testnet, devnet)
+
+**Utils Library** (packages/agent-kit/src/core/utils.ts)
+- **Async**: sleep, retry, delay, timeout
+- **Hex conversion**: toHex, fromHex, bytesToHex, hexToBytes, toUtf8Bytes, toUtf8String, keccak256
+- **Ether/Token**: formatEther, parseEther, formatUnits, parseUnits
+- **EventEmitter**: Type-safe event system with on/off/once/emit
+- **Logger**: createLogger(), Logger, LogLevel re-exports
+- **Address**: isValidAddress, shortAddress
 
 ### 2. **runtime/** - Agent Runtime
 **Status**: ✅ Completed
@@ -362,20 +400,24 @@ Trigger → Plan → Validate → Execute → Record → Store Result
 ```env
 # Network
 SOMNIA_RPC_URL=https://dream-rpc.somnia.network
-SOMNIA_CHAIN_ID=50311
+SOMNIA_CHAIN_ID=50312  # Testnet chain ID (mainnet: 50311)
 PRIVATE_KEY=0x...
 
 # Contracts
 AGENT_REGISTRY_ADDRESS=0x...
 AGENT_EXECUTOR_ADDRESS=0x...
+AGENT_MANAGER_ADDRESS=0x...
 AGENT_VAULT_ADDRESS=0x...
 
-# LLM
+# LLM (Optional)
 OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-3.5-turbo
 OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama2
 
-# Monitoring
-LOG_LEVEL=info
+# Advanced (Optional)
+DEFAULT_GAS_LIMIT=3000000
+LOG_LEVEL=info  # debug | info | warn | error
 METRICS_ENABLED=true
 ```
 
@@ -454,6 +496,6 @@ npm run clean
 
 ---
 
-**Last Updated**: 2025-10-16
-**Version**: 2.0.0
-**Status**: Production Ready - All core features implemented
+**Last Updated**: 2025-01-16
+**Version**: 2.0.1
+**Status**: Production Ready - Core modules fully refactored and tested (8/8 tests passing)
