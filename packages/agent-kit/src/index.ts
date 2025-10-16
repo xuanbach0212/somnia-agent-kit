@@ -3,8 +3,10 @@
  * @packageDocumentation
  */
 
+import { ethers } from 'ethers';
 import { AgentKitConfig, validateConfig, SOMNIA_NETWORKS } from './core/config';
 import { sleep, retry, isValidAddress, shortAddress } from './core/utils';
+import { SomniaContracts } from './core/contracts';
 
 /**
  * Main SDK class for Somnia Agent Kit
@@ -12,6 +14,9 @@ import { sleep, retry, isValidAddress, shortAddress } from './core/utils';
 export class SomniaAgentKit {
   private config: AgentKitConfig;
   private initialized: boolean = false;
+  private provider: ethers.Provider | null = null;
+  private signer: ethers.Signer | null = null;
+  private _contracts: SomniaContracts | null = null;
 
   /**
    * Create a new SomniaAgentKit instance
@@ -30,7 +35,23 @@ export class SomniaAgentKit {
       return;
     }
 
-    // TODO: Initialize blockchain client, contracts, etc.
+    // Initialize provider
+    this.provider = new ethers.JsonRpcProvider(this.config.network.rpcUrl);
+
+    // Initialize signer if private key is provided
+    if (this.config.privateKey) {
+      this.signer = new ethers.Wallet(this.config.privateKey, this.provider);
+    }
+
+    // Initialize contracts
+    this._contracts = new SomniaContracts(
+      this.provider,
+      this.config.contracts,
+      this.signer || undefined
+    );
+
+    await this._contracts.initialize();
+
     this.initialized = true;
   }
 
@@ -39,6 +60,33 @@ export class SomniaAgentKit {
    */
   isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * Get contracts instance
+   */
+  get contracts(): SomniaContracts {
+    if (!this._contracts) {
+      throw new Error('SDK not initialized. Call initialize() first.');
+    }
+    return this._contracts;
+  }
+
+  /**
+   * Get provider instance
+   */
+  getProvider(): ethers.Provider {
+    if (!this.provider) {
+      throw new Error('SDK not initialized. Call initialize() first.');
+    }
+    return this.provider;
+  }
+
+  /**
+   * Get signer instance (if available)
+   */
+  getSigner(): ethers.Signer | null {
+    return this.signer;
   }
 
   /**
@@ -64,3 +112,5 @@ export class SomniaAgentKit {
 export type { AgentKitConfig, NetworkConfig, ContractAddresses } from './core/config';
 export { SOMNIA_NETWORKS, validateConfig } from './core/config';
 export { sleep, retry, isValidAddress, shortAddress } from './core/utils';
+export { SomniaContracts } from './core/contracts';
+export type { ContractInstances } from './core/contracts';

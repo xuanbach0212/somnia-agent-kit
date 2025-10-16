@@ -11,6 +11,7 @@ export interface NetworkConfig {
 export interface ContractAddresses {
   agentRegistry: string;
   agentExecutor: string;
+  agentManager?: string;
   agentVault?: string;
 }
 
