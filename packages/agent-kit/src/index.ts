@@ -186,3 +186,15 @@ export { SomniaContracts } from './core/contracts';
 export type { ContractInstances } from './core/contracts';
 export { ChainClient } from './core/chainClient';
 export { SignerManager } from './core/signerManager';
+
+// Prompt management
+export * from './prompt';
+
+// Runtime modules
+export * from './runtime';
+
+// LLM adapters
+export * from './llm';
+
+// Monitoring
+export * from './monitor';

@@ -11,8 +11,11 @@ import { Planner } from './planner';
 import { Executor } from './executor';
 import { IStorage, MemoryStorage, FileStorage, StorageBackend } from './storage';
 import { Policy } from './policy';
+import { Memory, MemoryBackend, InMemoryBackend, FileBackend } from './memory';
+import { ContextBuilder } from './context';
 import { EventEmitter } from '../core/utils';
 import type { Logger } from '../monitor/logger';
+import type { ChainClient } from '../core/chainClient';
 
 export enum AgentState {
   Created = 'created',
@@ -44,6 +47,10 @@ export interface AgentOptions {
   logger?: Logger;
   storageBackend?: StorageBackend;
   storagePath?: string; // Path for FileStorage (default: './data')
+  memoryBackend?: 'memory' | 'file'; // Memory backend type (default: 'memory')
+  memoryPath?: string; // Path for FileBackend (default: './data/memory')
+  sessionId?: string; // Memory session ID (default: auto-generated)
+  enableMemory?: boolean; // Enable memory tracking (default: true)
 }
 
 interface AgentEvents {
@@ -74,12 +81,17 @@ export class Agent extends EventEmitter<AgentEvents> {
   private executor: Executor;
   private storage: IStorage;
   private policy: Policy;
+  private memory: Memory;
+  private contextBuilder: ContextBuilder;
   private logger?: Logger;
+  private enableMemory: boolean;
+  private chainClient?: ChainClient;
 
   constructor(config: AgentConfig, options?: AgentOptions) {
     super();
     this.config = config;
     this.logger = options?.logger;
+    this.enableMemory = options?.enableMemory !== false;
 
     // Initialize runtime modules
     this.trigger = new Trigger();
@@ -93,6 +105,25 @@ export class Agent extends EventEmitter<AgentEvents> {
       : new MemoryStorage();
 
     this.policy = new Policy();
+
+    // Initialize memory
+    const memoryBackendType = options?.memoryBackend || 'memory';
+    const memoryBackend = memoryBackendType === 'file'
+      ? new FileBackend(options?.memoryPath || './data/memory')
+      : new InMemoryBackend();
+
+    this.memory = new Memory({
+      backend: memoryBackend,
+      sessionId: options?.sessionId,
+    });
+
+    // Initialize context builder
+    this.contextBuilder = new ContextBuilder(
+      this.config,
+      undefined, // chainClient will be set in initialize()
+      this.storage,
+      this.memory
+    );
   }
 
   /**
@@ -190,23 +221,48 @@ export class Agent extends EventEmitter<AgentEvents> {
       this.emit('event:received', event);
       this.logger?.debug('Event received', { event });
 
+      // Add event to memory as input
+      if (this.enableMemory) {
+        await this.memory.addInput(event, { agentId: this.agentAddress });
+      }
+
       // 1. Check policy permissions
       if (event.sender && !this.policy.checkPermission(event.sender, 'execute')) {
         this.logger?.warn('Permission denied', { sender: event.sender });
         return;
       }
 
-      // 2. Plan tasks using planner
-      const tasks = await this.planner.plan(event.goal || event.data, event.context);
+      // 2. Build unified context using ContextBuilder
+      const agentContext = await this.contextBuilder.buildContext({
+        maxMemoryTokens: 1000,
+        maxActions: 10,
+        includeChainState: !!this.chainClient,
+        includeActions: true,
+        includeMemory: this.enableMemory,
+      });
+
+      // Format context for planner
+      const contextString = this.contextBuilder.formatContext(agentContext);
+      const fullContext = event.context
+        ? `${event.context}\n\n${contextString}`
+        : contextString;
+
+      // 3. Plan tasks using planner with context
+      const tasks = await this.planner.plan(event.goal || event.data, fullContext);
       this.emit('tasks:planned', { tasks });
       this.logger?.info('Tasks planned', { taskCount: tasks.length });
 
-      // 3. Execute tasks using executor
+      // 4. Execute tasks using executor
       const results = await this.executor.executeAll(tasks);
       this.emit('tasks:executed', { results });
       this.logger?.info('Tasks executed', { resultCount: results.length });
 
-      // 4. Store event and actions
+      // Add results to memory as output
+      if (this.enableMemory) {
+        await this.memory.addOutput({ tasks, results }, { agentId: this.agentAddress });
+      }
+
+      // 5. Store event and actions
       await this.storage.saveEvent(event);
       for (let i = 0; i < tasks.length; i++) {
         await this.storage.saveAction(tasks[i], results[i]);
@@ -422,7 +478,7 @@ export class Agent extends EventEmitter<AgentEvents> {
    * Get storage module (for advanced usage)
    * @returns Storage instance
    */
-  getStorageModule(): Storage {
+  getStorageModule(): IStorage {
     return this.storage;
   }
 
@@ -432,5 +488,89 @@ export class Agent extends EventEmitter<AgentEvents> {
    */
   getPolicyModule(): Policy {
     return this.policy;
+  }
+
+  /**
+   * Get memory module (for advanced usage)
+   * @returns Memory instance
+   */
+  getMemoryModule(): Memory {
+    return this.memory;
+  }
+
+  /**
+   * Get context builder (for advanced usage)
+   * @returns ContextBuilder instance
+   */
+  getContextBuilder(): ContextBuilder {
+    return this.contextBuilder;
+  }
+
+  /**
+   * Set chain client for context building
+   * @param chainClient ChainClient instance
+   */
+  setChainClient(chainClient: ChainClient): void {
+    this.chainClient = chainClient;
+    this.contextBuilder.setChainClient(chainClient);
+  }
+
+  /**
+   * Add memory entry
+   * @param type Memory type
+   * @param content Content to store
+   * @param metadata Optional metadata
+   * @returns Entry ID
+   */
+  async addMemory(
+    type: 'input' | 'output' | 'state' | 'system',
+    content: any,
+    metadata?: Record<string, any>
+  ): Promise<string> {
+    return this.memory.addMemory(type, content, metadata);
+  }
+
+  /**
+   * Get memory context for LLM
+   * @param maxTokens Max tokens to include
+   * @returns Context string
+   */
+  async getMemoryContext(maxTokens?: number): Promise<string> {
+    return this.memory.getContext(maxTokens);
+  }
+
+  /**
+   * Get memory history
+   * @param limit Max entries to return
+   * @returns Memory entries
+   */
+  async getMemoryHistory(limit?: number): Promise<any[]> {
+    if (limit) {
+      return this.memory.getRecent(limit);
+    }
+    return this.memory.getHistory();
+  }
+
+  /**
+   * Clear agent memory
+   */
+  async clearMemory(): Promise<void> {
+    await this.memory.clear();
+  }
+
+  /**
+   * Get memory session ID
+   * @returns Session ID
+   */
+  getMemorySessionId(): string {
+    return this.memory.getSessionId();
+  }
+
+  /**
+   * Set memory session ID
+   * @param sessionId New session ID
+   */
+  setMemorySessionId(sessionId: string): void {
+    this.memory.setSessionId(sessionId);
   }
 }
