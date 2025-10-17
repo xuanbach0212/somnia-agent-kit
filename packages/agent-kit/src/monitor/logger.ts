@@ -1,20 +1,23 @@
 /**
- * Winston-based Structured Logging
- * Provides comprehensive logging for agent operations
+ * Logger Module with Pino
+ * Production-ready logging with colored terminal and JSON output
  */
+
+import pino from 'pino';
+import type { Logger as PinoLogger } from 'pino';
 
 export enum LogLevel {
   Error = 'error',
   Warn = 'warn',
   Info = 'info',
   Debug = 'debug',
-  Verbose = 'verbose',
+  Verbose = 'trace', // Map verbose to trace in pino
 }
 
 export interface LogEntry {
+  timestamp: number;
   level: LogLevel;
   message: string;
-  timestamp: number;
   metadata?: Record<string, any>;
   context?: string;
 }
@@ -24,27 +27,120 @@ export interface LoggerConfig {
   enableConsole?: boolean;
   enableFile?: boolean;
   filePath?: string;
-  maxFileSize?: number;
-  maxFiles?: number;
+  format?: 'json' | 'pretty'; // JSON for production, pretty for development
+  enableMemoryStorage?: boolean; // For testing
+  telemetry?: any; // TelemetryConfig - avoid circular dependency
 }
 
 /**
- * Logger class for structured logging
+ * Main Logger class using Pino
+ * Supports colored terminal output, JSON format, and file logging
  */
 export class Logger {
   private config: LoggerConfig;
-  private logs: LogEntry[] = [];
-  private maxLogs: number = 1000;
+  private pinoLogger: PinoLogger;
+  private logs: LogEntry[] = []; // Optional memory storage
+  private telemetry?: any; // Telemetry instance
 
   constructor(config: LoggerConfig = {}) {
     this.config = {
-      level: config.level || LogLevel.Info,
+      level: config.level || this.getDefaultLogLevel(),
       enableConsole: config.enableConsole !== false,
       enableFile: config.enableFile || false,
       filePath: config.filePath || './logs/agent.log',
-      maxFileSize: config.maxFileSize || 5 * 1024 * 1024, // 5MB
-      maxFiles: config.maxFiles || 5,
+      format: config.format || (process.env.NODE_ENV === 'production' ? 'json' : 'pretty'),
+      enableMemoryStorage: config.enableMemoryStorage || false,
+      telemetry: config.telemetry,
     };
+
+    this.pinoLogger = this.createPinoLogger();
+
+    // Initialize telemetry if config provided
+    if (config.telemetry) {
+      try {
+        // Lazy import to avoid circular dependency
+        const { Telemetry } = require('./telemetry');
+        this.telemetry = new Telemetry(config.telemetry);
+      } catch (error) {
+        // Telemetry not available, continue without it
+      }
+    }
+  }
+
+  /**
+   * Get default log level from environment variable or fallback to 'info'
+   */
+  private getDefaultLogLevel(): LogLevel {
+    const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+    switch (envLevel) {
+      case 'error':
+        return LogLevel.Error;
+      case 'warn':
+        return LogLevel.Warn;
+      case 'info':
+        return LogLevel.Info;
+      case 'debug':
+        return LogLevel.Debug;
+      case 'verbose':
+      case 'trace':
+        return LogLevel.Verbose;
+      default:
+        return LogLevel.Info;
+    }
+  }
+
+  /**
+   * Create pino logger with appropriate transports
+   */
+  private createPinoLogger(): PinoLogger {
+    const level = this.config.level || LogLevel.Info;
+
+    // Base pino options
+    const pinoOptions: any = {
+      level: level === LogLevel.Verbose ? 'trace' : level,
+    };
+
+    // Configure transport based on format
+    if (this.config.enableConsole && this.config.format === 'pretty') {
+      pinoOptions.transport = {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss',
+          ignore: 'pid,hostname',
+        },
+      };
+    }
+
+    // File logging (if enabled)
+    if (this.config.enableFile) {
+      pinoOptions.transport = {
+        targets: [
+          // Pretty console output
+          ...(this.config.enableConsole && this.config.format === 'pretty'
+            ? [
+                {
+                  target: 'pino-pretty',
+                  level,
+                  options: {
+                    colorize: true,
+                    translateTime: 'HH:MM:ss',
+                    ignore: 'pid,hostname',
+                  },
+                },
+              ]
+            : []),
+          // File output (JSON)
+          {
+            target: 'pino/file',
+            level,
+            options: { destination: this.config.filePath },
+          },
+        ],
+      };
+    }
+
+    return pino(pinoOptions);
   }
 
   /**
@@ -76,14 +172,14 @@ export class Logger {
   }
 
   /**
-   * Log verbose message
+   * Log verbose/trace message
    */
   verbose(message: string, metadata?: Record<string, any>, context?: string): void {
     this.log(LogLevel.Verbose, message, metadata, context);
   }
 
   /**
-   * Core logging function
+   * Core log method
    */
   private log(
     level: LogLevel,
@@ -91,91 +187,51 @@ export class Logger {
     metadata?: Record<string, any>,
     context?: string
   ): void {
-    // Check if level is enabled
-    if (!this.isLevelEnabled(level)) {
-      return;
-    }
-
     const entry: LogEntry = {
+      timestamp: Date.now(),
       level,
       message,
-      timestamp: Date.now(),
       metadata,
       context,
     };
 
-    // Store in memory
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift();
+    // Store in memory if enabled (for testing)
+    if (this.config.enableMemoryStorage) {
+      this.logs.push(entry);
     }
 
-    // Console output
-    if (this.config.enableConsole) {
-      this.logToConsole(entry);
+    // Send to telemetry if enabled
+    if (this.telemetry) {
+      try {
+        this.telemetry.send({
+          type: 'log',
+          timestamp: entry.timestamp,
+          data: entry,
+        });
+      } catch (error) {
+        // Ignore telemetry errors
+      }
     }
 
-    // File output
-    if (this.config.enableFile) {
-      this.logToFile(entry);
-    }
+    // Log via pino
+    const logData = {
+      ...(context && { context }),
+      ...(metadata && { metadata }),
+    };
+
+    const pinoLevel = level === LogLevel.Verbose ? 'trace' : level;
+    this.pinoLogger[pinoLevel](logData, message);
   }
 
   /**
-   * Check if log level is enabled
+   * Create child logger with context
    */
-  private isLevelEnabled(level: LogLevel): boolean {
-    const levels = [
-      LogLevel.Error,
-      LogLevel.Warn,
-      LogLevel.Info,
-      LogLevel.Debug,
-      LogLevel.Verbose,
-    ];
-
-    const currentLevelIndex = levels.indexOf(this.config.level!);
-    const messageLevelIndex = levels.indexOf(level);
-
-    return messageLevelIndex <= currentLevelIndex;
+  child(context: string): ChildLogger {
+    return new ChildLogger(this, context);
   }
 
   /**
-   * Log to console
-   */
-  private logToConsole(entry: LogEntry): void {
-    const timestamp = new Date(entry.timestamp).toISOString();
-    const context = entry.context ? `[${entry.context}]` : '';
-    const metadata = entry.metadata ? JSON.stringify(entry.metadata) : '';
-
-    const message = `${timestamp} ${entry.level.toUpperCase()} ${context} ${entry.message} ${metadata}`;
-
-    switch (entry.level) {
-      case LogLevel.Error:
-        console.error(message);
-        break;
-      case LogLevel.Warn:
-        console.warn(message);
-        break;
-      case LogLevel.Info:
-        console.log(message);
-        break;
-      case LogLevel.Debug:
-      case LogLevel.Verbose:
-        console.debug(message);
-        break;
-    }
-  }
-
-  /**
-   * Log to file (placeholder)
-   */
-  private logToFile(entry: LogEntry): void {
-    // In production: use fs.appendFile or winston file transport
-    // For now, just store in memory
-  }
-
-  /**
-   * Get recent logs
+   * Get all logged entries (only if memory storage is enabled)
    */
   getLogs(limit?: number): LogEntry[] {
     if (limit) {
@@ -185,7 +241,7 @@ export class Logger {
   }
 
   /**
-   * Get logs by level
+   * Filter logs by level
    */
   getLogsByLevel(level: LogLevel, limit?: number): LogEntry[] {
     const filtered = this.logs.filter((log) => log.level === level);
@@ -196,7 +252,7 @@ export class Logger {
   }
 
   /**
-   * Get logs by context
+   * Filter logs by context
    */
   getLogsByContext(context: string, limit?: number): LogEntry[] {
     const filtered = this.logs.filter((log) => log.context === context);
@@ -207,48 +263,73 @@ export class Logger {
   }
 
   /**
-   * Get logs in time range
+   * Filter logs by time range
    */
-  getLogsByTimeRange(startTime: number, endTime: number): LogEntry[] {
-    return this.logs.filter(
-      (log) => log.timestamp >= startTime && log.timestamp <= endTime
-    );
+  getLogsByTimeRange(start: number, end: number): LogEntry[] {
+    return this.logs.filter((log) => log.timestamp >= start && log.timestamp <= end);
   }
 
   /**
-   * Clear all logs
+   * Clear stored logs
    */
   clearLogs(): void {
     this.logs = [];
   }
 
   /**
-   * Set log level
+   * Get log count
+   */
+  getLogCount(): number {
+    return this.logs.length;
+  }
+
+  /**
+   * Set log level dynamically
    */
   setLevel(level: LogLevel): void {
     this.config.level = level;
+    this.pinoLogger.level = level === LogLevel.Verbose ? 'trace' : level;
   }
 
   /**
-   * Get log level
+   * Get current log level
    */
   getLevel(): LogLevel {
-    return this.config.level!;
+    return this.config.level || LogLevel.Info;
   }
 
   /**
-   * Create child logger with context
+   * Check if level is enabled
    */
-  child(context: string): ChildLogger {
-    return new ChildLogger(this, context);
+  isLevelEnabled(level: LogLevel): boolean {
+    const levels = [LogLevel.Error, LogLevel.Warn, LogLevel.Info, LogLevel.Debug, LogLevel.Verbose];
+    const currentLevelIndex = levels.indexOf(this.config.level || LogLevel.Info);
+    const checkLevelIndex = levels.indexOf(level);
+    return checkLevelIndex <= currentLevelIndex;
+  }
+
+  /**
+   * Get pino logger instance (for advanced usage)
+   */
+  getPinoLogger(): PinoLogger {
+    return this.pinoLogger;
   }
 }
 
 /**
- * Child logger with predefined context
+ * Child Logger with context
+ * Uses pino's built-in child logger
  */
 export class ChildLogger {
-  constructor(private parent: Logger, private context: string) {}
+  private parent: Logger;
+  private context: string;
+  private pinoChild: PinoLogger;
+
+  constructor(parent: Logger, context: string) {
+    this.parent = parent;
+    this.context = context;
+    this.pinoChild = parent.getPinoLogger().child({ context });
+  }
 
   error(message: string, metadata?: Record<string, any>): void {
     this.parent.error(message, metadata, this.context);
@@ -269,4 +350,30 @@ export class ChildLogger {
   verbose(message: string, metadata?: Record<string, any>): void {
     this.parent.verbose(message, metadata, this.context);
   }
+
+  /**
+   * Get context string
+   */
+  getContext(): string {
+    return this.context;
+  }
+
+  /**
+   * Get pino child logger (for advanced usage)
+   */
+  getPinoLogger(): PinoLogger {
+    return this.pinoChild;
+  }
 }
+
+/**
+ * Create default logger instance
+ */
+export function createLogger(config?: LoggerConfig): Logger {
+  return new Logger(config);
+}
+
+/**
+ * Default logger instance with pretty format
+ */
+export const logger = createLogger();

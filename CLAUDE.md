@@ -346,36 +346,1304 @@ Dynamic prompt building and template system for AI agents.
 
 **Standard Interface**: `LLMAdapter` - Unified interface for all LLM providers
 
-Implemented adapters:
-- `openaiAdapter.ts` - OpenAI GPT integration (GPT-3.5, GPT-4, embeddings, streaming)
-- `anthropicAdapter.ts` - Anthropic Claude integration (Opus, Sonnet, Haiku)
-- `ollamaAdapter.ts` - Local Ollama integration (Llama, Mistral, model management)
+#### Overview & Architecture
+
+The LLM module provides a **provider-agnostic interface** for integrating AI language models into agents. All adapters implement the `LLMAdapter` interface, allowing seamless switching between OpenAI, Anthropic Claude, and local Ollama models without code changes.
+
+**Key Benefits**:
+- **Unified API**: Same methods work across all providers
+- **Provider Flexibility**: Switch providers with single line change
+- **Production Ready**: Built-in retry, timeout, logging
+- **Cost Optimization**: Choose provider based on task complexity
+
+#### types.ts - Standard Interfaces (140 lines)
+
+**LLMAdapter Interface**:
+```typescript
+interface LLMAdapter {
+  readonly name: string;
+  generate(input: string, options?: GenerateOptions): Promise<LLMResponse>;
+  chat?(messages: Message[], options?: GenerateOptions): Promise<LLMResponse>;
+  embed?(text: string, model?: string): Promise<number[]>;
+  stream?(input: string, options?: GenerateOptions): AsyncGenerator<string>;
+  testConnection?(): Promise<boolean>;
+}
+```
+
+**LLMResponse**: Structured response from all adapters
+- `content`: Generated text
+- `model`: Model used (e.g., 'gpt-4', 'claude-3-opus')
+- `usage`: Token counts (promptTokens, completionTokens, totalTokens)
+- `finishReason`: 'stop' | 'length' | 'error'
+- `metadata`: Provider-specific data (id, duration, etc.)
+
+**GenerateOptions**: Customizable generation parameters
+- `model`: Model name override
+- `temperature`: 0-2, creativity level (default: 0.7)
+- `maxTokens`: Max response length (default: 1000)
+- `topP`: Nucleus sampling (default: 1.0)
+- `frequencyPenalty`, `presencePenalty`: Repetition control
+- `stop`: Stop sequences
+- `timeout`: Request timeout in ms (default: 30000)
+- `retries`: Max retry attempts (default: 3)
+
+**RetryConfig**: Exponential backoff configuration
+- `maxRetries`: Max attempts before failure
+- `retryDelay`: Initial delay in ms
+- `backoffMultiplier`: Exponential multiplier (default: 2)
+- `maxDelay`: Maximum delay cap (default: 10000ms)
+
+**LLMLogger Interface**: Structured logging
+- `debug(message, data)`: Debug information
+- `info(message, data)`: General info
+- `warn(message, data)`: Warnings
+- `error(message, data)`: Errors
+
+#### openaiAdapter.ts - OpenAI GPT Integration (320 lines)
+
+**Supported Models**:
+- `gpt-3.5-turbo`: 4k context, fast, cheap ($0.50/1M tokens)
+- `gpt-4`: 8k context, powerful ($30/1M tokens)
+- `gpt-4-turbo`: 128k context, latest ($10/1M tokens)
+- `text-embedding-ada-002`: 1536-dim embeddings
+
+**Core Methods**:
+- `generate(prompt, options)`: Single-turn text completion
+- `chat(messages, options)`: Multi-turn conversation with history
+- `embed(text, model)`: Generate 1536-dim vectors for semantic search
+- `stream(input, options)`: Real-time token streaming
+- `testConnection()`: Verify API key validity
 
 **Features**:
-- **Unified Interface**: All adapters implement `LLMAdapter` interface
-- **Structured Response**: `LLMResponse` with content, usage, metadata
-- **Retry Logic**: Automatic retry with exponential backoff
-- **Timeout Control**: Configurable request timeout
-- **Structured Logging**: `LLMLogger` interface for debug/info/warn/error
-- **Chat Completion**: Message history with system/user/assistant roles
-- **Text Generation**: Customizable temperature, max tokens, top-p, penalties
-- **Streaming**: Real-time token streaming for all adapters
-- **Embeddings**: Vector generation for semantic search
-- **Model Management**: Pull, delete, list models (Ollama)
+- **Token Tracking**: Accurate promptTokens, completionTokens, totalTokens
+- **Retry Logic**: Exponential backoff on errors (1s→2s→4s→8s→10s)
+- **Timeout Control**: AbortController after configurable timeout
+- **Structured Logging**: Debug/info/error with request metadata
+- **Error Handling**: Rate limits, network errors, invalid keys
+
+**Usage Example**:
+```typescript
+const adapter = new OpenAIAdapter({
+  apiKey: process.env.OPENAI_API_KEY,
+  defaultModel: 'gpt-4',
+  timeout: 60000,
+  retries: 3
+});
+
+const response = await adapter.generate('Explain quantum computing');
+console.log(response.content);
+console.log(`Used ${response.usage.totalTokens} tokens`);
+```
+
+**When to Use**:
+- Production systems (reliable, fast)
+- Complex reasoning tasks (GPT-4)
+- Embeddings for semantic search
+- High availability requirements
+
+#### anthropicAdapter.ts - Anthropic Claude Integration (280 lines)
+
+**Supported Models**:
+- `claude-3-opus-20240229`: 200k context, most powerful, best reasoning
+- `claude-3-sonnet-20240229`: 200k context, balanced performance/speed
+- `claude-3-haiku-20240307`: 200k context, fastest, cheapest
+
+**Core Methods**:
+- `generate(input, options)`: Text completion
+- `chat(messages, options)`: Multi-turn chat with automatic message conversion
+- `stream(input, options)`: Streaming responses
+- `testConnection()`: API health check
+
+**Features**:
+- **Long Context**: 200k tokens (vs OpenAI's 128k)
+- **Message Conversion**: Automatically converts Message[] to Anthropic format
+- **System Message Handling**: Extracts system messages separately
+- **Alternating Pattern**: Ensures user/assistant message alternation
+- **Stop Reason Mapping**: Converts 'end_turn' → 'stop'
+
+**Advantages**:
+- Longer context window (200k tokens)
+- Better code understanding and analysis
+- More nuanced reasoning
+- Fewer hallucinations
+
+**Usage Example**:
+```typescript
+const adapter = new AnthropicAdapter({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  defaultModel: 'claude-3-sonnet-20240229'
+});
+
+const response = await adapter.chat([
+  { role: 'system', content: 'You are a code review expert.' },
+  { role: 'user', content: 'Review this function: ...' }
+]);
+
+console.log(response.content);
+console.log(`Model: ${response.model}`);
+```
+
+**When to Use**:
+- Long document analysis (up to 200k tokens)
+- Code review and refactoring
+- Complex reasoning tasks
+- When GPT-4 is too expensive
+
+#### ollamaAdapter.ts - Local LLM Integration (340 lines)
+
+**Supported Models**:
+- `llama2`, `llama3`: Meta's open models (7B-70B params)
+- `mistral`, `mixtral`: Mistral AI models (7B-8x7B params)
+- `codellama`: Code-specialized Llama
+- `phi`: Microsoft's small efficient models (2.7B params)
+
+**Core Methods**:
+- `generate(prompt, options)`: Local text generation
+- `chat(messages, options)`: Local chat completion
+- `embed(text, model)`: Local embeddings
+- `stream(input, options)`: Streaming generation
+- `listModels()`: Show installed models with size
+- `pullModel(name)`: Download model from registry
+- `deleteModel(name)`: Free disk space
+- `hasModel(name)`: Check if model exists
+- `testConnection()`: Verify Ollama server running
+
+**Advantages**:
+- **Free**: No API costs
+- **Privacy**: Data never leaves your machine
+- **Offline**: Works without internet
+- **Low Latency**: No network round-trip
+- **Customizable**: Fine-tune models
+
+**Disadvantages**:
+- Requires GPU/RAM (8GB+ recommended)
+- Slower than cloud APIs
+- Smaller models = lower quality
+- Manual model management
+
+**Usage Example**:
+```typescript
+const adapter = new OllamaAdapter({
+  baseURL: 'http://localhost:11434',
+  defaultModel: 'llama3'
+});
+
+// Check and download model
+if (!await adapter.hasModel('llama3')) {
+  console.log('Downloading llama3...');
+  await adapter.pullModel('llama3');
+}
+
+// List available models
+const models = await adapter.listModels();
+models.forEach(m => {
+  console.log(`${m.name} - ${(m.size / 1e9).toFixed(2)} GB`);
+});
+
+// Generate
+const response = await adapter.generate('Explain blockchain');
+console.log(response.content);
+console.log(`Eval duration: ${response.metadata.eval_duration}ms`);
+```
+
+**When to Use**:
+- Development and testing (free)
+- Privacy-sensitive applications
+- Offline deployments
+- Cost optimization
+- Experimentation with open models
+
+#### Retry & Error Handling
+
+**Exponential Backoff Algorithm**:
+```
+Attempt 1: immediate
+Attempt 2: wait 1000ms
+Attempt 3: wait 2000ms
+Attempt 4: wait 4000ms
+Attempt 5: wait 8000ms
+Attempt 6+: wait 10000ms (capped at maxDelay)
+```
+
+**Error Types & Handling**:
+- **Timeout**: AbortController kills request after 30s (default)
+  - Retry: ✅ Yes
+  - Solution: Increase timeout option
+- **Rate Limit (429)**: Too many requests
+  - Retry: ✅ Yes (with exponential backoff)
+  - Solution: Reduce request frequency
+- **Network Error**: Connection lost
+  - Retry: ✅ Yes
+  - Solution: Check internet connection
+- **Invalid API Key (401)**: Authentication failed
+  - Retry: ❌ No (fatal)
+  - Solution: Check API key in .env
+- **Invalid Model (404)**: Model not found
+  - Retry: ❌ No (fatal)
+  - Solution: Use valid model name
+
+**Timeout Configuration**:
+```typescript
+const adapter = new OpenAIAdapter({
+  apiKey: '...',
+  timeout: 60000,   // 60 second timeout
+  retries: 5        // Retry up to 5 times
+});
+```
+
+#### Integration with Planner
+
+**LLMPlanner** uses any `LLMAdapter` to generate structured action plans:
+
+```typescript
+import { OpenAIAdapter, LLMPlanner } from '@somnia/agent-kit';
+
+const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
+
+const planner = new LLMPlanner(llm, {
+  temperature: 0.3,        // Lower for deterministic plans
+  strictValidation: true,  // Throw on invalid actions
+  returnActionPlan: true   // Return ActionPlan[] with reason
+});
+
+// Generate structured action plan
+const actionPlans = await planner.planWithReason('Send 1 ETH to Alice');
+// Returns: [
+//   {
+//     type: 'check_balance',
+//     params: { amount: '1.0' },
+//     reason: 'Verify sufficient balance before transfer'
+//   },
+//   {
+//     type: 'execute_transfer',
+//     target: '0xAlice...',
+//     params: { to: '0xAlice...', amount: '1.0' },
+//     reason: 'Execute ETH transfer to Alice'
+//   }
+// ]
+```
+
+**Flow**: Goal → buildPrompt() → llm.generate() → parseResponseToActionPlan() → ActionPlan[] → Executor
+
+#### Best Practices
+
+**1. Choose the Right Adapter**:
+- **Development/Testing**: Ollama (free, fast iteration)
+- **Production (simple tasks)**: GPT-3.5-turbo (cheap, fast)
+- **Production (complex reasoning)**: GPT-4 or Claude Opus
+- **Code tasks**: CodeLlama (local) or GPT-4
+- **Long documents**: Claude (200k context)
+- **Embeddings**: OpenAI text-embedding-ada-002
+
+**2. Cost Optimization**:
+- Use lower temperature (0.3) for deterministic tasks
+- Set `maxTokens` to limit response length
+- Cache frequent prompts
+- Use streaming for long responses
+- Monitor `usage.totalTokens` for cost tracking
+- Use cheaper models for simple tasks
+
+**3. Error Handling**:
+```typescript
+try {
+  const response = await adapter.generate(prompt);
+
+  if (response.finishReason === 'length') {
+    console.warn('Response truncated, increase maxTokens');
+  }
+
+  return response.content;
+} catch (error) {
+  if (error.status === 429) {
+    // Rate limit - wait and retry
+    await sleep(60000);
+    return retry();
+  } else if (error.status === 401) {
+    // Invalid API key - fatal
+    throw new Error('Invalid API key');
+  } else {
+    // Network error - retry
+    return retry();
+  }
+}
+```
+
+**4. Performance Tips**:
+- Reuse adapter instances (don't recreate per request)
+- Use streaming for real-time UX (don't wait for full response)
+- Parallel requests when independent
+- Monitor `response.metadata.duration` for benchmarking
+- Use testConnection() on startup to fail fast
+
+**5. Security**:
+- Never commit API keys to git
+- Use environment variables (.env)
+- Validate user inputs before sending to LLM
+- Sanitize LLM outputs before displaying
+- Use prompt templates to prevent injection
+- Rate limit user requests
+
+**6. Provider Comparison**:
+| Feature | OpenAI GPT-4 | Claude Opus | Ollama Llama3 |
+|---------|--------------|-------------|---------------|
+| **Cost** | $30/1M tokens | $15/1M tokens | Free |
+| **Context** | 128k tokens | 200k tokens | 8k-128k |
+| **Speed** | Fast | Medium | Slow (local) |
+| **Quality** | Excellent | Excellent | Good |
+| **Privacy** | Cloud | Cloud | Local |
+| **Internet** | Required | Required | Optional |
 
 ### 5. **monitor/** - Monitoring System
 **Status**: ✅ Completed
 
 Implemented modules:
-- `logger.ts` - Structured logging with multiple levels (error, warn, info, debug, verbose)
+- `logger.ts` - **Pino-based logging** with colored terminal and JSON output
 - `metrics.ts` - Performance metrics (counters, gauges, histograms, timing)
 - `eventRecorder.ts` - On-chain event tracking with filtering and callbacks
+- `telemetry.ts` - **Remote observability** with Prometheus, Datadog, OpenTelemetry
+- `dashboard.ts` - **Development UI** with REST API and HTML dashboard
 
-**Features**:
-- Child loggers with context
-- Time-series metrics with aggregation
-- Automatic event listening and recording
-- Export capabilities for all monitoring data
+---
+
+#### **logger.ts** - Production-Ready Logging with Pino
+
+**Overview:**
+The logger module uses [pino](https://github.com/pinojs/pino) - a fast, low-overhead logging library - with support for colored terminal output via [pino-pretty](https://github.com/pinojs/pino-pretty).
+
+**Key Features:**
+- ✅ **LOG_LEVEL environment variable** - Set log level via `process.env.LOG_LEVEL`
+- ✅ **Colored console output** - Pretty, readable logs in development
+- ✅ **JSON format** - Structured logs for production (default in production)
+- ✅ **File logging** - Write logs to files with pino file transport
+- ✅ **Child loggers** - Context-aware logging with pino child loggers
+- ✅ **Memory storage** - Optional in-memory log storage for testing
+
+**Log Levels:**
+```typescript
+export enum LogLevel {
+  Error = 'error',    // Critical errors
+  Warn = 'warn',      // Warnings
+  Info = 'info',      // General info
+  Debug = 'debug',    // Debug details
+  Verbose = 'trace',  // Trace-level details
+}
+```
+
+**Basic Usage:**
+```typescript
+import { Logger, LogLevel, createLogger } from '@somnia/agent-kit';
+
+// Create logger with defaults (reads LOG_LEVEL env var)
+const logger = new Logger();
+
+// Log messages at different levels
+logger.info('Agent started', { agentId: '0x123...' });
+logger.debug('Processing event', { eventType: 'Transfer' });
+logger.warn('High gas price', { gasPrice: '100 gwei' });
+logger.error('Transaction failed', { error: 'Insufficient funds' });
+```
+
+**Environment Variable Configuration:**
+```bash
+# Set log level via environment variable
+LOG_LEVEL=debug node app.js  # Show debug and above
+LOG_LEVEL=info node app.js   # Show info and above (default)
+LOG_LEVEL=error node app.js  # Show only errors
+
+# Production with JSON output
+NODE_ENV=production node app.js
+```
+
+**Custom Configuration:**
+```typescript
+// Development: Pretty colored output
+const devLogger = new Logger({
+  level: LogLevel.Debug,
+  format: 'pretty',
+  enableConsole: true,
+  enableFile: false,
+});
+
+// Production: JSON logs + file output
+const prodLogger = new Logger({
+  level: LogLevel.Info,
+  format: 'json',
+  enableConsole: true,
+  enableFile: true,
+  filePath: './logs/agent.log',
+});
+
+// Testing: Memory storage enabled
+const testLogger = new Logger({
+  level: LogLevel.Verbose,
+  enableMemoryStorage: true,
+});
+```
+
+**Child Logger with Context:**
+```typescript
+// Create child logger with context
+const blockchainLogger = logger.child('blockchain');
+blockchainLogger.info('Block confirmed', { blockNumber: 1000000 });
+// Output: [12:34:56] INFO [blockchain]: Block confirmed
+
+const walletLogger = logger.child('wallet');
+walletLogger.warn('Low balance', { balance: '0.1 ETH' });
+// Output: [12:34:57] WARN [wallet]: Low balance
+```
+
+**File Logging:**
+```typescript
+// Enable file logging with rotation
+const logger = new Logger({
+  enableFile: true,
+  filePath: './logs/agent.log',
+  format: 'json', // Always write JSON to files
+});
+
+logger.info('This will be written to file');
+```
+
+**Memory Storage (for testing):**
+```typescript
+const logger = new Logger({
+  enableMemoryStorage: true,
+});
+
+logger.info('Message 1');
+logger.error('Message 2');
+
+// Retrieve logged entries
+const logs = logger.getLogs(); // All logs
+const errors = logger.getLogsByLevel(LogLevel.Error); // Filter by level
+const recent = logger.getLogs(10); // Last 10 logs
+
+// Time range filtering
+const start = Date.now() - 3600000; // 1 hour ago
+const end = Date.now();
+const hourLogs = logger.getLogsByTimeRange(start, end);
+```
+
+**Advanced: Direct Pino Access:**
+```typescript
+// Get underlying pino logger for advanced usage
+const pinoLogger = logger.getPinoLogger();
+pinoLogger.fatal('Critical system error');
+```
+
+**Output Examples:**
+
+*Pretty Format (Development):*
+```
+[12:34:56] INFO: Agent started
+    agentId: "0x123..."
+[12:34:57] DEBUG: Processing event
+    eventType: "Transfer"
+[12:34:58] WARN: High gas price
+    gasPrice: "100 gwei"
+[12:34:59] ERROR: Transaction failed
+    error: "Insufficient funds"
+```
+
+*JSON Format (Production):*
+```json
+{"level":30,"time":1640000000,"msg":"Agent started","agentId":"0x123..."}
+{"level":20,"time":1640000001,"msg":"Processing event","eventType":"Transfer"}
+{"level":40,"time":1640000002,"msg":"High gas price","gasPrice":"100 gwei"}
+{"level":50,"time":1640000003,"msg":"Transaction failed","error":"Insufficient funds"}
+```
+
+---
+
+#### **metrics.ts** - Performance Metrics
+
+Track agent performance with counters, gauges, histograms, and timing utilities. Includes built-in support for blockchain and LLM metrics.
+
+**Key Features:**
+- ✅ **Counters** - Track counts (transactions, LLM calls, errors)
+- ✅ **Gauges** - Track current values (memory usage, active connections)
+- ✅ **Histograms** - Track distributions (gas used, response times)
+- ✅ **Uptime tracking** - Automatic uptime calculation
+- ✅ **Success rates** - Auto-calculate tx_success_rate, llm_success_rate
+- ✅ **TPS calculation** - Transactions per second over time windows
+- ✅ **Percentiles** - p50, p95, p99 for performance analysis
+- ✅ **Convenience methods** - Simple API for common agent metrics
+
+**Basic Usage - Generic Metrics:**
+
+```typescript
+import { Metrics } from '@somnia/agent-kit';
+
+const metrics = new Metrics();
+
+// Counters
+metrics.increment('tasks.completed');
+metrics.increment('tasks.failed');
+
+// Gauges
+metrics.gauge('memory.usage', process.memoryUsage().heapUsed);
+metrics.gauge('active.connections', 10);
+
+// Histograms
+metrics.histogram('task.duration', 1250); // ms
+
+// Time async operations
+const result = await metrics.time('llm.generate', async () => {
+  return await llm.generate(prompt);
+});
+```
+
+**Agent-Specific Metrics (Simplified API):**
+
+```typescript
+// Record blockchain transactions
+metrics.recordTransaction(true, 21000);  // success=true, gasUsed=21000
+metrics.recordTransaction(false);         // failed transaction
+
+// Record LLM calls
+metrics.recordLLMCall(1250);              // duration=1250ms
+metrics.recordLLMCall(800, true);         // duration, success
+metrics.recordLLMCall(undefined, false);  // just track failure
+
+// Record gas usage
+metrics.recordGasUsed(50000);
+```
+
+**Calculate Success Rates:**
+
+```typescript
+// Automatic success rate calculation
+const txSuccessRate = metrics.rate('tx.success', 'tx.total');
+// Returns: 95.5 (as percentage)
+
+const llmSuccessRate = metrics.rate('llm.success', 'llm.total');
+// Returns: 98.2
+```
+
+**Calculate TPS (Transactions Per Second):**
+
+```typescript
+// TPS over last 60 seconds (default)
+const tps = metrics.calculateRate('tx.total');
+// Returns: 15.3 transactions/second
+
+// TPS over last 5 minutes
+const tps5m = metrics.calculateRate('tx.total', 300000);
+// Returns: 12.7 transactions/second
+```
+
+**Percentile Analysis:**
+
+```typescript
+// Get gas usage percentiles
+const p50Gas = metrics.getPercentile('tx.gas_used', 50);  // Median
+const p95Gas = metrics.getPercentile('tx.gas_used', 95);  // 95th percentile
+const p99Gas = metrics.getPercentile('tx.gas_used', 99);  // 99th percentile
+
+console.log(`Gas Usage: p50=${p50Gas}, p95=${p95Gas}, p99=${p99Gas}`);
+// Output: Gas Usage: p50=21000, p95=45000, p99=80000
+```
+
+**Get Uptime:**
+
+```typescript
+const uptime = metrics.getUptime();
+console.log(`Agent uptime: ${uptime}ms`);
+// Output: Agent uptime: 3600000ms (1 hour)
+
+// Convert to human-readable format
+const hours = uptime / (1000 * 60 * 60);
+console.log(`Uptime: ${hours.toFixed(2)} hours`);
+```
+
+**Get Complete Snapshot:**
+
+```typescript
+const snapshot = metrics.getSnapshot();
+console.log(JSON.stringify(snapshot, null, 2));
+```
+
+**Snapshot Format:**
+```json
+{
+  "counters": {
+    "tx.total": 1000,
+    "tx.success": 955,
+    "tx.failed": 45,
+    "llm.total": 500,
+    "llm.success": 491,
+    "llm.failed": 9
+  },
+  "gauges": {
+    "memory.usage": 52428800,
+    "active.connections": 5
+  },
+  "histograms": {
+    "gas_used": {
+      "p50": 21000,
+      "p95": 45000,
+      "p99": 80000
+    },
+    "reasoning_time": {
+      "p50": 1200,
+      "p95": 2500,
+      "p99": 3800
+    }
+  },
+  "tx_sent": 1000,
+  "tx_success_rate": 95.5,
+  "avg_gas_used": 25430,
+  "llm_calls": 500,
+  "reasoning_time": 1234,
+  "uptime": 3600000,
+  "tps": 16.67,
+  "timestamp": 1640000000000
+}
+```
+
+**Advanced: Summary Statistics:**
+
+```typescript
+// Get detailed statistics for a metric
+const gasSummary = metrics.getSummary('tx.gas_used');
+console.log(gasSummary);
+// {
+//   name: 'tx.gas_used',
+//   count: 1000,
+//   sum: 25430000,
+//   avg: 25430,
+//   min: 21000,
+//   max: 150000,
+//   lastValue: 30000,
+//   lastTimestamp: 1640000000000
+// }
+```
+
+**Real-World Example:**
+
+```typescript
+import { Agent, Metrics, Logger } from '@somnia/agent-kit';
+
+const metrics = new Metrics();
+const logger = new Logger();
+
+// In your agent execution loop
+agent.on('transaction:sent', async (tx) => {
+  try {
+    const receipt = await tx.wait();
+    metrics.recordTransaction(
+      receipt.status === 1,  // success
+      receipt.gasUsed.toNumber()
+    );
+  } catch (error) {
+    metrics.recordTransaction(false);  // failed
+  }
+});
+
+agent.on('llm:call', async (prompt) => {
+  const start = Date.now();
+  try {
+    const response = await llm.generate(prompt);
+    const duration = Date.now() - start;
+    metrics.recordLLMCall(duration, true);
+    return response;
+  } catch (error) {
+    metrics.recordLLMCall(Date.now() - start, false);
+    throw error;
+  }
+});
+
+// Monitor and log metrics every minute
+setInterval(() => {
+  const snapshot = metrics.getSnapshot();
+  logger.info('Metrics snapshot', {
+    tx_sent: snapshot.tx_sent,
+    success_rate: snapshot.tx_success_rate.toFixed(2),
+    avg_gas: snapshot.avg_gas_used.toFixed(0),
+    tps: snapshot.tps.toFixed(2),
+    uptime_hours: (snapshot.uptime / 3600000).toFixed(2),
+  });
+}, 60000);
+```
+
+---
+
+#### **eventRecorder.ts** - Blockchain Event Tracking
+
+Monitor and record on-chain events with filtering and callbacks.
+
+```typescript
+import { EventRecorder } from '@somnia/agent-kit';
+
+const recorder = new EventRecorder(config);
+
+// Start listening to events
+await recorder.startListening('AgentRegistry', ['AgentRegistered', 'AgentUpdated']);
+
+// Register event callback
+recorder.on('AgentRegistered', (event) => {
+  logger.info('New agent registered', { agentId: event.agentId });
+});
+
+// Query recorded events
+const events = recorder.getEvents({ type: 'AgentRegistered' });
+```
+
+---
+
+#### **telemetry.ts** - Remote Observability (Production-Level)
+
+Send logs and metrics to external monitoring services like Prometheus, Grafana, Datadog, and OpenTelemetry collectors.
+
+**Key Features:**
+- ✅ **Non-blocking async queue** - No performance impact
+- ✅ **Batch processing** - Efficient data transmission
+- ✅ **Multiple formats** - JSON, Prometheus, Datadog, OpenTelemetry
+- ✅ **Retry logic** - Exponential backoff (1s → 2s → 4s → 10s max)
+- ✅ **Auto-flush** - Configurable interval (default: 10s)
+- ✅ **Enable/disable** - Via TELEMETRY_ENDPOINT env var
+- ✅ **Integration** - Auto-export from Logger and Metrics
+
+**Basic Usage:**
+
+```typescript
+import { Telemetry } from '@somnia/agent-kit';
+
+// Create telemetry instance
+const telemetry = new Telemetry({
+  endpoint: process.env.TELEMETRY_ENDPOINT,  // Required
+  format: 'json',                             // json | prometheus | datadog | opentelemetry
+  batchSize: 100,                             // Flush after 100 items
+  flushInterval: 10000,                       // Flush every 10s
+  retries: 3,                                 // Retry up to 3 times
+  timeout: 5000,                              // 5s timeout
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',   // Optional custom headers
+  },
+});
+
+// Send data (non-blocking, adds to queue)
+telemetry.send({
+  type: 'metric',
+  timestamp: Date.now(),
+  data: { tx_sent: 1000, tx_success_rate: 95.5 },
+});
+
+// Manual flush
+await telemetry.flush();
+```
+
+**Environment Variable Configuration:**
+
+```bash
+# Enable telemetry by setting endpoint
+export TELEMETRY_ENDPOINT=https://metrics.example.com/api
+
+# Telemetry auto-detects and enables
+const telemetry = new Telemetry();  // Reads TELEMETRY_ENDPOINT
+```
+
+**Integration with Logger:**
+
+```typescript
+import { Logger } from '@somnia/agent-kit';
+
+const logger = new Logger({
+  telemetry: {
+    endpoint: 'https://logs.example.com/api',
+    format: 'json',
+    batchSize: 50,
+  },
+});
+
+// All logs automatically sent to telemetry
+logger.info('Transaction sent', { txHash: '0x123...' });
+logger.error('Transaction failed', { error: 'Insufficient funds' });
+```
+
+**Integration with Metrics:**
+
+```typescript
+import { Metrics } from '@somnia/agent-kit';
+
+const metrics = new Metrics({
+  telemetry: {
+    endpoint: 'http://localhost:9091/metrics',
+    format: 'prometheus',
+  },
+  telemetryInterval: 60000,  // Export every 60s
+});
+
+// Metrics auto-exported to Prometheus every minute
+metrics.recordTransaction(true, 21000);
+metrics.recordLLMCall(1250);
+```
+
+**Prometheus Integration:**
+
+```typescript
+// Prometheus Pushgateway
+const telemetry = new Telemetry({
+  endpoint: 'http://pushgateway:9091/metrics/job/somnia-agent',
+  format: 'prometheus',
+  flushInterval: 15000,  // Push every 15s
+});
+
+// Metrics sent in Prometheus text format:
+// # TYPE tx_sent counter
+// tx_sent 1000 1640000000
+// # TYPE tx_success_rate gauge
+// tx_success_rate 95.5 1640000000
+```
+
+**Grafana Loki Integration:**
+
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'http://loki:3100/loki/api/v1/push',
+  format: 'json',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Scope-OrgID': 'tenant1',
+  },
+});
+```
+
+**Datadog Integration:**
+
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'https://api.datadoghq.com/api/v1/series',
+  format: 'datadog',
+  headers: {
+    'DD-API-KEY': process.env.DATADOG_API_KEY,
+  },
+});
+
+// Metrics sent in Datadog format:
+// {
+//   "series": [
+//     {
+//       "metric": "tx.total",
+//       "type": "count",
+//       "points": [[1640000000, 1000]],
+//       "tags": ["env:production", "agent:v1"]
+//     }
+//   ]
+// }
+```
+
+**OpenTelemetry Integration:**
+
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'http://otel-collector:4318/v1/metrics',
+  format: 'opentelemetry',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+```
+
+**Manual Control:**
+
+```typescript
+// Enable/disable dynamically
+telemetry.disable();
+telemetry.enable();
+
+// Check status
+if (telemetry.isEnabled()) {
+  console.log('Telemetry active');
+}
+
+// Queue status
+console.log(`Queue size: ${telemetry.getQueueSize()}`);
+
+// Force flush
+await telemetry.flush();
+
+// Cleanup on shutdown
+await telemetry.shutdown();
+```
+
+**Error Handling:**
+
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'https://metrics.example.com/api',
+  onError: (error) => {
+    logger.error('Telemetry failed', { error: error.message });
+    // Send to alternative monitoring service
+  },
+});
+```
+
+**Real-World Example - Complete Observability Stack:**
+
+```typescript
+import { Agent, Logger, Metrics, Telemetry } from '@somnia/agent-kit';
+
+// Unified telemetry config
+const telemetryConfig = {
+  endpoint: process.env.TELEMETRY_ENDPOINT,
+  format: 'prometheus' as const,
+  batchSize: 100,
+  flushInterval: 30000,  // 30s
+  headers: {
+    'Authorization': `Bearer ${process.env.TELEMETRY_API_KEY}`,
+  },
+  onError: (error) => console.error('[Telemetry Error]', error),
+};
+
+// Logger with telemetry
+const logger = new Logger({
+  format: 'json',
+  telemetry: {
+    ...telemetryConfig,
+    endpoint: process.env.TELEMETRY_LOGS_ENDPOINT,
+  },
+});
+
+// Metrics with telemetry
+const metrics = new Metrics({
+  telemetry: telemetryConfig,
+  telemetryInterval: 60000,  // Export every minute
+});
+
+// Agent lifecycle
+const agent = new Agent(agentConfig, { logger });
+
+agent.on('transaction:sent', async (tx) => {
+  try {
+    const receipt = await tx.wait();
+    metrics.recordTransaction(
+      receipt.status === 1,
+      receipt.gasUsed.toNumber()
+    );
+    logger.info('Transaction confirmed', {
+      txHash: receipt.transactionHash,
+      gasUsed: receipt.gasUsed.toString(),
+    });
+  } catch (error) {
+    metrics.recordTransaction(false);
+    logger.error('Transaction failed', { error });
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('Shutting down...');
+  await metrics.getSnapshot();  // Final metrics
+  await agent.stop();
+  process.exit(0);
+});
+```
+
+**Performance Considerations:**
+
+- **Non-blocking**: All telemetry operations are async and queued
+- **Batch processing**: Reduces network overhead by 90%+
+- **Retry logic**: Handles temporary network failures
+- **Timeout protection**: Prevents hanging requests (default: 5s)
+- **Memory efficient**: Queue auto-flushes at configurable size
+- **Zero impact**: Telemetry errors never crash your agent
+
+**Monitoring Your Monitoring:**
+
+```typescript
+// Track telemetry performance
+setInterval(() => {
+  console.log({
+    queueSize: telemetry.getQueueSize(),
+    enabled: telemetry.isEnabled(),
+  });
+}, 60000);
+```
+
+---
+
+#### **dashboard.ts** - Development Monitoring UI
+
+Simple Express-based dashboard for real-time agent monitoring in development mode. View logs, metrics, and agent status in your browser.
+
+**Key Features:**
+- ✅ **Real-time monitoring** - Live updates for logs and metrics
+- ✅ **REST API** - JSON endpoints for programmatic access
+- ✅ **HTML UI** - Beautiful dark-themed dashboard in browser
+- ✅ **Auto-refresh** - Logs refresh every 10s, metrics every 5s
+- ✅ **CORS enabled** - Access API from external tools
+- ✅ **Dev mode only** - Optional in production
+- ✅ **Zero config** - Works out of the box
+
+**Quick Start:**
+
+```typescript
+import { Agent, Logger, Metrics, startDashboard } from '@somnia/agent-kit';
+
+const logger = new Logger({ enableMemoryStorage: true });
+const metrics = new Metrics();
+const agent = new Agent(config, { logger });
+
+// Start dashboard (dev mode only)
+if (process.env.NODE_ENV !== 'production') {
+  const dashboard = startDashboard({
+    port: 3001,
+    logger,
+    metrics,
+    agent,
+  });
+
+  console.log(`📊 Dashboard: ${dashboard.getURL()}`);
+  // Output: 📊 Dashboard: http://localhost:3001
+}
+```
+
+**API Endpoints:**
+
+```typescript
+// Health check
+GET /health
+// Response: { "status": "ok", "timestamp": 1640000000 }
+
+// Get metrics snapshot
+GET /metrics
+// Response: {
+//   "tx_sent": 1000,
+//   "tx_success_rate": 95.5,
+//   "avg_gas_used": 25430,
+//   "llm_calls": 500,
+//   "reasoning_time": 1234,
+//   "uptime": 3600000,
+//   "tps": 16.67
+// }
+
+// Get recent logs
+GET /logs?limit=20
+// Response: {
+//   "logs": [
+//     {
+//       "timestamp": 1640000000,
+//       "level": "info",
+//       "message": "Transaction sent",
+//       "metadata": { "txHash": "0x..." }
+//     }
+//   ],
+//   "total": 20
+// }
+
+// Get agent status
+GET /status
+// Response: {
+//   "online": true,
+//   "uptime": 3600000,
+//   "version": "2.0.0",
+//   "agent": {
+//     "state": "active",
+//     "address": "0x123...",
+//     "name": "My Agent"
+//   }
+// }
+```
+
+**HTML UI Access:**
+
+Open in browser: `http://localhost:3001`
+
+**Dashboard Features:**
+- **Agent Status Card**: Online status, uptime, version, agent state
+- **Performance Metrics Card**: TX sent, success rate, gas, LLM calls, TPS
+- **Recent Logs Panel**: Last 20 logs with color-coded levels (error, warn, info, debug)
+- **Auto-Refresh**: Logs refresh every 10s, metrics/status every 5s
+- **Manual Refresh**: Button to force log refresh
+- **Responsive Design**: Works on desktop, tablet, and mobile
+
+**Custom Configuration:**
+
+```typescript
+const dashboard = new Dashboard({
+  port: 4000,              // Custom port
+  enableUI: true,          // Enable HTML UI (default: true)
+  enableCORS: true,        // Enable CORS (default: true)
+  logger: logger,          // Logger instance
+  metrics: metrics,        // Metrics instance
+  agent: agent,            // Agent instance
+  onError: (error) => {    // Custom error handler
+    console.error('Dashboard error:', error);
+  },
+});
+
+await dashboard.start();   // Start server
+console.log(dashboard.getURL());  // Get URL
+console.log(dashboard.isRunning());  // Check if running
+await dashboard.stop();    // Stop server
+```
+
+**Programmatic API Access:**
+
+```typescript
+// Fetch metrics from external script
+const response = await fetch('http://localhost:3001/metrics');
+const metrics = await response.json();
+console.log(`TPS: ${metrics.tps}, Success Rate: ${metrics.tx_success_rate}%`);
+
+// Fetch recent logs
+const logsResponse = await fetch('http://localhost:3001/logs?limit=50');
+const { logs } = await logsResponse.json();
+logs.forEach(log => {
+  console.log(`[${log.level}] ${log.message}`);
+});
+```
+
+**Integration with Monitoring Tools:**
+
+```bash
+# Curl examples
+curl http://localhost:3001/metrics | jq '.tx_success_rate'
+curl http://localhost:3001/status | jq '.uptime'
+
+# Watch metrics in terminal
+watch -n 5 'curl -s http://localhost:3001/metrics | jq .'
+```
+
+**Grafana Integration:**
+
+```typescript
+// Use dashboard API as Grafana datasource (Simple JSON plugin)
+// Grafana dashboard queries:
+// - http://localhost:3001/metrics (for metrics panels)
+// - http://localhost:3001/status (for status panel)
+// - http://localhost:3001/logs (for log table)
+```
+
+**Security Considerations:**
+
+```typescript
+// Production mode: Disable dashboard
+if (process.env.NODE_ENV === 'production') {
+  console.log('Dashboard disabled in production');
+} else {
+  startDashboard({ port: 3001, logger, metrics, agent });
+}
+
+// Or: Bind to localhost only (no external access)
+const dashboard = new Dashboard({
+  port: 3001,
+  enableCORS: false,  // Disable CORS for security
+});
+
+// Or: Use authentication middleware
+import express from 'express';
+const app = express();
+app.use((req, res, next) => {
+  const token = req.headers.authorization;
+  if (token !== 'Bearer YOUR_SECRET_TOKEN') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+});
+```
+
+**Real-World Example:**
+
+```typescript
+import { Agent, Logger, Metrics, startDashboard } from '@somnia/agent-kit';
+
+// Setup monitoring
+const logger = new Logger({
+  format: 'pretty',
+  enableMemoryStorage: true,  // Required for dashboard
+});
+
+const metrics = new Metrics();
+
+// Create agent
+const agent = new Agent({
+  name: 'Trading Agent',
+  description: 'Automated trading bot',
+  owner: '0x...',
+}, { logger });
+
+// Track agent events
+agent.on('transaction:sent', (tx) => {
+  logger.info('Transaction sent', { txHash: tx.hash });
+});
+
+agent.on('transaction:confirmed', (receipt) => {
+  metrics.recordTransaction(
+    receipt.status === 1,
+    receipt.gasUsed.toNumber()
+  );
+  logger.info('Transaction confirmed', {
+    txHash: receipt.transactionHash,
+    gasUsed: receipt.gasUsed.toString(),
+  });
+});
+
+// Start dashboard in dev mode
+if (process.env.NODE_ENV !== 'production') {
+  const dashboard = startDashboard({
+    port: 3001,
+    logger,
+    metrics,
+    agent,
+    onError: (error) => logger.error('Dashboard error', { error }),
+  });
+
+  console.log(`
+╔═══════════════════════════════════════╗
+║   📊 Agent Dashboard                   ║
+║   ${dashboard.getURL()}                ║
+║                                       ║
+║   Endpoints:                          ║
+║   - /metrics  (Performance metrics)   ║
+║   - /logs     (Recent logs)           ║
+║   - /status   (Agent status)          ║
+║   - /health   (Health check)          ║
+╚═══════════════════════════════════════╝
+  `);
+}
+
+// Start agent
+await agent.start();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('Shutting down...');
+  await agent.stop();
+  await dashboard.stop();
+  process.exit(0);
+});
+```
+
+**Performance:**
+- **Lightweight**: Express server with minimal overhead
+- **Non-blocking**: All API calls are async
+- **Memory efficient**: Only stores logs if enableMemoryStorage is true
+- **Fast**: API responses < 10ms for typical datasets
+
+**Troubleshooting:**
+
+```typescript
+// Port already in use
+const dashboard = new Dashboard({ port: 3002 });  // Use different port
+
+// Logger not showing logs
+const logger = new Logger({
+  enableMemoryStorage: true,  // REQUIRED for dashboard /logs endpoint
+});
+
+// Metrics not available
+const metrics = new Metrics();  // Create metrics instance first
+const dashboard = startDashboard({ metrics });  // Pass to dashboard
+
+// CORS issues
+const dashboard = new Dashboard({
+  enableCORS: true,  // Enable CORS for external access
+});
+```
+
+---
 
 ### 6. **cli/** - Command Line Interface
 **Status**: ✅ Completed

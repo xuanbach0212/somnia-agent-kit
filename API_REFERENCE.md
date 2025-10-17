@@ -3736,8 +3736,9 @@ interface LoggerConfig {
   enableConsole?: boolean; // default: true
   enableFile?: boolean; // default: false
   filePath?: string;
-  maxFileSize?: number;
-  maxFiles?: number;
+  format?: 'json' | 'pretty'; // default: 'pretty' (uses pino-pretty)
+  enableMemoryStorage?: boolean; // default: true
+  telemetry?: TelemetryConfig; // Optional telemetry integration
 }
 ```
 
@@ -3840,85 +3841,269 @@ Get current log level.
 
 ### Metrics
 
-**Performance Metrics** - Counters, gauges, histograms, timing
+**Performance Metrics** - Counters, gauges, histograms, timing, uptime tracking
 
 **Location**: `packages/agent-kit/src/monitor/metrics.ts`
 
-#### Metric Types
+#### Constructor
 
 ```typescript
-enum MetricType {
-  Counter = 'counter',
-  Gauge = 'gauge',
-  Histogram = 'histogram',
+new Metrics(config?: MetricsConfig)
+```
+
+**MetricsConfig**:
+```typescript
+interface MetricsConfig {
+  retentionPeriod?: number; // Milliseconds (default: 24 hours)
+  maxMetrics?: number; // Maximum metrics to store (default: 10000)
+  telemetry?: TelemetryConfig; // Optional telemetry integration
+  telemetryInterval?: number; // Auto-export interval in ms (default: 60s)
 }
 ```
 
-#### Methods
+#### Core Methods
 
-##### `incrementCounter(name: string, value?: number, labels?: Record<string, string>): void`
+##### `record(name: string, value: number, tags?: Record<string, string>): void`
 
-Increment counter.
+Record a metric value.
 
 **Parameters**:
 - `name`: Metric name
+- `value`: Metric value
+- `tags` (optional): Metric tags/labels
+
+---
+
+##### `increment(name: string, value?: number): void`
+
+Increment a counter.
+
+**Parameters**:
+- `name`: Counter name
 - `value` (optional): Increment value (default: 1)
-- `labels` (optional): Metric labels
 
 ---
 
-##### `setGauge(name: string, value: number, labels?: Record<string, string>): void`
+##### `decrement(name: string, value?: number): void`
 
-Set gauge value.
-
----
-
-##### `recordHistogram(name: string, value: number, labels?: Record<string, string>): void`
-
-Record histogram value.
+Decrement a counter.
 
 ---
 
-##### `startTimer(name: string, labels?: Record<string, string>): () => void`
+##### `gauge(name: string, value: number): void`
 
-Start timer for metric.
+Set a gauge value.
 
-**Returns**: Function to stop timer
+---
+
+##### `histogram(name: string, value: number): void`
+
+Record a histogram value.
+
+---
+
+##### `async time<T>(name: string, fn: () => Promise<T>): Promise<T>`
+
+Time an async operation.
 
 **Example**:
 ```typescript
-const stopTimer = metrics.startTimer('operation_duration');
-// ... do operation
-stopTimer(); // Records duration
+const result = await metrics.time('db.query', async () => {
+  return await database.query('SELECT * FROM users');
+});
 ```
 
 ---
 
-##### `getMetric(name: string, labels?: Record<string, string>): Metric | undefined`
+#### Getter Methods
 
-Get metric by name and labels.
+##### `getCounter(name: string): number`
 
----
+Get counter value.
 
-##### `getAllMetrics(): Metric[]`
-
-Get all metrics.
-
-**Returns**: `Metric[]`
+**Returns**: Counter value (0 if not found)
 
 ---
 
-##### `export(): MetricData[]`
+##### `getGauge(name: string): number | undefined`
 
-Export all metrics data.
-
-**Returns**: `MetricData[]`
+Get gauge value.
 
 ---
 
-##### `reset(): void`
+##### `getHistogram(name: string): number[]`
 
-Reset all metrics.
+Get histogram values.
+
+**Returns**: Array of recorded values
+
+---
+
+##### `getSummary(name: string): MetricSummary | null`
+
+Get metric summary with statistics.
+
+**Returns**: `MetricSummary` with count, sum, avg, min, max, lastValue, lastTimestamp
+
+---
+
+##### `getAllSummaries(): MetricSummary[]`
+
+Get summaries for all metrics.
+
+---
+
+##### `getMetrics(name: string, limit?: number): Metric[]`
+
+Get raw metrics by name.
+
+---
+
+##### `getMetricsByTimeRange(name: string, startTime: number, endTime: number): Metric[]`
+
+Get metrics in time range.
+
+---
+
+##### `getMetricNames(): string[]`
+
+Get all metric names.
+
+---
+
+#### Calculated Metrics
+
+##### `rate(numerator: string, denominator: string): number`
+
+Calculate rate (ratio) between two counters as percentage.
+
+**Example**:
+```typescript
+// Calculate success rate
+const successRate = metrics.rate('tx.success', 'tx.total');
+console.log(`Success rate: ${successRate}%`);
+```
+
+---
+
+##### `calculateRate(metricName: string, windowMs?: number): number`
+
+Calculate operations per second over time window.
+
+**Parameters**:
+- `metricName`: Counter name
+- `windowMs` (optional): Time window in milliseconds (default: 60000 = 60s)
+
+**Returns**: Rate per second (TPS for transactions)
+
+**Example**:
+```typescript
+// Calculate TPS over last 60 seconds
+const tps = metrics.calculateRate('tx.total', 60000);
+```
+
+---
+
+##### `getPercentile(name: string, percentile: number): number | null`
+
+Calculate percentile for histogram.
+
+**Parameters**:
+- `name`: Histogram name
+- `percentile`: Percentile (0-100), e.g., 50 for median, 95 for p95, 99 for p99
+
+**Example**:
+```typescript
+const p95 = metrics.getPercentile('tx.gas_used', 95);
+console.log(`95th percentile gas: ${p95}`);
+```
+
+---
+
+#### Uptime Tracking
+
+##### `getUptime(): number`
+
+Get uptime in milliseconds since metrics instance creation.
+
+---
+
+##### `resetUptime(): void`
+
+Reset uptime counter.
+
+---
+
+#### Convenience Methods
+
+##### `recordTransaction(success: boolean, gasUsed?: number): void`
+
+Record a blockchain transaction.
+
+**Parameters**:
+- `success`: Whether transaction succeeded
+- `gasUsed` (optional): Amount of gas used
+
+**Increments**:
+- `tx.total` counter
+- `tx.success` or `tx.failed` counter
+- Records `tx.gas_used` histogram
+
+---
+
+##### `recordLLMCall(duration?: number, success?: boolean): void`
+
+Record an LLM call.
+
+**Parameters**:
+- `duration` (optional): Duration in milliseconds
+- `success` (optional): Whether call succeeded (default: true)
+
+**Increments**:
+- `llm.total` counter
+- `llm.success` or `llm.failed` counter
+- Records `llm.reasoning_time` histogram
+
+---
+
+##### `recordGasUsed(amount: number): void`
+
+Record gas usage.
+
+---
+
+#### Export Methods
+
+##### `getSnapshot(): Record<string, any>`
+
+Get snapshot of all metrics (alias for export).
+
+**Returns**: Complete metrics snapshot including counters, gauges, histograms, calculated metrics (tx_sent, tx_success_rate, avg_gas_used, llm_calls, reasoning_time, uptime, tps)
+
+---
+
+##### `export(): Record<string, any>`
+
+Export metrics as JSON.
+
+**Returns**: Structured metrics data with counters, gauges, summaries, histograms, and calculated metrics
+
+**Example**:
+```typescript
+const snapshot = metrics.export();
+console.log(`TPS: ${snapshot.tps}`);
+console.log(`Success Rate: ${snapshot.tx_success_rate}%`);
+console.log(`Uptime: ${snapshot.uptime}ms`);
+```
+
+---
+
+##### `clear(name?: string): void`
+
+Clear metrics.
+
+**Parameters**:
+- `name` (optional): Clear specific metric, or all if omitted
 
 ---
 
@@ -3991,6 +4176,431 @@ Clear all recorded events.
 Export all events.
 
 **Returns**: `ContractEvent[]`
+
+---
+
+### Telemetry
+
+**Remote Observability** - Send logs and metrics to external monitoring services
+
+**Location**: `packages/agent-kit/src/monitor/telemetry.ts`
+
+#### Supported Formats
+
+- **JSON**: Generic JSON format for custom endpoints
+- **Prometheus**: Text format for Prometheus Pushgateway
+- **Datadog**: Datadog Series API format
+- **OpenTelemetry**: OTLP metrics format
+
+#### Constructor
+
+```typescript
+new Telemetry(config?: TelemetryConfig)
+```
+
+**TelemetryConfig**:
+```typescript
+interface TelemetryConfig {
+  endpoint?: string; // TELEMETRY_ENDPOINT env var
+  format?: 'json' | 'prometheus' | 'datadog' | 'opentelemetry'; // default: 'json'
+  batchSize?: number; // Number of items before auto-flush (default: 100)
+  flushInterval?: number; // Auto-flush interval in ms (default: 10s)
+  enabled?: boolean; // Enable/disable (auto-detected from endpoint)
+  retries?: number; // Max retry attempts (default: 3)
+  timeout?: number; // Request timeout in ms (default: 5s)
+  headers?: Record<string, string>; // Custom headers (API keys, etc.)
+  onError?: (error: Error) => void; // Error callback
+}
+```
+
+#### Methods
+
+##### `send(data: TelemetryData): void`
+
+Send data to telemetry (non-blocking, adds to queue).
+
+**Parameters**:
+- `data`: Telemetry data with type ('log', 'metric', 'event'), timestamp, and data payload
+
+**Auto-flushes** when batch size reached.
+
+---
+
+##### `async sendMetrics(metrics: Metrics): Promise<void>`
+
+Send metrics snapshot to telemetry.
+
+**Parameters**:
+- `metrics`: Metrics instance
+
+---
+
+##### `async sendLogs(logs: LogEntry[]): Promise<void>`
+
+Send log entries to telemetry.
+
+**Parameters**:
+- `logs`: Array of log entries
+
+---
+
+##### `async sendEvent(event: any, tags?: Record<string, string>): Promise<void>`
+
+Send custom event to telemetry.
+
+**Parameters**:
+- `event`: Event data
+- `tags` (optional): Event tags
+
+---
+
+##### `async flush(): Promise<void>`
+
+Flush queue to endpoint immediately.
+
+**Behavior**:
+- Non-blocking async operation
+- Batches items from queue
+- Formats based on config (JSON, Prometheus, Datadog, OpenTelemetry)
+- Retries with exponential backoff (1s → 2s → 4s → 10s max)
+
+---
+
+##### `enable(): void`
+
+Enable telemetry and start auto-flush.
+
+---
+
+##### `disable(): void`
+
+Disable telemetry and stop auto-flush.
+
+---
+
+##### `isEnabled(): boolean`
+
+Check if telemetry is enabled.
+
+---
+
+##### `getQueueSize(): number`
+
+Get current queue size.
+
+---
+
+##### `clearQueue(): void`
+
+Clear telemetry queue.
+
+---
+
+##### `async shutdown(): Promise<void>`
+
+Cleanup and flush remaining data.
+
+**Important**: Call before process exit to ensure all data is sent.
+
+---
+
+#### Helper Functions
+
+##### `createTelemetry(config?: TelemetryConfig): Telemetry`
+
+Create telemetry instance with config.
+
+---
+
+##### `async sendTelemetry(data: any): Promise<void>`
+
+Convenience function to send telemetry using default instance.
+
+**Requires**: `TELEMETRY_ENDPOINT` environment variable
+
+**Example**:
+```typescript
+import { sendTelemetry } from '@somnia/agent-kit';
+
+// Set endpoint
+process.env.TELEMETRY_ENDPOINT = 'https://my-monitoring.com/api';
+
+// Send custom event
+await sendTelemetry({
+  event: 'agent_started',
+  agentId: 'my-agent',
+  timestamp: Date.now(),
+});
+```
+
+---
+
+#### Usage Examples
+
+**Prometheus Integration**:
+```typescript
+import { Telemetry, Metrics } from '@somnia/agent-kit';
+
+const telemetry = new Telemetry({
+  endpoint: 'http://pushgateway:9091/metrics/job/my-agent',
+  format: 'prometheus',
+  flushInterval: 30000, // 30s
+});
+
+const metrics = new Metrics({ telemetry });
+
+// Metrics automatically exported to Prometheus every 30s
+metrics.recordTransaction(true, 21000);
+```
+
+**Datadog Integration**:
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'https://api.datadoghq.com/api/v1/series',
+  format: 'datadog',
+  headers: {
+    'DD-API-KEY': process.env.DATADOG_API_KEY,
+  },
+});
+```
+
+**Custom JSON Endpoint**:
+```typescript
+const telemetry = new Telemetry({
+  endpoint: 'https://my-monitoring.com/api/metrics',
+  format: 'json',
+  batchSize: 50,
+  retries: 5,
+});
+
+telemetry.send({
+  type: 'metric',
+  timestamp: Date.now(),
+  data: { cpu: 80, memory: 60 },
+});
+```
+
+---
+
+### Dashboard
+
+**Development Monitoring UI** - Real-time agent monitoring with REST API and HTML UI
+
+**Location**: `packages/agent-kit/src/monitor/dashboard.ts`
+
+#### Constructor
+
+```typescript
+new Dashboard(config?: DashboardConfig)
+```
+
+**DashboardConfig**:
+```typescript
+interface DashboardConfig {
+  port?: number; // Default: 3001
+  enableUI?: boolean; // HTML UI (default: true)
+  enableCORS?: boolean; // CORS (default: true)
+  logger?: Logger; // Logger instance
+  metrics?: Metrics; // Metrics instance
+  agent?: any; // Agent instance for status
+  onError?: (error: Error) => void; // Error callback
+}
+```
+
+#### Methods
+
+##### `async start(): Promise<void>`
+
+Start dashboard server.
+
+**Output**: Logs dashboard URL to console
+
+---
+
+##### `async stop(): Promise<void>`
+
+Stop dashboard server.
+
+---
+
+##### `getURL(): string`
+
+Get dashboard URL.
+
+**Returns**: URL string (e.g., `http://localhost:3001`)
+
+---
+
+##### `isRunning(): boolean`
+
+Check if dashboard is running.
+
+---
+
+#### Helper Functions
+
+##### `startDashboard(config: DashboardConfig): Dashboard`
+
+Convenience function to create and start dashboard.
+
+**Returns**: Dashboard instance
+
+**Example**:
+```typescript
+import { startDashboard, logger, Metrics } from '@somnia/agent-kit';
+
+const metrics = new Metrics();
+
+const dashboard = startDashboard({
+  port: 3001,
+  logger,
+  metrics,
+  agent: myAgent,
+});
+
+// Open http://localhost:3001 in browser
+```
+
+---
+
+#### REST API Endpoints
+
+##### `GET /health`
+
+Health check endpoint.
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "timestamp": 1234567890
+}
+```
+
+---
+
+##### `GET /metrics`
+
+Get metrics snapshot.
+
+**Response**: Complete metrics data (counters, gauges, histograms, calculated metrics)
+
+**Example**:
+```json
+{
+  "tx_sent": 42,
+  "tx_success_rate": 95.2,
+  "avg_gas_used": 21000,
+  "llm_calls": 15,
+  "reasoning_time": 250,
+  "uptime": 3600000,
+  "tps": 0.7,
+  "counters": { ... },
+  "gauges": { ... },
+  "histograms": { ... }
+}
+```
+
+---
+
+##### `GET /logs?limit=N`
+
+Get recent logs.
+
+**Query Parameters**:
+- `limit` (optional): Number of logs (default: 20)
+
+**Response**:
+```json
+{
+  "logs": [
+    {
+      "timestamp": 1234567890,
+      "level": "info",
+      "message": "Transaction sent",
+      "context": "Agent",
+      "metadata": { "txHash": "0x..." }
+    }
+  ],
+  "total": 20
+}
+```
+
+---
+
+##### `GET /status`
+
+Get agent status.
+
+**Response**:
+```json
+{
+  "online": true,
+  "uptime": 3600000,
+  "version": "2.0.0",
+  "timestamp": 1234567890,
+  "agent": {
+    "state": "active",
+    "address": "0x...",
+    "name": "My Agent"
+  }
+}
+```
+
+---
+
+##### `GET /`
+
+HTML dashboard UI.
+
+**Features**:
+- Real-time metrics display
+- Recent logs with auto-refresh (10s)
+- Agent status with uptime
+- Dark theme UI
+- Auto-refresh metrics/status every 5s
+
+---
+
+#### Usage Example
+
+**Complete Setup**:
+```typescript
+import {
+  SomniaAgentKit,
+  logger,
+  Metrics,
+  startDashboard,
+} from '@somnia/agent-kit';
+
+// Initialize
+const kit = await SomniaAgentKit.create({
+  rpcUrl: 'https://dream-rpc.somnia.network',
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+const metrics = new Metrics();
+
+// Start dashboard
+const dashboard = startDashboard({
+  port: 3001,
+  logger,
+  metrics,
+  agent: kit.agent,
+});
+
+// Open http://localhost:3001 to view dashboard
+
+// Use metrics
+metrics.recordTransaction(true, 21000);
+logger.info('Dashboard running', { url: dashboard.getURL() });
+
+// Cleanup on exit
+process.on('SIGINT', async () => {
+  await dashboard.stop();
+  process.exit(0);
+});
+```
 
 ---
 
