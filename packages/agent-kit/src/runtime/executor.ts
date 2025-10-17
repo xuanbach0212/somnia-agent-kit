@@ -9,6 +9,7 @@ import type { Action } from './planner';
 import type { ChainClient } from '../core/chainClient';
 import type { SomniaContracts } from '../core/contracts';
 import type {
+  ExecutionResult,
   DetailedExecutionResult,
   ExecutionContext,
   ExecutorConfig,
@@ -18,7 +19,7 @@ import { ExecutionStatus } from '../types/action'; // Import enum as value
 
 // Re-export types for backward compatibility
 export { ExecutionStatus, ExecutorConfig };
-export type { DetailedExecutionResult as ExecutionResult, ExecutionContext, ActionHandler };
+export type { ExecutionResult, DetailedExecutionResult, ExecutionContext, ActionHandler };
 
 // Type alias for transaction receipt
 export type TxReceipt = ethers.TransactionReceipt;
@@ -85,9 +86,9 @@ export class Executor {
   /**
    * Execute a single action
    * @param action Action to execute
-   * @returns Execution result with optional transaction receipt
+   * @returns Detailed execution result with status and metadata
    */
-  async execute(action: Action): Promise<ExecutionResult> {
+  async execute(action: Action): Promise<DetailedExecutionResult> {
     const startTime = Date.now();
     const actionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -254,7 +255,7 @@ export class Executor {
   /**
    * Execute a single step
    */
-  private async executeStep(step: PlanStep): Promise<ExecutionResult> {
+  private async executeStep(step: PlanStep): Promise<DetailedExecutionResult> {
     const startTime = Date.now();
     let retryCount = 0;
 

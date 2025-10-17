@@ -88,11 +88,11 @@ export class Policy {
   addRule(rule: Omit<PolicyRule, 'id' | 'createdAt'>): string {
     const id = `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const fullRule: PolicyRule = {
+      ...rule,
       id,
       createdAt: Date.now(),
       priority: rule.priority || 0,
       enabled: rule.enabled !== false,
-      ...rule,
     };
 
     this.rules.set(id, fullRule);

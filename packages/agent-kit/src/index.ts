@@ -136,7 +136,7 @@ export class SomniaAgentKit {
   }
 }
 
-// Re-export types and utilities
+// Re-export types and utilities from config layer
 export type {
   AgentKitConfig,
   NetworkConfig,
@@ -145,19 +145,32 @@ export type {
   SDKConfig,
   RuntimeConfig,
   CompleteSolutionConfig,
-} from './core/config';
+} from './config';
 export {
   SOMNIA_NETWORKS,
+  DEFAULT_NETWORK,
+  getNetwork,
   validateConfig,
+  validateAgentConfig,
+  validateSDKConfig,
+  validateRuntimeConfig,
   DEFAULT_CONFIG,
   DEFAULT_SDK_CONFIG,
   DEFAULT_RUNTIME_CONFIG,
+  DEFAULT_AGENT_CONFIG,
   loadFromEnv,
+  loadAgentConfigFromEnv,
   loadSDKConfigFromEnv,
   loadRuntimeConfigFromEnv,
   loadConfig,
+  mergeConfig,
   createConfigFromEnv,
-} from './core/config';
+  // Global config instance (for quick start)
+  config,
+  getConfig,
+  setConfig,
+  resetConfig,
+} from './config';
 // Utility functions
 export {
   // Async utilities

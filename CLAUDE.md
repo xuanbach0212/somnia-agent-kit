@@ -2415,6 +2415,29 @@ The SDK is now feature-complete and ready for:
 - Real-time monitoring and metrics
 - Multi-backend state management
 
+### 🔧 Recent Fixes (v2.0.1 - October 2025)
+
+**Build & Type Errors Fixed:**
+- ✅ **Fixed `agent.ts` registration** - Added missing `_ipfsMetadata` parameter to `registerAgent()` call (line 123)
+- ✅ **Fixed `agent.ts` termination** - Changed from `deregisterAgent()` to `deactivateAgent()` using agentId (line 288)
+- ✅ **Fixed `storage.ts` enum imports** - Changed StorageType and StorageBackend to value imports
+- ✅ **Fixed `policy.ts` duplicate property** - Reordered object spread to prevent 'enabled' overwrite
+- ✅ **Fixed `executor.ts` return types** - Changed ExecutionResult to DetailedExecutionResult for proper typing
+- ✅ **Fixed `context.ts` network access** - Changed `provider.network` to `provider.getNetwork()` for ethers v6
+- ✅ **Fixed `ollamaAdapter.ts` type assertion** - Added proper type for response.json()
+- ✅ **Fixed `anthropicAdapter.ts` error types** - Added type assertions for error objects
+
+**Contract Integration:**
+- Agent registration now properly stores `agentId` (uint256) from AgentRegistry contract
+- Terminate method correctly uses `deactivateAgent(agentId)` instead of non-existent `deregisterAgent()`
+- IPFS metadata support added to agent registration flow
+
+**Build Status:**
+- ✅ ESM build: 299.86 KB
+- ✅ CJS build: 303.83 KB
+- ✅ DTS build: 184.36 KB
+- ✅ All TypeScript errors resolved
+
 ### 📋 Future Enhancements
 - [ ] Advanced integration tests
 - [ ] Performance benchmarks
@@ -2462,6 +2485,30 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-3.5-turbo
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama2
+
+# Agent Metadata (Optional)
+AGENT_IPFS_METADATA=QmHash...  # IPFS hash for agent metadata (required for registration)
+
+# SDK-Level Configuration (Optional)
+SDK_DEBUG=false
+SDK_TELEMETRY=false
+SDK_LOG_LEVEL=info
+SDK_LLM_PROVIDER=openai
+SDK_DEFAULT_TIMEOUT=30000
+SDK_MAX_RETRIES=3
+SDK_AUTO_RECOVER=false
+
+# Runtime Module Configuration (Optional)
+RUNTIME_MAX_CONCURRENT=5
+RUNTIME_ENABLE_PARALLEL=true
+RUNTIME_DRY_RUN=false
+RUNTIME_MEMORY_LIMIT=1000
+RUNTIME_STORAGE_BACKEND=memory  # memory | file
+RUNTIME_STORAGE_PATH=./data/storage
+RUNTIME_MEMORY_BACKEND=memory  # memory | file
+RUNTIME_MEMORY_PATH=./data/memory
+RUNTIME_ENABLE_MEMORY=true
+RUNTIME_SESSION_ID=
 
 # Advanced (Optional)
 DEFAULT_GAS_LIMIT=3000000
@@ -2544,6 +2591,6 @@ npm run clean
 
 ---
 
-**Last Updated**: 2025-01-17
-**Version**: 2.1.0
-**Status**: Production Ready - All runtime modules enhanced to 100/100 (8/8 tests passing)
+**Last Updated**: 2025-10-17
+**Version**: 2.0.1
+**Status**: Production Ready - All build errors fixed, SDK + Runtime config complete (Build: ESM 299.86 KB, CJS 303.83 KB, DTS 184.36 KB)

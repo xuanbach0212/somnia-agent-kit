@@ -7,12 +7,11 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import type {
-  StorageBackend,
-  StorageType,
   EventEntry,
   ActionEntry,
   IStorage,
 } from '../types/storage';
+import { StorageBackend, StorageType } from '../types/storage'; // Enums as values
 
 // Re-export types for backward compatibility
 export { StorageBackend, StorageType, EventEntry, ActionEntry, IStorage };

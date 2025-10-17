@@ -178,7 +178,7 @@ export class AnthropicAdapter implements LLMAdapter {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(
         `Anthropic API error: ${response.status} ${response.statusText}${
           error.error?.message ? ` - ${error.error.message}` : ''
@@ -302,7 +302,7 @@ export class AnthropicAdapter implements LLMAdapter {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
         throw new Error(
           `Anthropic API error: ${response.status} ${response.statusText}${
             error.error?.message ? ` - ${error.error.message}` : ''

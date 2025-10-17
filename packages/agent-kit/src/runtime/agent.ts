@@ -38,6 +38,7 @@ export class Agent extends EventEmitter<AgentEvents> {
   private registryContract: AgentRegistry | null = null;
   private executorContract: AgentExecutor | null = null;
   private agentAddress: string | null = null;
+  private agentId: bigint | null = null;
   private tasks: Map<string, AgentTask> = new Map();
 
   // Runtime modules
@@ -120,12 +121,13 @@ export class Agent extends EventEmitter<AgentEvents> {
       .registerAgent(
         this.config.name,
         this.config.description,
+        this.config.metadata?.ipfsHash || '', // IPFS metadata hash
         this.config.capabilities || []
       );
 
     const receipt = await tx.wait();
 
-    // Extract agent address from event
+    // Extract agentId from event
     const event = receipt?.logs.find((log: any) => {
       try {
         const parsed = this.registryContract!.interface.parseLog(log);
@@ -137,7 +139,8 @@ export class Agent extends EventEmitter<AgentEvents> {
 
     if (event) {
       const parsed = this.registryContract.interface.parseLog(event);
-      this.agentAddress = parsed?.args[0];
+      this.agentId = parsed?.args[0]; // agentId (uint256)
+      this.agentAddress = parsed?.args[1]; // owner address
     }
 
     this.state = AgentState.Registered;
@@ -272,16 +275,17 @@ export class Agent extends EventEmitter<AgentEvents> {
 
   /**
    * Terminate agent permanently
+   * Deactivates the agent on-chain
    */
   async terminate(signer: ethers.Signer): Promise<void> {
-    if (!this.registryContract || !this.agentAddress) {
+    if (!this.registryContract || this.agentId === null) {
       throw new Error('Agent not registered');
     }
 
-    // Deregister from contract
+    // Deactivate agent on contract
     const tx = await this.registryContract
       .connect(signer)
-      .deregisterAgent(this.agentAddress);
+      .deactivateAgent(this.agentId);
 
     await tx.wait();
 

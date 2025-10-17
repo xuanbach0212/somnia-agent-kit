@@ -134,7 +134,7 @@ export class ContextBuilder {
       const [blockNumber, gasPrice, network] = await Promise.all([
         this.chainClient.getBlockNumber(),
         this.chainClient.getGasPrice(),
-        Promise.resolve(this.chainClient.getProvider().network),
+        this.chainClient.getProvider().getNetwork(),
       ]);
 
       const chainState: ChainState = {
