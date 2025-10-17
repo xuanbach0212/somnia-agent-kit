@@ -1,36 +1,28 @@
 /**
  * Configuration for Somnia Agent Kit
+ * Type definitions moved to src/types/config.ts
  */
 
-export interface NetworkConfig {
-  rpcUrl: string;
-  chainId: number;
-  name: string;
-}
+import type {
+  NetworkConfig,
+  ContractAddresses,
+  LLMProviderConfig,
+  AgentKitConfig,
+  SDKConfig,
+  RuntimeConfig,
+  CompleteSolutionConfig,
+} from '../types/config';
 
-export interface ContractAddresses {
-  agentRegistry: string;
-  agentExecutor: string;
-  agentManager?: string;
-  agentVault?: string;
-}
-
-export interface LLMProviderConfig {
-  provider?: 'openai' | 'ollama' | 'custom';
-  apiKey?: string;
-  baseUrl?: string;
-  model?: string;
-}
-
-export interface AgentKitConfig {
-  network: NetworkConfig;
-  contracts: ContractAddresses;
-  privateKey?: string;
-  llmProvider?: LLMProviderConfig;
-  defaultGasLimit?: bigint;
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
-  metricsEnabled?: boolean;
-}
+// Re-export types for backward compatibility
+export type {
+  NetworkConfig,
+  ContractAddresses,
+  LLMProviderConfig,
+  AgentKitConfig,
+  SDKConfig,
+  RuntimeConfig,
+  CompleteSolutionConfig,
+};
 
 export const SOMNIA_NETWORKS = {
   mainnet: {
@@ -71,6 +63,31 @@ export const DEFAULT_CONFIG = {
   defaultGasLimit: 3000000n,
   logLevel: 'info' as const,
   metricsEnabled: false,
+};
+
+/**
+ * Default SDK configuration
+ */
+export const DEFAULT_SDK_CONFIG: SDKConfig = {
+  debug: false,
+  telemetry: false,
+  logLevel: 'info',
+  defaultTimeout: 30000, // 30 seconds
+  maxRetries: 3,
+  autoRecover: false,
+};
+
+/**
+ * Default runtime configuration
+ */
+export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
+  maxConcurrent: 5,
+  enableParallel: true,
+  dryRun: false,
+  memoryLimit: 1000,
+  storageBackend: 'memory',
+  memoryBackend: 'memory',
+  enableMemory: true,
 };
 
 /**
@@ -145,6 +162,97 @@ export function loadFromEnv(): Partial<AgentKitConfig> {
 
   if (process.env.METRICS_ENABLED !== undefined) {
     config.metricsEnabled = process.env.METRICS_ENABLED === 'true';
+  }
+
+  return config;
+}
+
+/**
+ * Load SDK configuration from environment variables
+ * @returns Partial SDK configuration from environment
+ */
+export function loadSDKConfigFromEnv(): Partial<SDKConfig> {
+  const config: Partial<SDKConfig> = {};
+
+  if (process.env.SDK_DEBUG !== undefined) {
+    config.debug = process.env.SDK_DEBUG === 'true';
+  }
+
+  if (process.env.SDK_TELEMETRY !== undefined) {
+    config.telemetry = process.env.SDK_TELEMETRY === 'true';
+  }
+
+  if (process.env.SDK_LOG_LEVEL) {
+    const level = process.env.SDK_LOG_LEVEL.toLowerCase();
+    if (['debug', 'info', 'warn', 'error'].includes(level)) {
+      config.logLevel = level as 'debug' | 'info' | 'warn' | 'error';
+    }
+  }
+
+  if (process.env.SDK_LLM_PROVIDER) {
+    config.llmProvider = process.env.SDK_LLM_PROVIDER as any;
+  }
+
+  if (process.env.SDK_DEFAULT_TIMEOUT) {
+    config.defaultTimeout = parseInt(process.env.SDK_DEFAULT_TIMEOUT);
+  }
+
+  if (process.env.SDK_MAX_RETRIES) {
+    config.maxRetries = parseInt(process.env.SDK_MAX_RETRIES);
+  }
+
+  if (process.env.SDK_AUTO_RECOVER !== undefined) {
+    config.autoRecover = process.env.SDK_AUTO_RECOVER === 'true';
+  }
+
+  return config;
+}
+
+/**
+ * Load runtime configuration from environment variables
+ * @returns Partial runtime configuration from environment
+ */
+export function loadRuntimeConfigFromEnv(): Partial<RuntimeConfig> {
+  const config: Partial<RuntimeConfig> = {};
+
+  if (process.env.RUNTIME_MAX_CONCURRENT) {
+    config.maxConcurrent = parseInt(process.env.RUNTIME_MAX_CONCURRENT);
+  }
+
+  if (process.env.RUNTIME_ENABLE_PARALLEL !== undefined) {
+    config.enableParallel = process.env.RUNTIME_ENABLE_PARALLEL === 'true';
+  }
+
+  if (process.env.RUNTIME_DRY_RUN !== undefined) {
+    config.dryRun = process.env.RUNTIME_DRY_RUN === 'true';
+  }
+
+  if (process.env.RUNTIME_MEMORY_LIMIT) {
+    config.memoryLimit = parseInt(process.env.RUNTIME_MEMORY_LIMIT);
+  }
+
+  if (process.env.RUNTIME_STORAGE_BACKEND) {
+    config.storageBackend = process.env.RUNTIME_STORAGE_BACKEND as 'memory' | 'file';
+  }
+
+  if (process.env.RUNTIME_STORAGE_PATH) {
+    config.storagePath = process.env.RUNTIME_STORAGE_PATH;
+  }
+
+  if (process.env.RUNTIME_MEMORY_BACKEND) {
+    config.memoryBackend = process.env.RUNTIME_MEMORY_BACKEND as 'memory' | 'file';
+  }
+
+  if (process.env.RUNTIME_MEMORY_PATH) {
+    config.memoryPath = process.env.RUNTIME_MEMORY_PATH;
+  }
+
+  if (process.env.RUNTIME_ENABLE_MEMORY !== undefined) {
+    config.enableMemory = process.env.RUNTIME_ENABLE_MEMORY === 'true';
+  }
+
+  if (process.env.RUNTIME_SESSION_ID) {
+    config.sessionId = process.env.RUNTIME_SESSION_ID;
   }
 
   return config;

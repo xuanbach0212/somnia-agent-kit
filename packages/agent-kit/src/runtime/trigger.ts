@@ -6,69 +6,16 @@
 
 import type { ChainClient } from '../core/chainClient';
 import type { ethers } from 'ethers';
+import type {
+  ITrigger,
+  TriggerCondition,
+  TriggerConfig,
+} from '../types/trigger';
+import { TriggerType, TriggerStatus } from '../types/trigger'; // Import enums as values
 
-// =============================================================================
-// Base Trigger Interface
-// =============================================================================
-
-/**
- * Base interface for all trigger types
- */
-export interface ITrigger {
-  /**
-   * Start the trigger and begin listening/executing
-   * @param callback Function to call when trigger fires
-   */
-  start(callback: (data: any) => void): Promise<void>;
-
-  /**
-   * Stop the trigger and cleanup resources
-   */
-  stop(): Promise<void>;
-
-  /**
-   * Check if trigger is currently running
-   */
-  isRunning(): boolean;
-}
-
-// =============================================================================
-// Trigger Types and Enums
-// =============================================================================
-
-export enum TriggerType {
-  Time = 'time',
-  Event = 'event',
-  Condition = 'condition',
-  Manual = 'manual',
-}
-
-export enum TriggerStatus {
-  Active = 'active',
-  Inactive = 'inactive',
-  Triggered = 'triggered',
-  Expired = 'expired',
-}
-
-export interface TriggerCondition {
-  type: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains';
-  field: string;
-  value: any;
-}
-
-export interface TriggerConfig {
-  id: string;
-  name: string;
-  type: TriggerType;
-  conditions?: TriggerCondition[];
-  schedule?: string; // Cron expression for time triggers
-  eventName?: string; // Event name for event triggers
-  enabled: boolean;
-  action: string;
-  params?: Record<string, any>;
-  createdAt: number;
-  lastTriggeredAt?: number;
-}
+// Re-export types for backward compatibility
+export { TriggerType, TriggerStatus };
+export type { ITrigger, TriggerCondition, TriggerConfig };
 
 // =============================================================================
 // Specialized Trigger Classes

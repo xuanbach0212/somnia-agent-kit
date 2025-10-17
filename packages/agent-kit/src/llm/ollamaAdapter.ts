@@ -239,7 +239,7 @@ export class OllamaAdapter implements LLMAdapter {
       throw new Error(`Ollama API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as { models?: OllamaModel[] };
     return data.models || [];
   }
 

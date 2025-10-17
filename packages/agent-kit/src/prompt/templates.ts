@@ -3,16 +3,11 @@
  * Reusable prompt templates with placeholder support
  */
 
-/**
- * Template metadata
- */
-export interface PromptTemplate {
-  name: string;
-  description: string;
-  template: string;
-  variables: string[];
-  examples?: Record<string, any>[];
-}
+// Import PromptTemplate from centralized types
+import type { PromptTemplate } from '../types/llm';
+
+// Re-export for backward compatibility
+export type { PromptTemplate };
 
 /**
  * Basic agent prompt for general tasks

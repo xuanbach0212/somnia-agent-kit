@@ -6,90 +6,16 @@
 
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import type {
+  StorageBackend,
+  StorageType,
+  EventEntry,
+  ActionEntry,
+  IStorage,
+} from '../types/storage';
 
-// =============================================================================
-// Storage Enums and Types
-// =============================================================================
-
-export enum StorageBackend {
-  Memory = 'memory',
-  File = 'file',
-}
-
-export enum StorageType {
-  Memory = 'memory',
-  LocalFile = 'local',
-  OnChain = 'onchain',
-  IPFS = 'ipfs',
-}
-
-/**
- * Event entry for storage
- */
-export interface EventEntry {
-  id: string;
-  event: any;
-  timestamp: number;
-  agentId?: string;
-  metadata?: Record<string, any>;
-}
-
-/**
- * Action entry for storage
- */
-export interface ActionEntry {
-  id: string;
-  action: any;
-  result?: any;
-  status?: 'pending' | 'success' | 'failed';
-  timestamp: number;
-  agentId?: string;
-  metadata?: Record<string, any>;
-}
-
-// =============================================================================
-// IStorage Interface
-// =============================================================================
-
-/**
- * Base storage interface for agent events and actions
- */
-export interface IStorage {
-  /**
-   * Save an event
-   */
-  saveEvent(event: any, metadata?: Record<string, any>): Promise<void>;
-
-  /**
-   * Save an action with optional result
-   */
-  saveAction(action: any, result?: any, metadata?: Record<string, any>): Promise<void>;
-
-  /**
-   * Get all events
-   */
-  getEvents(filter?: any): Promise<EventEntry[]>;
-
-  /**
-   * Get all actions
-   */
-  getActions(filter?: any): Promise<ActionEntry[]>;
-
-  /**
-   * Get complete history (events + actions)
-   */
-  getHistory(): Promise<{ events: EventEntry[]; actions: ActionEntry[] }>;
-
-  /**
-   * Clear all data
-   */
-  clear(): Promise<void>;
-
-  /**
-   * Get storage size
-   */
-  size(): Promise<{ events: number; actions: number }>;
-}
+// Re-export types for backward compatibility
+export { StorageBackend, StorageType, EventEntry, ActionEntry, IStorage };
 
 // =============================================================================
 // MemoryStorage - In-memory storage for testing

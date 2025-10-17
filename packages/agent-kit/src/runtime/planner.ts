@@ -8,71 +8,21 @@ import type { OpenAIAdapter } from '../llm/openaiAdapter';
 import type { OllamaAdapter } from '../llm/ollamaAdapter';
 import { ACTION_PLANNER_PROMPT, buildPrompt } from '../prompt';
 import { z } from 'zod';
+import type { PlanStep, ExecutionPlan } from './executor';
 
-// =============================================================================
-// Base Planner Interface and Action Type
-// =============================================================================
+// Import types from centralized location
+import type {
+  Action,
+  ActionPlan,
+} from '../types/llm';
+import { ActionType, TaskPriority, TaskStatus } from '../types/llm';
 
-/**
- * Simple action interface for planner output (backward compatibility)
- */
-export interface Action {
-  type: string;
-  params: Record<string, any>;
-}
+// Re-export for backward compatibility
+export type { Action, ActionPlan, PlanStep, ExecutionPlan };
+export { ActionType, TaskPriority, TaskStatus };
 
-/**
- * Action types enum for structured planning
- */
-export enum ActionType {
-  // Blockchain operations
-  Transfer = 'transfer',
-  Swap = 'swap',
-  ContractCall = 'contract_call',
-  DeployContract = 'deploy_contract',
-
-  // Validation operations
-  ValidateAddress = 'validate_address',
-  ValidateContract = 'validate_contract',
-  CheckBalance = 'check_balance',
-  EstimateGas = 'estimate_gas',
-
-  // Token operations
-  ApproveToken = 'approve_token',
-  GetQuote = 'get_quote',
-
-  // Contract operations
-  CallContract = 'call_contract',
-  CompileContract = 'compile_contract',
-  EstimateDeploymentGas = 'estimate_deployment_gas',
-
-  // Execution operations
-  Execute = 'execute',
-  ExecuteTransfer = 'execute_transfer',
-  ExecuteSwap = 'execute_swap',
-
-  // Data operations
-  DataFetch = 'data_fetch',
-
-  // Special operations
-  NoAction = 'no_action',
-
-  // Generic
-  Generic = 'generic',
-}
-
-/**
- * Structured action plan (enhanced Action)
- * Includes reasoning, dependencies, and metadata
- */
-export interface ActionPlan {
-  type: ActionType | string;
-  target?: string;
-  params: Record<string, any>;
-  reason: string;
-  dependencies?: string[];
-  metadata?: Record<string, any>;
-}
+// Note: PlanStep and ExecutionPlan are executor-specific types for handler-based execution
+// For LLM reasoning layer, see types/llm (PlanStep with action: Action | ActionPlan)
 
 // =============================================================================
 // Zod Schemas for Validation
@@ -203,40 +153,8 @@ export interface IPlanner {
 }
 
 // =============================================================================
-// Legacy Types (for backward compatibility)
+// Planner Configuration
 // =============================================================================
-
-export enum TaskPriority {
-  Low = 0,
-  Normal = 1,
-  High = 2,
-  Critical = 3,
-}
-
-export enum TaskStatus {
-  Pending = 'pending',
-  Planned = 'planned',
-  Ready = 'ready',
-  Blocked = 'blocked',
-}
-
-export interface PlanStep {
-  id: string;
-  action: string;
-  params: Record<string, any>;
-  dependencies: string[];
-  estimatedDuration?: number;
-  retryable?: boolean;
-}
-
-export interface ExecutionPlan {
-  taskId: string;
-  steps: PlanStep[];
-  totalSteps: number;
-  createdAt: number;
-  priority: TaskPriority;
-  status: TaskStatus;
-}
 
 export interface PlannerConfig {
   maxSteps?: number;
@@ -266,7 +184,7 @@ export class Planner {
     taskId: string,
     taskType: string,
     taskData: any,
-    priority: TaskPriority = TaskPriority.Normal
+    priority: number = 1 // 0=low, 1=normal, 2=high, 3=critical
   ): Promise<ExecutionPlan> {
     // Generate steps based on task type
     const steps = await this.decompose(taskType, taskData);
@@ -285,7 +203,7 @@ export class Planner {
       totalSteps: optimizedSteps.length,
       createdAt: Date.now(),
       priority,
-      status: TaskStatus.Planned,
+      status: TaskStatus.Pending, // Use Pending instead of old Planned
     };
 
     this.plans.set(taskId, plan);

@@ -142,12 +142,19 @@ export type {
   NetworkConfig,
   ContractAddresses,
   LLMProviderConfig,
+  SDKConfig,
+  RuntimeConfig,
+  CompleteSolutionConfig,
 } from './core/config';
 export {
   SOMNIA_NETWORKS,
   validateConfig,
   DEFAULT_CONFIG,
+  DEFAULT_SDK_CONFIG,
+  DEFAULT_RUNTIME_CONFIG,
   loadFromEnv,
+  loadSDKConfigFromEnv,
+  loadRuntimeConfigFromEnv,
   loadConfig,
   createConfigFromEnv,
 } from './core/config';

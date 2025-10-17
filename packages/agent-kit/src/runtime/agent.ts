@@ -9,59 +9,24 @@ import type { AgentRegistry, AgentExecutor } from '../../../../contracts/typecha
 import { Trigger, TriggerConfig } from './trigger';
 import { Planner } from './planner';
 import { Executor } from './executor';
-import { IStorage, MemoryStorage, FileStorage, StorageBackend } from './storage';
+import { IStorage, MemoryStorage, FileStorage } from './storage';
 import { Policy } from './policy';
 import { Memory, MemoryBackend, InMemoryBackend, FileBackend } from './memory';
 import { ContextBuilder } from './context';
 import { EventEmitter } from '../core/utils';
 import type { Logger } from '../monitor/logger';
 import type { ChainClient } from '../core/chainClient';
+import type {
+  AgentConfig,
+  AgentTask,
+  AgentOptions,
+  AgentEvents,
+} from '../types/agent';
+import { AgentState } from '../types/agent'; // Enum must be imported as value
+import { StorageBackend } from '../types/storage';
 
-export enum AgentState {
-  Created = 'created',
-  Registered = 'registered',
-  Active = 'active',
-  Paused = 'paused',
-  Stopped = 'stopped',
-  Terminated = 'terminated',
-}
-
-export interface AgentConfig {
-  name: string;
-  description: string;
-  version?: string;
-  owner: string;
-  capabilities?: string[];
-  metadata?: Record<string, any>;
-}
-
-export interface AgentTask {
-  id: string;
-  type: string;
-  data: any;
-  priority?: number;
-  createdAt: number;
-}
-
-export interface AgentOptions {
-  logger?: Logger;
-  storageBackend?: StorageBackend;
-  storagePath?: string; // Path for FileStorage (default: './data')
-  memoryBackend?: 'memory' | 'file'; // Memory backend type (default: 'memory')
-  memoryPath?: string; // Path for FileBackend (default: './data/memory')
-  sessionId?: string; // Memory session ID (default: auto-generated)
-  enableMemory?: boolean; // Enable memory tracking (default: true)
-}
-
-interface AgentEvents {
-  started: { agentId: string | null };
-  stopped: { agentId: string | null };
-  'event:received': any;
-  'tasks:planned': { tasks: any[] };
-  'tasks:executed': { results: any[] };
-  'results:stored': { taskId: string };
-  error: { error: any; event?: any };
-}
+// Re-export types for backward compatibility
+export { AgentState, AgentConfig, AgentTask, AgentOptions, AgentEvents };
 
 /**
  * Agent class for managing autonomous agent lifecycle

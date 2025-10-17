@@ -66,11 +66,25 @@ somnia-agent-kit/
 │           │   ├── ollamaAdapter.ts  # Ollama integration
 │           │   └── index.ts
 │           │
-│           ├── monitor/          # ✅ COMPLETED (4/4 files)
-│           │   ├── logger.ts         # Winston logger
+│           ├── monitor/          # ✅ COMPLETED (5/5 files)
+│           │   ├── logger.ts         # Pino logger
 │           │   ├── metrics.ts        # Performance metrics
 │           │   ├── eventRecorder.ts  # Event tracking
+│           │   ├── telemetry.ts      # Remote observability
+│           │   ├── dashboard.ts      # Development UI
 │           │   └── index.ts
+│           │
+│           ├── types/            # ✅ NEW - Centralized Types
+│           │   ├── agent.ts          # Agent types
+│           │   ├── config.ts         # Configuration types
+│           │   ├── chain.ts          # Blockchain types
+│           │   ├── storage.ts        # Storage types
+│           │   ├── memory.ts         # Memory types
+│           │   ├── trigger.ts        # Trigger types
+│           │   ├── llm.ts            # LLM types
+│           │   ├── monitor.ts        # Monitor types
+│           │   ├── common.ts         # Common utilities
+│           │   └── index.ts          # Central exports
 │           │
 │           └── cli/              # ✅ COMPLETED (1/1 file)
 │               └── cli.ts            # CLI commands
@@ -702,6 +716,627 @@ Implemented modules:
 - `eventRecorder.ts` - On-chain event tracking with filtering and callbacks
 - `telemetry.ts` - **Remote observability** with Prometheus, Datadog, OpenTelemetry
 - `dashboard.ts` - **Development UI** with REST API and HTML dashboard
+
+---
+
+### 6. **types/** - Centralized Type Definitions
+**Status**: ✅ Completed
+
+**Purpose**: Standardize data structures and interfaces across all SDK modules
+
+**Location**: `packages/agent-kit/src/types/`
+
+**Why Centralized Types?**
+- ✅ **Single Source of Truth**: All type definitions in one place
+- ✅ **Avoid Circular Dependencies**: Clean import hierarchy
+- ✅ **Better Discoverability**: Easy to find and browse all types
+- ✅ **Consistent Naming**: Enforce conventions across modules
+- ✅ **Maintainability**: Update types in one location
+- ✅ **IDE Support**: Better autocomplete and type checking
+
+**Type Modules**:
+
+#### `types/agent.ts` - Agent Core Types
+- `AgentState` - Lifecycle states (Created, Registered, Active, Paused, Stopped, Terminated)
+- `AgentRuntimeState` - Runtime status with error tracking
+- `AgentConfig` - Configuration (id, name, version, model, capabilities, metadata)
+- `AgentTask` - Task definition with priority, deadline, status
+- `AgentOptions` - Initialization options (storage, memory, logging)
+- `AgentEvents` - Event types for agent lifecycle
+- `AgentStatus` - Complete status information
+
+#### `types/config.ts` - Configuration Types (SDK + Agent + Runtime)
+
+**SDK-Level Configuration:**
+- `SDKConfig` - Global SDK settings (debug, telemetry, logLevel, defaultChain, llmProvider, defaultTimeout, maxRetries, autoRecover, options)
+- `DEFAULT_SDK_CONFIG` - Default SDK configuration values
+
+**Agent-Level Configuration:**
+- `AgentKitConfig` - Agent Kit configuration (network, contracts, privateKey, llmProvider, defaultGasLimit, logLevel, metricsEnabled, telemetryEnabled, options)
+- `NetworkConfig` - Network settings (rpcUrl, chainId, name)
+- `ContractAddresses` - System contract addresses (agentRegistry, agentExecutor, agentManager, agentVault)
+- `LLMProviderConfig` - LLM provider settings (provider, apiKey, baseUrl, model, options)
+- `DEFAULT_CONFIG` - Default agent configuration values
+
+**Runtime Module Configuration:**
+- `RuntimeConfig` - Runtime settings (maxConcurrent, enableParallel, dryRun, memoryLimit, storageBackend, storagePath, memoryBackend, memoryPath, enableMemory, sessionId)
+- `DEFAULT_RUNTIME_CONFIG` - Default runtime configuration values
+
+**Complete Solution:**
+- `CompleteSolutionConfig` - Combined configuration (AgentKitConfig + SDKConfig + RuntimeConfig)
+
+**Usage Examples:**
+
+```typescript
+import {
+  SDKConfig,
+  RuntimeConfig,
+  CompleteSolutionConfig,
+  DEFAULT_SDK_CONFIG,
+  DEFAULT_RUNTIME_CONFIG,
+  loadSDKConfigFromEnv,
+  loadRuntimeConfigFromEnv,
+} from '@somnia/agent-kit';
+
+// SDK-level configuration (global settings)
+const sdkConfig: SDKConfig = {
+  debug: true,
+  telemetry: false,
+  logLevel: 'debug',
+  llmProvider: 'openai',
+  defaultTimeout: 30000,    // 30 seconds
+  maxRetries: 3,
+  autoRecover: true,
+};
+
+// Runtime module configuration
+const runtimeConfig: RuntimeConfig = {
+  maxConcurrent: 5,
+  enableParallel: true,
+  dryRun: false,           // Set to true for testing
+  memoryLimit: 1000,
+  storageBackend: 'file',
+  storagePath: './data/storage',
+  memoryBackend: 'file',
+  memoryPath: './data/memory',
+  enableMemory: true,
+  sessionId: 'session-123',
+};
+
+// Complete solution configuration
+const config: CompleteSolutionConfig = {
+  // Agent-level configuration
+  network: {
+    rpcUrl: 'https://dream-rpc.somnia.network',
+    chainId: 50312,
+    name: 'Somnia Dream Testnet',
+  },
+  contracts: {
+    agentRegistry: '0x123...',
+    agentExecutor: '0x456...',
+  },
+  privateKey: process.env.PRIVATE_KEY,
+  llmProvider: {
+    provider: 'openai',
+    apiKey: process.env.OPENAI_API_KEY,
+    model: 'gpt-4',
+  },
+  defaultGasLimit: 3000000n,
+  logLevel: 'info',
+  metricsEnabled: true,
+
+  // SDK-level configuration
+  sdk: sdkConfig,
+
+  // Runtime module configuration
+  runtime: runtimeConfig,
+};
+
+// Load configuration from environment variables
+const envSDKConfig = loadSDKConfigFromEnv();
+// Reads: SDK_DEBUG, SDK_TELEMETRY, SDK_LOG_LEVEL, SDK_LLM_PROVIDER,
+//        SDK_DEFAULT_TIMEOUT, SDK_MAX_RETRIES, SDK_AUTO_RECOVER
+
+const envRuntimeConfig = loadRuntimeConfigFromEnv();
+// Reads: RUNTIME_MAX_CONCURRENT, RUNTIME_ENABLE_PARALLEL, RUNTIME_DRY_RUN,
+//        RUNTIME_MEMORY_LIMIT, RUNTIME_STORAGE_BACKEND, RUNTIME_STORAGE_PATH,
+//        RUNTIME_MEMORY_BACKEND, RUNTIME_MEMORY_PATH, RUNTIME_ENABLE_MEMORY,
+//        RUNTIME_SESSION_ID
+
+// Merge with defaults
+const mergedConfig: CompleteSolutionConfig = {
+  ...config,
+  sdk: { ...DEFAULT_SDK_CONFIG, ...envSDKConfig },
+  runtime: { ...DEFAULT_RUNTIME_CONFIG, ...envRuntimeConfig },
+};
+```
+
+**Environment Variable Configuration:**
+
+```bash
+# SDK-level settings
+SDK_DEBUG=true
+SDK_TELEMETRY=false
+SDK_LOG_LEVEL=debug
+SDK_LLM_PROVIDER=openai
+SDK_DEFAULT_TIMEOUT=30000
+SDK_MAX_RETRIES=3
+SDK_AUTO_RECOVER=true
+
+# Runtime module settings
+RUNTIME_MAX_CONCURRENT=5
+RUNTIME_ENABLE_PARALLEL=true
+RUNTIME_DRY_RUN=false
+RUNTIME_MEMORY_LIMIT=1000
+RUNTIME_STORAGE_BACKEND=file
+RUNTIME_STORAGE_PATH=./data/storage
+RUNTIME_MEMORY_BACKEND=file
+RUNTIME_MEMORY_PATH=./data/memory
+RUNTIME_ENABLE_MEMORY=true
+RUNTIME_SESSION_ID=session-123
+```
+
+**Configuration Hierarchy:**
+
+```typescript
+// 1. SDK-Level (Global)
+// Controls SDK-wide behavior
+const sdk: SDKConfig = {
+  debug: true,          // Enable verbose logging
+  telemetry: true,      // Send metrics to monitoring
+  logLevel: 'debug',    // Global log level
+  maxRetries: 3,        // Default retry attempts
+};
+
+// 2. Agent-Level (Instance)
+// Controls individual agent behavior
+const agentConfig: AgentKitConfig = {
+  network: { rpcUrl: '...', chainId: 50312, name: 'Testnet' },
+  contracts: { agentRegistry: '0x...', agentExecutor: '0x...' },
+  privateKey: '0x...',
+  logLevel: 'info',     // Override SDK log level for this agent
+};
+
+// 3. Runtime-Level (Modules)
+// Controls runtime module behavior
+const runtime: RuntimeConfig = {
+  maxConcurrent: 5,     // Max parallel executions
+  enableParallel: true, // Enable parallel execution
+  dryRun: false,        // Simulate without actual execution
+  memoryLimit: 1000,    // Max memory entries
+};
+
+// Combined configuration
+const complete: CompleteSolutionConfig = {
+  ...agentConfig,
+  sdk,
+  runtime,
+};
+```
+
+**Real-World Usage Examples:**
+
+```typescript
+import { SomniaAgentKit, loadConfig } from '@somnia/agent-kit';
+
+// Example 1: Development setup with debugging
+const devConfig = loadConfig({
+  network: { rpcUrl: 'http://localhost:8545', chainId: 31337, name: 'Devnet' },
+  contracts: { agentRegistry: '0x...', agentExecutor: '0x...' },
+  privateKey: '0x...',
+  sdk: {
+    debug: true,
+    telemetry: false,
+    logLevel: 'debug',
+  },
+  runtime: {
+    dryRun: true,        // Don't execute real transactions
+    enableParallel: false, // Easier to debug serially
+    storageBackend: 'memory', // Faster in dev
+    memoryBackend: 'memory',
+  },
+});
+
+const devKit = new SomniaAgentKit(devConfig);
+await devKit.initialize();
+
+// Example 2: Production setup with telemetry
+const prodConfig = loadConfig({
+  network: { rpcUrl: 'https://rpc.somnia.network', chainId: 50311, name: 'Mainnet' },
+  contracts: { agentRegistry: '0x...', agentExecutor: '0x...' },
+  privateKey: process.env.PRIVATE_KEY,
+  sdk: {
+    debug: false,
+    telemetry: true,
+    logLevel: 'info',
+    maxRetries: 5,
+    autoRecover: true,
+  },
+  runtime: {
+    maxConcurrent: 10,
+    enableParallel: true,
+    dryRun: false,
+    storageBackend: 'file',
+    storagePath: './data/storage',
+    memoryBackend: 'file',
+    memoryPath: './data/memory',
+    enableMemory: true,
+  },
+});
+
+const prodKit = new SomniaAgentKit(prodConfig);
+await prodKit.initialize();
+
+// Example 3: Testing setup
+const testConfig = loadConfig({
+  network: { rpcUrl: 'http://localhost:8545', chainId: 31337, name: 'Test' },
+  contracts: { agentRegistry: '0x...', agentExecutor: '0x...' },
+  sdk: {
+    debug: true,
+    telemetry: false,
+    logLevel: 'verbose',
+  },
+  runtime: {
+    dryRun: true,
+    maxConcurrent: 1,
+    enableParallel: false,
+    storageBackend: 'memory',
+    memoryBackend: 'memory',
+    memoryLimit: 100,
+  },
+});
+
+const testKit = new SomniaAgentKit(testConfig);
+await testKit.initialize();
+```
+
+#### `types/chain.ts` - Blockchain Types
+- `ChainConfig` - Simplified chain configuration (alternative to NetworkConfig + ContractAddresses)
+- `Transaction` - Simplified transaction info (hash, from, to, gasUsed, status)
+- `TransactionRequest` - Transaction creation parameters
+- `ChainEvent` - On-chain event (name, contract, args, txHash, blockNumber)
+- `Block` - Block information (number, hash, timestamp, gasUsed, transactions)
+- `GasEstimate` - Gas estimation (gasLimit, gasPrice, estimatedCost)
+- `GasPricing` - Gas pricing information (EIP-1559 support)
+- `ChainState` - Blockchain state snapshot (blockNumber, gasPrice, chainId)
+- `ContractCall` - Contract interaction parameters
+- `ContractCallResult` - Contract call result with success/error
+- `ContractDeployment` - Contract deployment parameters
+- `NetworkInfo` - Network information
+
+#### `types/storage.ts` - Storage Types
+- `StorageBackend` - Backend types (Memory, File)
+- `StorageType` - Storage categories (Memory, LocalFile, OnChain, IPFS)
+- `EventEntry` - Event storage structure
+- `ActionEntry` - Action storage structure
+- `IStorage` - Storage interface
+
+#### `types/memory.ts` - Memory Types
+- `MemoryType` - Entry types (Input, Output, State, System)
+- `MemoryEntry` - Memory structure with tokens
+- `MemoryBackend` - Backend interface
+- `MemoryFilter` - Query filtering options
+- `MemoryConfig` - Memory configuration
+
+#### `types/trigger.ts` - Trigger Types
+- `TriggerType` - Trigger categories (Time, Event, Condition, Manual)
+- `TriggerStatus` - Trigger states (Active, Inactive, Triggered, Expired)
+- `TriggerCondition` - Condition definitions
+- `TriggerConfig` - Trigger configuration
+- `ITrigger` - Trigger interface
+
+#### `types/action.ts` - Action Types (Runtime Execution)
+**Purpose**: Standardized action definitions for runtime execution - the "action language" that the runtime understands and executes.
+
+**Runtime Actions:**
+- `RuntimeAction` - Standard action format (id, type, payload, createdAt, executed, priority, agentId, metadata)
+- `ActionStatus` - Execution status enum (Pending, Running, Completed, Failed, Cancelled, Retrying)
+- `ActionMetadata` - Execution control (priority, retryable, timeout, dependencies, maxRetries, retryDelay, tags)
+- `RuntimeActionWithMetadata` - Action with execution metadata
+- `ActionType` - Re-exported from types/llm (18 action types)
+
+**Execution Results:**
+- `ExecutionResult` - Simplified result (success, txHash, error, duration, data, retryCount)
+- `ExecutionStatus` - Status enum (Idle, Running, Success, Failed, Retrying, Cancelled, Timeout)
+- `DetailedExecutionResult` - Extended result (includes stepId, status, txReceipt, dryRun, executedAt)
+- `ExecutionContext` - Execution state tracker (taskId, currentStep, results map, timestamps, status, metadata)
+
+**Executor Configuration:**
+- `ExecutorConfig` - Behavior and constraints (maxRetries, retryDelay, timeout, enableParallel, dryRun, maxConcurrent)
+- `ActionHandler` - Handler function type (params, context) => Promise<any>
+- `ActionHandlerEntry` - Handler registry entry (name, handler, description, required/optional params)
+- `ActionConversionOptions` - Options for converting LLM Action to RuntimeAction
+
+**Action Lifecycle Flow:**
+```
+LLM Layer (Planning):
+  Action (type, params) → ActionPlan (+ reasoning)
+            ↓
+       [Conversion]
+            ↓
+Runtime Layer (Execution):
+  RuntimeAction (id, type, payload, createdAt, executed)
+            ↓
+        [Execute]
+            ↓
+  ExecutionResult (success, txHash, error, duration)
+            ↓
+         [Store]
+            ↓
+Storage Layer:
+  ActionEntry (id, action, result, status, timestamp)
+```
+
+#### `types/llm.ts` - LLM Types
+**Message & Generation:**
+- `Message` - Chat message format (role, content)
+- `GenerateOptions` - Generation parameters (temperature, maxTokens, topP)
+- `TokenUsage` - Token statistics (promptTokens, completionTokens, totalTokens)
+- `LLMResponse` - Standard response format (content, model, usage, finishReason)
+- `RetryConfig` - Retry logic configuration (maxRetries, retryDelay, backoffMultiplier)
+- `LLMAdapter` - Adapter interface (generate, chat, embed, stream, testConnection)
+- `LLMLogger` - Logger interface (debug, info, warn, error)
+- `ConsoleLogger` - Default console logger implementation
+
+**Prompt Building:**
+- `PromptPayload` - Prompt template payload (template, variables, options)
+- `PromptBuildOptions` - Build options (strict, trim, maxLength, sanitize)
+- `PromptTemplate` - Template definition (name, description, template, variables, examples, category)
+
+**Action & Planning:**
+- `Action` - Base action interface (type, params)
+- `ActionType` - Action type enum (Transfer, Swap, ContractCall, ValidateAddress, CheckBalance, etc.)
+- `ActionPlan` - Structured action plan with reasoning (type, target, params, reason, dependencies, metadata)
+- `TaskPriority` - Priority levels (Low, Medium, High, Critical)
+- `TaskStatus` - Execution status (Pending, Running, Completed, Failed, Cancelled)
+- `PlanStep` - Execution plan step (id, action, status, result, error, executedAt)
+- `ExecutionPlan` - Complete execution plan (steps, totalSteps, currentStep, status, createdAt, completedAt)
+
+**Reasoning:**
+- `ReasoningContext` - Context for LLM reasoning (goal, chainState, memory, availableActions, userAddress, agentAddress)
+- `ReasoningResult` - LLM reasoning result (actions, reasoning, confidence, llmResponse, latencyMs, rawOutput)
+- `LLMResponseWithMetrics` - Enhanced response with performance metrics (latencyMs, tokensPerSecond, costEstimate, provider, timestamp)
+
+#### `types/monitor.ts` - Monitor Types
+- `LogLevel` - Log levels (Error, Warn, Info, Debug, Verbose)
+- `LogEntry` - Log structure
+- `LoggerConfig` - Logger configuration
+- `Metric` - Metric structure
+- `MetricSummary` - Statistics summary
+- `MetricsConfig` - Metrics configuration
+- `TelemetryFormat` - Output formats (JSON, Prometheus, Datadog, OpenTelemetry)
+- `TelemetryData` - Telemetry data structure
+- `TelemetryConfig` - Telemetry configuration
+- `DashboardConfig` - Dashboard configuration
+
+#### `types/common.ts` - Common Utility Types
+- `Result<T, E>` - Standard result type
+- `AsyncResult<T, E>` - Async result type
+- `Nullable<T>` - Type with null
+- `Optional<T>` - Type with undefined
+- `Timestamp` - Unix timestamp
+- `Address` - Ethereum address (0x-prefixed)
+- `Hash` - Transaction/block hash
+- `DeepPartial<T>` - Deep partial type
+
+**Usage Examples**:
+
+```typescript
+// Import from centralized types (recommended)
+import type {
+  AgentConfig,
+  AgentState,
+  StorageBackend,
+  TriggerConfig,
+  Transaction,
+  ChainEvent,
+} from '@somnia/agent-kit/types';
+
+// Or from individual modules (backward compatible)
+import type { AgentConfig } from '@somnia/agent-kit/runtime';
+```
+
+**Blockchain Types Usage**:
+
+```typescript
+import type {
+  ChainConfig,
+  Transaction,
+  ChainEvent,
+  GasEstimate,
+  ChainState,
+} from '@somnia/agent-kit/types';
+
+// Simple chain configuration
+const config: ChainConfig = {
+  rpcUrl: 'https://dream-rpc.somnia.network',
+  chainId: 50312,
+  network: 'testnet',
+  contracts: {
+    registry: '0x123...',
+    executor: '0x456...',
+  },
+};
+
+// Transaction logging
+function logTransaction(tx: Transaction) {
+  console.log(`TX ${tx.hash} from ${tx.from}`);
+  console.log(`Gas used: ${tx.gasUsed}, Status: ${tx.status}`);
+}
+
+// Event handling
+function handleEvent(event: ChainEvent) {
+  console.log(`Event ${event.name} from ${event.contract}`);
+  console.log(`Block: ${event.blockNumber}, Args:`, event.args);
+}
+
+// Gas estimation
+const estimate: GasEstimate = {
+  gasLimit: 100000n,
+  maxFeePerGas: 2000000000n,
+  estimatedCost: 200000000000000n, // 0.0002 ETH
+};
+```
+
+**Backward Compatibility**: All existing modules re-export types from `types/` for seamless migration.
+
+**LLM Reasoning Types Usage**:
+
+```typescript
+import type {
+  PromptPayload,
+  ActionPlan,
+  ActionType,
+  ReasoningContext,
+  ReasoningResult,
+  LLMResponseWithMetrics,
+} from '@somnia/agent-kit/types';
+
+// Build prompt from template
+const promptPayload: PromptPayload = {
+  template: 'Transfer {{amount}} ETH to {{recipient}}',
+  variables: {
+    amount: '1.5',
+    recipient: '0xabc...',
+  },
+  options: {
+    strict: true,
+    sanitize: true,
+  },
+};
+
+// Create action plan
+const actionPlan: ActionPlan = {
+  type: ActionType.Transfer,
+  target: '0xabc...',
+  params: {
+    amount: '1.5',
+    token: 'ETH',
+  },
+  reason: 'User requested transfer of 1.5 ETH',
+  dependencies: [],
+};
+
+// LLM reasoning context
+const context: ReasoningContext = {
+  goal: 'Transfer tokens to recipient',
+  chainState: { blockNumber: 1000000, gasPrice: 20n },
+  memory: ['Previous successful transfer', 'User balance: 10 ETH'],
+  availableActions: ['transfer', 'swap', 'approve'],
+  userAddress: '0x123...',
+  agentAddress: '0x456...',
+};
+
+// Process reasoning result
+function processReasoning(result: ReasoningResult) {
+  console.log(`Reasoning: ${result.reasoning}`);
+  console.log(`Confidence: ${result.confidence}`);
+  console.log(`Latency: ${result.latencyMs}ms`);
+
+  result.actions.forEach((action, i) => {
+    console.log(`Action ${i+1}: ${action.type}`);
+    console.log(`Reason: ${action.reason}`);
+    console.log(`Params:`, action.params);
+  });
+}
+
+// Enhanced LLM response with metrics
+function logMetrics(response: LLMResponseWithMetrics) {
+  console.log(`Model: ${response.model}`);
+  console.log(`Latency: ${response.latencyMs}ms`);
+  console.log(`Tokens/sec: ${response.tokensPerSecond}`);
+  console.log(`Cost: $${response.costEstimate}`);
+  console.log(`Provider: ${response.provider}`);
+}
+```
+
+**Runtime Action Types Usage**:
+
+```typescript
+import type {
+  RuntimeAction,
+  ActionStatus,
+  ExecutionResult,
+  ExecutionStatus,
+  ActionHandler,
+  ExecutorConfig,
+} from '@somnia/agent-kit/types';
+import { ActionType } from '@somnia/agent-kit/types';
+
+// Create a runtime action (user's desired format)
+const action: RuntimeAction = {
+  id: 'action-001',
+  type: ActionType.Transfer,
+  payload: {
+    to: '0xabc...',
+    amount: '1.5',
+    token: 'ETH',
+  },
+  createdAt: Date.now(),
+  executed: false,
+  priority: 80,
+  agentId: '0x123...',
+};
+
+// Execute action and get result
+const result: ExecutionResult = {
+  success: true,
+  txHash: '0xdef...',
+  duration: 3500, // ms
+  data: {
+    gasUsed: 21000,
+    blockNumber: 1000000,
+  },
+};
+
+// Check execution status
+if (result.success) {
+  console.log(`Action ${action.id} completed successfully`);
+  console.log(`TX Hash: ${result.txHash}`);
+  console.log(`Duration: ${result.duration}ms`);
+  action.executed = true;
+} else {
+  console.error(`Action ${action.id} failed: ${result.error}`);
+}
+
+// Action handler example
+const transferHandler: ActionHandler = async (params, context) => {
+  console.log(`Transferring ${params.amount} to ${params.to}`);
+
+  // Simulate blockchain transfer
+  const txHash = '0x' + Math.random().toString(36).substring(7);
+
+  return {
+    success: true,
+    txHash,
+    amount: params.amount,
+    recipient: params.to,
+  };
+};
+
+// Executor configuration
+const executorConfig: ExecutorConfig = {
+  maxRetries: 3,
+  retryDelay: 1000, // 1 second
+  timeout: 30000, // 30 seconds
+  enableParallel: true,
+  dryRun: false, // Set to true for testing
+  maxConcurrent: 5,
+};
+
+// Convert LLM Action to RuntimeAction
+function convertToRuntimeAction(
+  llmAction: { type: string; params: Record<string, any> }
+): RuntimeAction {
+  return {
+    id: `action-${Date.now()}`,
+    type: llmAction.type,
+    payload: llmAction.params,
+    createdAt: Date.now(),
+    executed: false,
+  };
+}
+```
 
 ---
 

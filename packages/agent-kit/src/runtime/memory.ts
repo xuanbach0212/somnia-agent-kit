@@ -6,74 +6,16 @@
 
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import type {
+  MemoryType,
+  MemoryEntry,
+  MemoryBackend,
+  MemoryFilter,
+  MemoryConfig,
+} from '../types/memory';
 
-// =============================================================================
-// Memory Types and Interfaces
-// =============================================================================
-
-/**
- * Memory entry type
- */
-export type MemoryType = 'input' | 'output' | 'state' | 'system';
-
-/**
- * Memory entry structure
- */
-export interface MemoryEntry {
-  id: string;
-  sessionId: string;
-  type: MemoryType;
-  content: any;
-  timestamp: number;
-  tokens?: number; // Token count (optional)
-  metadata?: Record<string, any>;
-}
-
-/**
- * Memory backend interface
- */
-export interface MemoryBackend {
-  /**
-   * Save memory entry
-   */
-  save(entry: MemoryEntry): Promise<void>;
-
-  /**
-   * Load memory entries
-   */
-  load(sessionId: string, filter?: MemoryFilter): Promise<MemoryEntry[]>;
-
-  /**
-   * Clear memory
-   */
-  clear(sessionId?: string): Promise<void>;
-
-  /**
-   * Get memory count
-   */
-  count(sessionId: string): Promise<number>;
-}
-
-/**
- * Memory filter options
- */
-export interface MemoryFilter {
-  type?: MemoryType;
-  fromTimestamp?: number;
-  toTimestamp?: number;
-  limit?: number;
-}
-
-/**
- * Memory configuration
- */
-export interface MemoryConfig {
-  backend?: MemoryBackend;
-  sessionId?: string;
-  maxTokens?: number; // Max tokens for context (default: 4000)
-  maxEntries?: number; // Max entries to keep in memory (default: 100)
-  summarizeOld?: boolean; // Summarize old memories (default: false)
-}
+// Re-export types for backward compatibility
+export { MemoryType, MemoryEntry, MemoryBackend, MemoryFilter, MemoryConfig };
 
 // =============================================================================
 // In-Memory Backend

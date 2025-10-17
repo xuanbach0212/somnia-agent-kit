@@ -5,47 +5,42 @@
  */
 
 import { ethers } from 'ethers';
-import type { ExecutionPlan, PlanStep, Action } from './planner';
+import type { Action } from './planner';
 import type { ChainClient } from '../core/chainClient';
 import type { SomniaContracts } from '../core/contracts';
+import type {
+  DetailedExecutionResult,
+  ExecutionContext,
+  ExecutorConfig,
+  ActionHandler,
+} from '../types/action';
+import { ExecutionStatus } from '../types/action'; // Import enum as value
+
+// Re-export types for backward compatibility
+export { ExecutionStatus, ExecutorConfig };
+export type { DetailedExecutionResult as ExecutionResult, ExecutionContext, ActionHandler };
 
 // Type alias for transaction receipt
 export type TxReceipt = ethers.TransactionReceipt;
 
-export enum ExecutionStatus {
-  Idle = 'idle',
-  Running = 'running',
-  Success = 'success',
-  Failed = 'failed',
-  Retrying = 'retrying',
+// Legacy PlanStep and ExecutionPlan types for executor (backward compatibility)
+// These use string-based action identifiers for handler lookup
+export interface PlanStep {
+  id: string;
+  action: string; // Action type as string (handler key)
+  params: Record<string, any>;
+  dependencies: string[];
+  estimatedDuration?: number;
+  retryable?: boolean;
 }
 
-export interface ExecutionResult {
-  stepId: string;
-  status: ExecutionStatus;
-  result?: any;
-  error?: string;
-  retryCount?: number;
-  duration: number;
-  txReceipt?: TxReceipt; // Transaction receipt for on-chain actions
-  dryRun?: boolean; // Indicates if this was a dry-run execution
-}
-
-export interface ExecutionContext {
+export interface ExecutionPlan {
   taskId: string;
-  currentStep?: string;
-  results: Map<string, ExecutionResult>;
-  startTime: number;
-  endTime?: number;
-  status: ExecutionStatus;
-}
-
-export interface ExecutorConfig {
-  maxRetries?: number;
-  retryDelay?: number;
-  timeout?: number;
-  enableParallel?: boolean;
-  dryRun?: boolean; // If true, simulate execution without sending transactions
+  steps: PlanStep[];
+  totalSteps: number;
+  createdAt: number;
+  priority: number;
+  status: string;
 }
 
 /**
@@ -103,6 +98,7 @@ export class Executor {
         return {
           stepId: actionId,
           status: ExecutionStatus.Failed,
+          success: false,
           error: `No handler registered for action: ${action.type}`,
           duration: Date.now() - startTime,
           dryRun: this.config.dryRun,
@@ -115,7 +111,8 @@ export class Executor {
         return {
           stepId: actionId,
           status: ExecutionStatus.Success,
-          result: { simulated: true, action },
+          success: true,
+          data: { simulated: true, action },
           duration: Date.now() - startTime,
           dryRun: true,
         };
@@ -135,7 +132,8 @@ export class Executor {
           return {
             stepId: actionId,
             status: ExecutionStatus.Success,
-            result,
+            success: true,
+            data: result,
             retryCount,
             duration: Date.now() - startTime,
             txReceipt: result?.txReceipt, // Extract tx receipt if present
@@ -155,6 +153,7 @@ export class Executor {
       return {
         stepId: actionId,
         status: ExecutionStatus.Failed,
+        success: false,
         error: lastError?.message || 'Unknown error',
         retryCount,
         duration: Date.now() - startTime,
@@ -163,6 +162,7 @@ export class Executor {
       return {
         stepId: actionId,
         status: ExecutionStatus.Failed,
+        success: false,
         error: (error as Error).message,
         duration: Date.now() - startTime,
       };
@@ -240,6 +240,7 @@ export class Executor {
       context.results.set('error', {
         stepId: 'error',
         status: ExecutionStatus.Failed,
+        success: false,
         error: (error as Error).message,
         duration: 0,
       });
@@ -273,7 +274,8 @@ export class Executor {
         return {
           stepId: step.id,
           status: ExecutionStatus.Success,
-          result,
+          success: true,
+          data: result,
           retryCount,
           duration: Date.now() - startTime,
         };
@@ -282,6 +284,7 @@ export class Executor {
           return {
             stepId: step.id,
             status: ExecutionStatus.Failed,
+            success: false,
             error: (error as Error).message,
             retryCount,
             duration: Date.now() - startTime,
@@ -296,6 +299,7 @@ export class Executor {
     return {
       stepId: step.id,
       status: ExecutionStatus.Failed,
+      success: false,
       error: 'Max retries exceeded',
       retryCount,
       duration: Date.now() - startTime,
