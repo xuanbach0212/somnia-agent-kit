@@ -11,9 +11,9 @@ import { Planner } from './planner';
 import { Executor } from './executor';
 import { IStorage, MemoryStorage, FileStorage } from './storage';
 import { Policy } from './policy';
-import { Memory, MemoryBackend, InMemoryBackend, FileBackend } from './memory';
-import { ContextBuilder } from './context';
-import { EventEmitter } from '../core/utils';
+import { Memory, MemoryBackend, InMemoryBackend, FileBackend } from './memoryManager';
+import { ContextBuilder } from '../llm/context';
+import { EventEmitter } from '../utils/logger';
 import type { Logger } from '../monitor/logger';
 import type { ChainClient } from '../core/chainClient';
 import type {

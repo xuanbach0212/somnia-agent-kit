@@ -10,8 +10,8 @@ import type {
   GenerateOptions,
   RetryConfig,
   LLMLogger,
-} from './types';
-import { ConsoleLogger } from './types';
+} from '../../types/llm';
+import { ConsoleLogger } from '../../types/llm';
 
 export interface OllamaConfig {
   baseURL?: string;

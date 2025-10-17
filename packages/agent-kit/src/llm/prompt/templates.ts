@@ -4,7 +4,7 @@
  */
 
 // Import PromptTemplate from centralized types
-import type { PromptTemplate } from '../types/llm';
+import type { PromptTemplate } from '../../types/llm';
 
 // Re-export for backward compatibility
 export type { PromptTemplate };

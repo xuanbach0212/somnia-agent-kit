@@ -4,9 +4,9 @@
  * Includes rule-based and LLM-based planning strategies
  */
 
-import type { OpenAIAdapter } from '../llm/openaiAdapter';
-import type { OllamaAdapter } from '../llm/ollamaAdapter';
-import { ACTION_PLANNER_PROMPT, buildPrompt } from '../prompt';
+import type { OpenAIAdapter } from '../llm/adapters/openaiAdapter';
+import type { OllamaAdapter } from '../llm/adapters/ollamaAdapter';
+import { ACTION_PLANNER_PROMPT, buildPrompt } from '../llm/prompt';
 import { z } from 'zod';
 import type { PlanStep, ExecutionPlan } from './executor';
 

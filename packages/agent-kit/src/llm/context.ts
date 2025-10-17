@@ -5,9 +5,9 @@
  */
 
 import type { ChainClient } from '../core/chainClient';
-import type { IStorage, ActionEntry } from './storage';
-import type { Memory } from './memory';
-import type { AgentConfig } from './agent';
+import type { IStorage, ActionEntry } from '../types/storage';
+import type { Memory } from '../runtime/memoryManager';
+import type { AgentConfig } from '../types/agent';
 
 // =============================================================================
 // Context Types and Interfaces

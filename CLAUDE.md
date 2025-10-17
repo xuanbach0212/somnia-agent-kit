@@ -43,51 +43,72 @@ somnia-agent-kit/
 │       └── src/
 │           ├── index.ts          # ✅ Main SDK class (SomniaAgentKit)
 │           ├── index.test.ts     # ✅ Unit tests
+│           ├── version.ts        # ✅ SDK version tracking
 │           │
-│           ├── core/             # ✅ COMPLETED (6/6 files)
+│           ├── core/             # ✅ Blockchain layer (5/5 files)
 │           │   ├── chainClient.ts    # Blockchain client
 │           │   ├── contracts.ts      # Contract interactions
 │           │   ├── signerManager.ts  # Wallet management
 │           │   ├── config.ts         # Network configs
-│           │   ├── utils.ts          # Utilities
 │           │   └── index.ts          # Exports
 │           │
-│           ├── runtime/          # ✅ COMPLETED (7/7 files)
+│           ├── runtime/          # ✅ Agent orchestration (6/6 files)
 │           │   ├── agent.ts          # Agent lifecycle
 │           │   ├── planner.ts        # Task planning
 │           │   ├── executor.ts       # Execution engine
 │           │   ├── trigger.ts        # Event triggers
-│           │   ├── storage.ts        # State persistence
+│           │   ├── memoryManager.ts  # State/memory management
 │           │   ├── policy.ts         # Access control
-│           │   └── index.ts
+│           │   └── index.ts          # Exports
 │           │
-│           ├── llm/              # ✅ COMPLETED (3/3 files)
-│           │   ├── openaiAdapter.ts  # OpenAI integration
-│           │   ├── ollamaAdapter.ts  # Ollama integration
-│           │   └── index.ts
+│           ├── llm/              # ✅ AI reasoning (9/9 files)
+│           │   ├── adapters/         # LLM provider integrations
+│           │   │   ├── openaiAdapter.ts   # OpenAI integration
+│           │   │   └── ollamaAdapter.ts   # Ollama integration
+│           │   ├── prompt/           # Prompt management
+│           │   │   ├── templates.ts       # Prompt templates
+│           │   │   └── builder.ts         # Dynamic prompt building
+│           │   ├── memory.ts         # LLM memory management
+│           │   ├── context.ts        # Context building for LLM
+│           │   ├── planner.ts        # LLM-based planning
+│           │   ├── reasoning.ts      # LLM reasoning logic
+│           │   └── index.ts          # Exports
 │           │
-│           ├── monitor/          # ✅ COMPLETED (5/5 files)
+│           ├── monitor/          # ✅ Monitoring (6/6 files)
 │           │   ├── logger.ts         # Pino logger
 │           │   ├── metrics.ts        # Performance metrics
 │           │   ├── eventRecorder.ts  # Event tracking
 │           │   ├── telemetry.ts      # Remote observability
 │           │   ├── dashboard.ts      # Development UI
-│           │   └── index.ts
+│           │   └── index.ts          # Exports
 │           │
-│           ├── types/            # ✅ NEW - Centralized Types
+│           ├── utils/            # ✅ Common utilities (5/5 files)
+│           │   ├── logger.ts         # Logging utilities
+│           │   ├── retry.ts          # Retry logic
+│           │   ├── encode.ts         # Hex/UTF-8 utilities
+│           │   ├── validate.ts       # Validation helpers
+│           │   └── index.ts          # Exports
+│           │
+│           ├── config/           # ✅ Configuration (3/3 files)
+│           │   ├── defaults.ts       # Default configs
+│           │   ├── loader.ts         # Config loader
+│           │   └── index.ts          # Exports
+│           │
+│           ├── types/            # ✅ Type definitions (7/7 files)
 │           │   ├── agent.ts          # Agent types
 │           │   ├── config.ts         # Configuration types
 │           │   ├── chain.ts          # Blockchain types
-│           │   ├── storage.ts        # Storage types
-│           │   ├── memory.ts         # Memory types
-│           │   ├── trigger.ts        # Trigger types
 │           │   ├── llm.ts            # LLM types
-│           │   ├── monitor.ts        # Monitor types
-│           │   ├── common.ts         # Common utilities
+│           │   ├── action.ts         # Action types
+│           │   ├── runtime.ts        # Runtime types
 │           │   └── index.ts          # Central exports
 │           │
-│           └── cli/              # ✅ COMPLETED (1/1 file)
-│               └── cli.ts            # CLI commands
+│           └── cli/              # ✅ CLI tools (4/4 files)
+│               ├── cli.ts            # Main CLI entry
+│               └── commands/         # Command modules
+│                   ├── deploy.ts     # Deploy command
+│                   ├── run.ts        # Run command
+│                   └── inspect.ts    # Inspect command
 │
 ├── ⚙️ contracts/                 # Smart contracts workspace
 │   ├── package.json              # ✅ With Hardhat & Typechain
@@ -148,15 +169,16 @@ somnia-agent-kit/
 ## Module Breakdown
 
 ### 1. **core/** - Blockchain Layer
-**Status**: ✅ Completed & Refactored (100/100)
+**Status**: ✅ Completed (5/5 files)
 
 **Files**:
 - `chainClient.ts` - Main blockchain client with provider/signer management
 - `contracts.ts` - Smart contract wrapper with Typechain integration
 - `signerManager.ts` - Wallet, mnemonic, and transaction signing
 - `config.ts` - Configuration with env loading and defaults merging
-- `utils.ts` - 20+ utilities (hex, ether, logger, EventEmitter)
 - `index.ts` - Module exports
+
+**Note**: `utils.ts` has been extracted to dedicated `utils/` folder for better organization.
 
 **Key Classes & Features**:
 
@@ -199,8 +221,13 @@ somnia-agent-kit/
 - **Logger**: createLogger(), Logger, LogLevel re-exports
 - **Address**: isValidAddress, shortAddress
 
-### 2. **runtime/** - Agent Runtime
-**Status**: ✅ Completed & Enhanced (100/100 for all modules)
+### 2. **runtime/** - Agent Orchestration
+**Status**: ✅ Refactored (6/6 files)
+
+**Changes**:
+- ✅ `memory.ts` → `memoryManager.ts` (renamed for clarity)
+- ❌ `storage.ts` removed (functionality integrated elsewhere)
+- ❌ `context.ts` removed (moved to `llm/context.ts` for LLM-specific use)
 
 **agent.ts** - Full Orchestrator (100/100)
 - Complete lifecycle: Created → Registered → Active → Paused → Stopped → Terminated
@@ -355,24 +382,43 @@ Dynamic prompt building and template system for AI agents.
 - **Max Length**: Enforce prompt length limits
 - **Strict Mode**: Error on missing required variables
 
-### 4. **llm/** - LLM Adapters
-**Status**: ✅ Completed (Enhanced v2.1.0)
+### 4. **llm/** - AI Reasoning & LLM Integration (9/9 files)
+**Status**: ✅ Completed (v2.2.0 - Reorganized)
 
-**Standard Interface**: `LLMAdapter` - Unified interface for all LLM providers
+The LLM module provides AI-powered reasoning, planning, and memory management through a provider-agnostic adapter interface. Supports OpenAI and local Ollama models.
 
-#### Overview & Architecture
+**Structural Changes in v2.2.0**:
+- ✅ Organized adapters into `adapters/` subfolder
+- ✅ Organized prompt system into `prompt/` subfolder
+- ✅ Moved `memory.ts` from `runtime/` to `llm/` (LLM-specific memory management)
+- ✅ Moved `context.ts` from `runtime/` to `llm/` (LLM context building)
+- ✅ Added `planner.ts` (LLM-powered planning logic)
+- ✅ Added `reasoning.ts` (Multi-step reasoning and chain-of-thought)
+- ❌ Removed `anthropicAdapter.ts` (consolidated to 2 adapters)
+- ❌ Removed `types.ts` (merged to centralized `types/` folder)
 
-The LLM module provides a **provider-agnostic interface** for integrating AI language models into agents. All adapters implement the `LLMAdapter` interface, allowing seamless switching between OpenAI, Anthropic Claude, and local Ollama models without code changes.
+**Module Structure**:
+```
+llm/
+├── adapters/          # LLM provider adapters
+│   ├── openaiAdapter.ts   # OpenAI GPT integration
+│   └── ollamaAdapter.ts   # Local Ollama integration
+├── prompt/            # Prompt management system
+│   ├── templates.ts       # Built-in prompt templates
+│   └── builder.ts         # Dynamic prompt construction
+├── memory.ts          # Agent memory system (moved from runtime/)
+├── context.ts         # Context building for LLM (moved from runtime/)
+├── planner.ts         # LLM-powered planning
+├── reasoning.ts       # Multi-step reasoning logic
+└── index.ts           # Module exports
+```
 
-**Key Benefits**:
-- **Unified API**: Same methods work across all providers
-- **Provider Flexibility**: Switch providers with single line change
-- **Production Ready**: Built-in retry, timeout, logging
-- **Cost Optimization**: Choose provider based on task complexity
+---
 
-#### types.ts - Standard Interfaces (140 lines)
+#### adapters/ - LLM Provider Integrations
 
-**LLMAdapter Interface**:
+**Standard Interface**: All adapters implement `LLMAdapter` from `types/llm.ts`:
+
 ```typescript
 interface LLMAdapter {
   readonly name: string;
@@ -384,36 +430,13 @@ interface LLMAdapter {
 }
 ```
 
-**LLMResponse**: Structured response from all adapters
-- `content`: Generated text
-- `model`: Model used (e.g., 'gpt-4', 'claude-3-opus')
-- `usage`: Token counts (promptTokens, completionTokens, totalTokens)
-- `finishReason`: 'stop' | 'length' | 'error'
-- `metadata`: Provider-specific data (id, duration, etc.)
+**Key Benefits**:
+- **Unified API**: Same methods work across all providers
+- **Provider Flexibility**: Switch providers with single line change
+- **Production Ready**: Built-in retry, timeout, logging
+- **Cost Optimization**: Choose provider based on task complexity
 
-**GenerateOptions**: Customizable generation parameters
-- `model`: Model name override
-- `temperature`: 0-2, creativity level (default: 0.7)
-- `maxTokens`: Max response length (default: 1000)
-- `topP`: Nucleus sampling (default: 1.0)
-- `frequencyPenalty`, `presencePenalty`: Repetition control
-- `stop`: Stop sequences
-- `timeout`: Request timeout in ms (default: 30000)
-- `retries`: Max retry attempts (default: 3)
-
-**RetryConfig**: Exponential backoff configuration
-- `maxRetries`: Max attempts before failure
-- `retryDelay`: Initial delay in ms
-- `backoffMultiplier`: Exponential multiplier (default: 2)
-- `maxDelay`: Maximum delay cap (default: 10000ms)
-
-**LLMLogger Interface**: Structured logging
-- `debug(message, data)`: Debug information
-- `info(message, data)`: General info
-- `warn(message, data)`: Warnings
-- `error(message, data)`: Errors
-
-#### openaiAdapter.ts - OpenAI GPT Integration (320 lines)
+##### openaiAdapter.ts - OpenAI GPT Integration
 
 **Supported Models**:
 - `gpt-3.5-turbo`: 4k context, fast, cheap ($0.50/1M tokens)
@@ -435,8 +458,10 @@ interface LLMAdapter {
 - **Structured Logging**: Debug/info/error with request metadata
 - **Error Handling**: Rate limits, network errors, invalid keys
 
-**Usage Example**:
+**Usage**:
 ```typescript
+import { OpenAIAdapter } from '@somnia/agent-kit/llm/adapters';
+
 const adapter = new OpenAIAdapter({
   apiKey: process.env.OPENAI_API_KEY,
   defaultModel: 'gpt-4',
@@ -455,55 +480,7 @@ console.log(`Used ${response.usage.totalTokens} tokens`);
 - Embeddings for semantic search
 - High availability requirements
 
-#### anthropicAdapter.ts - Anthropic Claude Integration (280 lines)
-
-**Supported Models**:
-- `claude-3-opus-20240229`: 200k context, most powerful, best reasoning
-- `claude-3-sonnet-20240229`: 200k context, balanced performance/speed
-- `claude-3-haiku-20240307`: 200k context, fastest, cheapest
-
-**Core Methods**:
-- `generate(input, options)`: Text completion
-- `chat(messages, options)`: Multi-turn chat with automatic message conversion
-- `stream(input, options)`: Streaming responses
-- `testConnection()`: API health check
-
-**Features**:
-- **Long Context**: 200k tokens (vs OpenAI's 128k)
-- **Message Conversion**: Automatically converts Message[] to Anthropic format
-- **System Message Handling**: Extracts system messages separately
-- **Alternating Pattern**: Ensures user/assistant message alternation
-- **Stop Reason Mapping**: Converts 'end_turn' → 'stop'
-
-**Advantages**:
-- Longer context window (200k tokens)
-- Better code understanding and analysis
-- More nuanced reasoning
-- Fewer hallucinations
-
-**Usage Example**:
-```typescript
-const adapter = new AnthropicAdapter({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  defaultModel: 'claude-3-sonnet-20240229'
-});
-
-const response = await adapter.chat([
-  { role: 'system', content: 'You are a code review expert.' },
-  { role: 'user', content: 'Review this function: ...' }
-]);
-
-console.log(response.content);
-console.log(`Model: ${response.model}`);
-```
-
-**When to Use**:
-- Long document analysis (up to 200k tokens)
-- Code review and refactoring
-- Complex reasoning tasks
-- When GPT-4 is too expensive
-
-#### ollamaAdapter.ts - Local LLM Integration (340 lines)
+##### ollamaAdapter.ts - Local LLM Integration
 
 **Supported Models**:
 - `llama2`, `llama3`: Meta's open models (7B-70B params)
@@ -529,14 +506,10 @@ console.log(`Model: ${response.model}`);
 - **Low Latency**: No network round-trip
 - **Customizable**: Fine-tune models
 
-**Disadvantages**:
-- Requires GPU/RAM (8GB+ recommended)
-- Slower than cloud APIs
-- Smaller models = lower quality
-- Manual model management
-
-**Usage Example**:
+**Usage**:
 ```typescript
+import { OllamaAdapter } from '@somnia/agent-kit/llm/adapters';
+
 const adapter = new OllamaAdapter({
   baseURL: 'http://localhost:11434',
   defaultModel: 'llama3'
@@ -544,20 +517,11 @@ const adapter = new OllamaAdapter({
 
 // Check and download model
 if (!await adapter.hasModel('llama3')) {
-  console.log('Downloading llama3...');
   await adapter.pullModel('llama3');
 }
 
-// List available models
-const models = await adapter.listModels();
-models.forEach(m => {
-  console.log(`${m.name} - ${(m.size / 1e9).toFixed(2)} GB`);
-});
-
-// Generate
 const response = await adapter.generate('Explain blockchain');
 console.log(response.content);
-console.log(`Eval duration: ${response.metadata.eval_duration}ms`);
 ```
 
 **When to Use**:
@@ -565,149 +529,347 @@ console.log(`Eval duration: ${response.metadata.eval_duration}ms`);
 - Privacy-sensitive applications
 - Offline deployments
 - Cost optimization
-- Experimentation with open models
 
-#### Retry & Error Handling
+---
 
-**Exponential Backoff Algorithm**:
-```
-Attempt 1: immediate
-Attempt 2: wait 1000ms
-Attempt 3: wait 2000ms
-Attempt 4: wait 4000ms
-Attempt 5: wait 8000ms
-Attempt 6+: wait 10000ms (capped at maxDelay)
-```
+#### prompt/ - Prompt Management System
 
-**Error Types & Handling**:
-- **Timeout**: AbortController kills request after 30s (default)
-  - Retry: ✅ Yes
-  - Solution: Increase timeout option
-- **Rate Limit (429)**: Too many requests
-  - Retry: ✅ Yes (with exponential backoff)
-  - Solution: Reduce request frequency
-- **Network Error**: Connection lost
-  - Retry: ✅ Yes
-  - Solution: Check internet connection
-- **Invalid API Key (401)**: Authentication failed
-  - Retry: ❌ No (fatal)
-  - Solution: Check API key in .env
-- **Invalid Model (404)**: Model not found
-  - Retry: ❌ No (fatal)
-  - Solution: Use valid model name
+##### templates.ts - Built-in Prompt Templates
 
-**Timeout Configuration**:
+**9 Production-Ready Templates**:
+- `basic_agent`: General purpose AI agent
+- `action_planner`: Break down goals into actions (used by LLMPlanner)
+- `blockchain_analyzer`: Analyze blockchain state and events
+- `event_handler`: Handle blockchain events
+- `tool_executor`: Execute tools and handle results
+- `transaction_builder`: Build blockchain transactions
+- `data_query`: Query blockchain data
+- `error_handler`: Handle errors and suggest recovery
+- `risk_assessment`: Assess transaction risks
+
+**Template Structure**:
 ```typescript
-const adapter = new OpenAIAdapter({
-  apiKey: '...',
-  timeout: 60000,   // 60 second timeout
-  retries: 5        // Retry up to 5 times
-});
+interface PromptTemplate {
+  name: string;
+  description: string;
+  template: string;
+  variables: string[];
+  examples?: Array<{ input: Record<string, any>; output: string }>;
+}
 ```
 
-#### Integration with Planner
+**Helper Functions**:
+- `getTemplate(name)`: Retrieve template by name
+- `listTemplates()`: List all available templates
+- `getTemplateVariables(name)`: Get required variables
 
-**LLMPlanner** uses any `LLMAdapter` to generate structured action plans:
+##### builder.ts - Dynamic Prompt Construction
 
+**Core Functions**:
+- `buildPrompt(template, data)`: Replace placeholders ({{var}} or ${var})
+- `buildFromTemplate(name, data)`: Build from named template
+- `composePrompts(prompts)`: Combine multiple prompts
+- `injectContext(prompt, context)`: Add context to prompts
+- `sanitizeData(data)`: Prevent injection attacks
+- `validateTemplate(template, data)`: Check for missing variables
+- `createTemplate(config)`: Create custom templates
+
+**Features**:
+- **Placeholder Support**: Both {{variable}} and ${variable} syntax
+- **Conditional Blocks**: {{#if variable}}...{{/if}}
+- **Sanitization**: Automatic data cleaning and validation
+- **Strict Mode**: Error on missing required variables
+
+---
+
+#### memory.ts - Agent Memory System (Moved from runtime/)
+
+**Purpose**: LLM-specific memory management for agents. Moved from `runtime/` to `llm/` as it's primarily used for building LLM context.
+
+**Core Features**:
+- **Memory Types**: input, output, state, system
+- **Backends**: InMemoryBackend (fast), FileBackend (persistent)
+- **Token Management**: Stay within LLM context limits
+- **Session Management**: Multiple agent sessions
+
+**Key Methods**:
+- `addMemory(type, content, metadata)`: Save interactions
+- `getContext(maxTokens)`: Build LLM context from memory
+- `getHistory(filter)`: Retrieve memory entries
+- `clear()`: Session cleanup
+- `summarize()`: Memory compression
+
+**Integration**: Automatically saves agent interactions in Agent.onEvent(), builds context for LLM planners.
+
+---
+
+#### context.ts - LLM Context Building (Moved from runtime/)
+
+**Purpose**: Unified context aggregation for LLM. Moved from `runtime/` to `llm/` as it's LLM-specific functionality.
+
+**AgentContext Interface**:
+- `chainState`: blockNumber, gasPrice, network, chainId, timestamp
+- `recentActions`: Latest actions from storage
+- `memory`: Memory context from MemoryManager
+- `config`: Agent configuration
+
+**ContextBuilder Methods**:
+- `buildContext(options)`: Unified context aggregation
+- `getChainState()`: Blockchain state with 2s cache
+- `getRecentActions()`: Latest actions from storage
+- `getMemoryContext()`: Formatted memory context
+- `formatContext()`: Full LLM-friendly formatting
+- `formatCompact()`: Compact version for token limits
+
+**Options**:
+- `maxMemoryTokens`: Token limit for memory (default: 1000)
+- `maxActions`: Max recent actions (default: 10)
+- `includeChainState/includeActions/includeMemory`: Toggle components
+
+---
+
+#### planner.ts - LLM-Powered Planning (NEW)
+
+**Purpose**: AI-powered task decomposition and action planning using LLM adapters.
+
+**Core Components**:
+- **LLMPlanner**: Uses any `LLMAdapter` to generate structured action plans
+- **Action Validation**: Zod-based validation for type safety
+- **Structured Output**: Returns `ActionPlan[]` with reasoning
+
+**Usage**:
 ```typescript
-import { OpenAIAdapter, LLMPlanner } from '@somnia/agent-kit';
+import { OpenAIAdapter } from '@somnia/agent-kit/llm/adapters';
+import { LLMPlanner } from '@somnia/agent-kit/llm';
 
 const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
-
 const planner = new LLMPlanner(llm, {
   temperature: 0.3,        // Lower for deterministic plans
   strictValidation: true,  // Throw on invalid actions
   returnActionPlan: true   // Return ActionPlan[] with reason
 });
 
-// Generate structured action plan
-const actionPlans = await planner.planWithReason('Send 1 ETH to Alice');
+const plans = await planner.planWithReason('Send 1 ETH to Alice');
 // Returns: [
-//   {
-//     type: 'check_balance',
-//     params: { amount: '1.0' },
-//     reason: 'Verify sufficient balance before transfer'
-//   },
-//   {
-//     type: 'execute_transfer',
-//     target: '0xAlice...',
-//     params: { to: '0xAlice...', amount: '1.0' },
-//     reason: 'Execute ETH transfer to Alice'
-//   }
+//   { type: 'check_balance', params: {...}, reason: 'Verify sufficient balance' },
+//   { type: 'execute_transfer', target: '0x...', params: {...}, reason: 'Execute transfer' }
 // ]
 ```
 
 **Flow**: Goal → buildPrompt() → llm.generate() → parseResponseToActionPlan() → ActionPlan[] → Executor
 
+---
+
+#### reasoning.ts - Multi-Step Reasoning (NEW)
+
+**Purpose**: Advanced reasoning capabilities including chain-of-thought, multi-step problem solving, and reasoning traces.
+
+**Core Features**:
+- **Chain-of-Thought**: Break complex problems into reasoning steps
+- **Reasoning Traces**: Track decision-making process
+- **Multi-Step Planning**: Decompose goals into sub-goals
+- **Confidence Scoring**: Assess reasoning quality
+
+**Key Methods**:
+- `chainOfThought(problem)`: Generate reasoning steps
+- `multiStepReasoning(goal, context)`: Complex problem solving
+- `evaluateReasoning(trace)`: Assess reasoning quality
+- `explainDecision(action)`: Explain why action was chosen
+
+**Use Cases**:
+- Complex task decomposition
+- Decision explanation for users
+- Debugging agent behavior
+- Improving plan quality
+
+---
+
 #### Best Practices
 
-**1. Choose the Right Adapter**:
-- **Development/Testing**: Ollama (free, fast iteration)
-- **Production (simple tasks)**: GPT-3.5-turbo (cheap, fast)
-- **Production (complex reasoning)**: GPT-4 or Claude Opus
-- **Code tasks**: CodeLlama (local) or GPT-4
-- **Long documents**: Claude (200k context)
-- **Embeddings**: OpenAI text-embedding-ada-002
+**1. Adapter Selection**:
+- **Development**: Ollama (free, fast iteration)
+- **Production (simple)**: GPT-3.5-turbo (cheap, fast)
+- **Production (complex)**: GPT-4 (powerful reasoning)
+- **Privacy**: Ollama (local, no data leaves machine)
 
 **2. Cost Optimization**:
-- Use lower temperature (0.3) for deterministic tasks
+- Lower temperature (0.3) for deterministic tasks
 - Set `maxTokens` to limit response length
-- Cache frequent prompts
 - Use streaming for long responses
 - Monitor `usage.totalTokens` for cost tracking
-- Use cheaper models for simple tasks
 
 **3. Error Handling**:
-```typescript
-try {
-  const response = await adapter.generate(prompt);
+- Implement exponential backoff (1s→2s→4s→8s→10s)
+- Handle rate limits (429), invalid keys (401), timeouts
+- Use `testConnection()` on startup to fail fast
 
-  if (response.finishReason === 'length') {
-    console.warn('Response truncated, increase maxTokens');
-  }
-
-  return response.content;
-} catch (error) {
-  if (error.status === 429) {
-    // Rate limit - wait and retry
-    await sleep(60000);
-    return retry();
-  } else if (error.status === 401) {
-    // Invalid API key - fatal
-    throw new Error('Invalid API key');
-  } else {
-    // Network error - retry
-    return retry();
-  }
-}
-```
-
-**4. Performance Tips**:
-- Reuse adapter instances (don't recreate per request)
-- Use streaming for real-time UX (don't wait for full response)
-- Parallel requests when independent
-- Monitor `response.metadata.duration` for benchmarking
-- Use testConnection() on startup to fail fast
-
-**5. Security**:
-- Never commit API keys to git
-- Use environment variables (.env)
+**4. Security**:
+- Never commit API keys (use .env)
 - Validate user inputs before sending to LLM
 - Sanitize LLM outputs before displaying
 - Use prompt templates to prevent injection
-- Rate limit user requests
 
-**6. Provider Comparison**:
-| Feature | OpenAI GPT-4 | Claude Opus | Ollama Llama3 |
-|---------|--------------|-------------|---------------|
-| **Cost** | $30/1M tokens | $15/1M tokens | Free |
-| **Context** | 128k tokens | 200k tokens | 8k-128k |
-| **Speed** | Fast | Medium | Slow (local) |
-| **Quality** | Excellent | Excellent | Good |
-| **Privacy** | Cloud | Cloud | Local |
-| **Internet** | Required | Required | Optional |
+### 5. **utils/** - Shared Utilities (5/5 files) ✨ NEW
+**Status**: ✅ Completed (v2.2.0 - Extracted from core/)
 
-### 5. **monitor/** - Monitoring System
+Shared utility functions extracted from `core/utils.ts` for better modularity and reusability across the SDK.
+
+**Why Separate Module?**
+- ✅ **Better Organization**: Utilities separated from blockchain-specific code
+- ✅ **Reusability**: Can be imported by any module without circular dependencies
+- ✅ **Maintainability**: Easier to find and update utility functions
+- ✅ **Tree-Shaking**: Better bundle optimization (only import what you need)
+
+**Module Structure**:
+```
+utils/
+├── logger.ts      # Logging utilities (Pino-based)
+├── retry.ts       # Retry logic with exponential backoff
+├── encode.ts      # Encoding/decoding utilities (hex, bytes, UTF-8)
+├── validate.ts    # Validation helpers (addresses, data formats)
+└── index.ts       # Utility exports
+```
+
+---
+
+#### logger.ts - Logging Utilities
+
+**Features**:
+- **Pino-based logging**: Fast, structured JSON logging
+- **Log Levels**: debug, info, warn, error, fatal
+- **Colored Terminal Output**: Pretty printing for development
+- **Metadata Support**: Attach context to log entries
+- **Performance**: Low overhead, production-ready
+
+**Usage**:
+```typescript
+import { createLogger, LogLevel } from '@somnia/agent-kit/utils';
+
+const logger = createLogger({
+  level: LogLevel.INFO,
+  pretty: true  // Colored output for dev
+});
+
+logger.info('Agent initialized', { agentId: '0x123' });
+logger.error('Transaction failed', { error: err, txHash });
+```
+
+**Exports**:
+- `Logger` class: Main logging interface
+- `LogLevel` enum: DEBUG, INFO, WARN, ERROR, FATAL
+- `createLogger(config)`: Factory function
+- `LoggerConfig` type: Configuration options
+- `LogEntry` type: Structured log entry
+
+---
+
+#### retry.ts - Retry Logic with Exponential Backoff
+
+**Features**:
+- **Exponential Backoff**: 1s→2s→4s→8s→10s (capped at maxDelay)
+- **Configurable**: maxRetries, retryDelay, backoffMultiplier, maxDelay
+- **Predicate Function**: Decide which errors to retry
+- **Timeout Support**: Abort after configurable timeout
+
+**Core Functions**:
+- `retry<T>(fn, config)`: Retry a function with exponential backoff
+- `delay(ms)`: Promise-based sleep
+- `timeout<T>(promise, ms)`: Wrap promise with timeout
+
+**Usage**:
+```typescript
+import { retry } from '@somnia/agent-kit/utils';
+
+const result = await retry(
+  async () => {
+    const tx = await contract.transfer(to, amount);
+    return await tx.wait();
+  },
+  {
+    maxRetries: 5,
+    retryDelay: 1000,
+    backoffMultiplier: 2,
+    maxDelay: 10000,
+    shouldRetry: (error) => error.code !== 'INSUFFICIENT_FUNDS'
+  }
+);
+```
+
+**Retry Algorithm**:
+```
+Attempt 1: immediate
+Attempt 2: wait 1000ms
+Attempt 3: wait 2000ms
+Attempt 4: wait 4000ms
+Attempt 5: wait 8000ms
+Attempt 6+: wait 10000ms (capped)
+```
+
+---
+
+#### encode.ts - Encoding/Decoding Utilities
+
+**Features**:
+- **Hex Conversion**: toHex(), fromHex(), bytesToHex(), hexToBytes()
+- **UTF-8 Encoding**: toUtf8Bytes(), toUtf8String()
+- **Hashing**: keccak256() for Ethereum-compatible hashing
+- **Ethers.js Integration**: Wraps ethers utilities for convenience
+
+**Core Functions**:
+- `toHex(value)`: Convert value to hex string
+- `fromHex(hex)`: Parse hex string to value
+- `bytesToHex(bytes)`: Uint8Array to hex
+- `hexToBytes(hex)`: Hex to Uint8Array
+- `toUtf8Bytes(str)`: String to UTF-8 bytes
+- `toUtf8String(bytes)`: UTF-8 bytes to string
+- `keccak256(data)`: Ethereum keccak256 hash
+
+**Usage**:
+```typescript
+import { toHex, keccak256, toUtf8Bytes } from '@somnia/agent-kit/utils';
+
+const hex = toHex(42);  // '0x2a'
+const hash = keccak256(toUtf8Bytes('hello'));
+const bytes = hexToBytes('0x1234');
+```
+
+---
+
+#### validate.ts - Validation Helpers
+
+**Features**:
+- **Address Validation**: Check Ethereum address format
+- **Format Validation**: Verify hex strings, numbers, etc.
+- **Data Sanitization**: Clean and normalize inputs
+- **Type Guards**: TypeScript type narrowing
+
+**Core Functions**:
+- `isValidAddress(address)`: Check if valid Ethereum address
+- `shortAddress(address, chars)`: Shorten address for display (0x1234...5678)
+- `isValidHex(hex)`: Verify hex string format
+- `isValidChainId(chainId)`: Check chain ID validity
+- `sanitizeInput(input)`: Clean user input
+
+**Usage**:
+```typescript
+import { isValidAddress, shortAddress } from '@somnia/agent-kit/utils';
+
+if (isValidAddress(userInput)) {
+  console.log('Valid address:', shortAddress(userInput));
+} else {
+  throw new Error('Invalid Ethereum address');
+}
+```
+
+**Integration**:
+- Used by `core/chainClient.ts` for parameter validation
+- Used by `runtime/executor.ts` for action validation
+- Used by `runtime/policy.ts` for access control
+- Used throughout SDK for input sanitization
+
+---
+
+### 6. **monitor/** - Monitoring System
 **Status**: ✅ Completed
 
 Implemented modules:
@@ -719,7 +881,7 @@ Implemented modules:
 
 ---
 
-### 6. **types/** - Centralized Type Definitions
+### 7. **types/** - Centralized Type Definitions (7/7 files)
 **Status**: ✅ Completed
 
 **Purpose**: Standardize data structures and interfaces across all SDK modules
@@ -2280,17 +2442,32 @@ const dashboard = new Dashboard({
 
 ---
 
-### 6. **cli/** - Command Line Interface
-**Status**: ✅ Completed
+### 8. **cli/** - Command Line Interface (4/4 files)
+**Status**: ✅ Completed (v2.2.0 - Reorganized)
 
-Implemented commands:
-- `create` - Create new agent
-- `deploy` - Deploy agent on-chain
-- `start` - Start agent execution
-- `stop` - Stop agent
-- `status` - View agent status
-- `task` - Create task for agent
-- `help` - Show help message
+**Structural Changes in v2.2.0**:
+- ✅ Organized commands into `commands/` subfolder for better structure
+- ✅ Each command has its own file for maintainability
+
+**Module Structure**:
+```
+cli/
+├── commands/       # Individual command implementations
+│   ├── create.ts
+│   ├── deploy.ts
+│   └── start.ts
+├── index.ts        # CLI entry point
+└── parser.ts       # Command parsing logic
+```
+
+**Implemented Commands**:
+- `create` - Create new agent configuration
+- `deploy` - Deploy agent on-chain via AgentRegistry
+- `start` - Start agent execution with triggers
+- `stop` - Stop running agent
+- `status` - View agent status and metrics
+- `task` - Create and manage tasks for agents
+- `help` - Display command help and usage
 
 ---
 
@@ -2361,6 +2538,61 @@ export class ... {
 ---
 
 ## Current Status
+
+### ✅ Latest: v2.2.0 - Structural Reorganization (October 2025)
+
+**Major Architectural Changes:**
+- ✅ **New `utils/` Module (5 files)**: Extracted utilities from `core/utils.ts` for better modularity
+  - `logger.ts`: Pino-based logging utilities
+  - `retry.ts`: Retry logic with exponential backoff
+  - `encode.ts`: Encoding/decoding utilities (hex, bytes, UTF-8)
+  - `validate.ts`: Validation helpers (addresses, data formats)
+  - `index.ts`: Utility exports
+
+- ✅ **Reorganized `llm/` Module (9 files)**: Improved structure with subfolders
+  - **New `adapters/` subfolder**: openaiAdapter.ts, ollamaAdapter.ts
+  - **New `prompt/` subfolder**: templates.ts, builder.ts
+  - **Moved from `runtime/`**: memory.ts, context.ts (LLM-specific functionality)
+  - **New files**: planner.ts (LLM planning logic), reasoning.ts (chain-of-thought)
+  - **Removed**: anthropicAdapter.ts (consolidated to 2 adapters), types.ts (merged to centralized types/)
+
+- ✅ **Enhanced `runtime/` Module (6 files)**: Cleaner separation of concerns
+  - **Renamed**: memory.ts → memoryManager.ts (agent-specific memory management)
+  - **Removed**: storage.ts (merged into agent.ts), context.ts (moved to llm/)
+  - Core files: agent.ts, planner.ts, executor.ts, trigger.ts, memoryManager.ts, policy.ts
+
+- ✅ **Reorganized `cli/` Module (4 files)**: Better command organization
+  - **New `commands/` subfolder**: create.ts, deploy.ts, start.ts
+  - Files: commands/, index.ts, parser.ts
+
+- ✅ **New `version.ts`**: SDK version tracking at root level
+
+- ✅ **Reduced `core/` Module (5 files)**: Extracted utilities for cleaner blockchain layer
+  - Files: chainClient.ts, contracts.ts, signerManager.ts, config.ts, index.ts
+  - Removed: utils.ts (extracted to utils/ module)
+
+**Module Summary (v2.2.0):**
+```
+src/
+├── version.ts        # ✅ SDK version tracking (NEW)
+├── core/             # ✅ 5/5 files (was 6 - extracted utils)
+├── runtime/          # ✅ 6/6 files (was 7 - removed storage, renamed memory)
+├── llm/              # ✅ 9/9 files (was 4 - reorganized with subfolders)
+├── utils/            # ✅ 5/5 files (NEW - extracted from core/)
+├── config/           # ✅ 3/3 files (unchanged)
+├── types/            # ✅ 7/7 files (unchanged)
+├── monitor/          # ✅ 5/5 files (unchanged)
+├── cli/              # ✅ 4/4 files (was 3 - added commands/ subfolder)
+└── prompt/           # ✅ 2/2 files (moved to llm/prompt/)
+```
+
+**Benefits of Reorganization:**
+- 🎯 **Better Modularity**: Clear separation between blockchain, runtime, LLM, and utilities
+- 🎯 **Improved Maintainability**: Each module has focused responsibility
+- 🎯 **Tree-Shaking**: Better bundle optimization with granular imports
+- 🎯 **Discoverability**: Logical folder structure matches architectural layers
+
+---
 
 ### ✅ Completed (v2.0.0 - Phase 1-5 Complete)
 

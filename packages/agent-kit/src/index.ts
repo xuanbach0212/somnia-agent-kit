@@ -5,7 +5,7 @@
 
 import { ethers } from 'ethers';
 import { AgentKitConfig, validateConfig, loadConfig, SOMNIA_NETWORKS } from './core/config';
-import { sleep, retry, isValidAddress, shortAddress } from './core/utils';
+import { sleep, retry, isValidAddress, shortAddress } from './utils';
 import { SomniaContracts } from './core/contracts';
 import { ChainClient } from './core/chainClient';
 import { SignerManager } from './core/signerManager';
@@ -171,7 +171,16 @@ export {
   setConfig,
   resetConfig,
 } from './config';
-// Utility functions
+// Version tracking
+export {
+  SDK_VERSION,
+  SDK_NAME,
+  BUILD_DATE,
+  getVersionString,
+  getVersionInfo,
+} from './version';
+
+// Utility functions (from utils/ module)
 export {
   // Async utilities
   sleep,
@@ -200,21 +209,23 @@ export {
   Logger,
   LogLevel,
   createLogger,
-} from './core/utils';
-export type { EventListener, LoggerConfig, LogEntry } from './core/utils';
+} from './utils';
+export type { EventListener, LoggerConfig, LogEntry } from './utils';
+
+// Core blockchain layer
 export { SomniaContracts } from './core/contracts';
 export type { ContractInstances } from './core/contracts';
 export { ChainClient } from './core/chainClient';
 export { SignerManager } from './core/signerManager';
 
-// Prompt management
-export * from './prompt';
-
 // Runtime modules
 export * from './runtime';
 
-// LLM adapters
+// LLM integration (includes prompt management)
 export * from './llm';
 
 // Monitoring
 export * from './monitor';
+
+// CLI
+export * from './cli';
