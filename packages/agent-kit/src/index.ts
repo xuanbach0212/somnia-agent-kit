@@ -148,6 +148,7 @@ export type {
 } from './config';
 export {
   SOMNIA_NETWORKS,
+  SOMNIA_NETWORKS as NETWORK_CONFIGS, // Alias for backward compatibility
   DEFAULT_NETWORK,
   getNetwork,
   validateConfig,

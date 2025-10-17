@@ -31,7 +31,7 @@ export const SOMNIA_NETWORKS = {
   },
   devnet: {
     rpcUrl: 'http://localhost:8545',
-    chainId: 31337,
+    chainId: 50313,
     name: 'Somnia Devnet',
   },
 } as const satisfies Record<string, NetworkConfig>;
