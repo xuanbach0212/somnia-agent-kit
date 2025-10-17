@@ -23,6 +23,7 @@
    - [Trigger](#trigger)
    - [Storage](#storage)
    - [Policy](#policy)
+   - [Memory](#memory)
 3. [LLM Adapters](#llm-adapters)
    - [OpenAIAdapter](#openai adapter)
    - [OllamaAdapter](#ollamaadapter)
@@ -1416,313 +1417,1391 @@ Get agent configuration.
 
 ### Planner
 
-**Task Planning** - Task decomposition and dependency resolution
+**AI/Rule-Based Planning** - LLM and rule-based task planning
 
 **Location**: `packages/agent-kit/src/runtime/planner.ts`
 
-#### Task Planning
+#### Interfaces
 
-##### `async plan(goal: string, context?: any): Promise<Task[]>`
+##### `IPlanner`
 
-Plan tasks to achieve goal.
+Base planner interface.
 
-**Parameters**:
-- `goal`: Goal description
-- `context` (optional): Additional context
+```typescript
+interface IPlanner {
+  plan(goal: any, context?: any): Promise<Action[]>;
+}
+```
 
-**Returns**: `Promise<Task[]>` - Array of planned tasks
+##### `Action`
 
----
+Simple action format.
 
-##### `async decompose(task: Task): Promise<Task[]>`
+```typescript
+interface Action {
+  type: string;
+  params: Record<string, any>;
+}
+```
 
-Decompose complex task into subtasks.
+#### Classes
 
-**Parameters**:
-- `task`: Task to decompose
+##### `RulePlanner`
 
-**Returns**: `Promise<Task[]>` - Array of subtasks
+Rule-based planner for predefined task types.
 
----
+**Usage**:
+```typescript
+const planner = new RulePlanner();
+const actions = await planner.plan({
+  type: 'transfer',
+  to: '0x123...',
+  amount: '1.0'
+});
+// Returns: [
+//   { type: 'validate_address', params: { address: '0x123...' } },
+//   { type: 'check_balance', params: { amount: '1.0' } },
+//   { type: 'execute_transfer', params: { to: '0x123...', amount: '1.0' } }
+// ]
+```
 
-##### `resolveDependencies(tasks: Task[]): Task[]`
+**Supported task types**: `transfer`, `swap`, `contract_call`, `deploy_contract`
 
-Resolve task dependencies and return execution order.
+##### `LLMPlanner`
 
-**Parameters**:
-- `tasks`: Array of tasks
+AI-powered planner using OpenAI or Ollama.
 
-**Returns**: `Task[]` - Tasks in execution order
+**Constructor**:
+```typescript
+constructor(llm: OpenAIAdapter | OllamaAdapter, options?: {
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
+})
+```
+
+**Usage**:
+```typescript
+const llm = new OpenAIAdapter({ apiKey: 'sk-...' });
+const planner = new LLMPlanner(llm);
+
+const actions = await planner.plan(
+  'Transfer 1 ETH to Alice and swap 100 USDC for STT',
+  { userBalance: '5 ETH', network: 'testnet' }
+);
+// LLM generates appropriate action sequence
+```
+
+**Methods**:
+- `setSystemPrompt(prompt: string)`: Customize AI instructions
+- `getSystemPrompt()`: Get current system prompt
+
+##### `Planner` (Legacy)
+
+Base planner with backward compatibility.
+
+**Methods**:
+- `plan(goal: any, context?: any): Promise<Action[]>` - Plan actions
+- `createPlan(taskId, taskType, taskData, priority)` - Legacy method (deprecated)
 
 ---
 
 ### Executor
 
-**Task Execution** - Execute tasks with retry logic and error handling
+**Action Execution Engine** - Execute actions with blockchain integration
 
 **Location**: `packages/agent-kit/src/runtime/executor.ts`
 
-#### Task Execution
+#### Constructor
 
-##### `async execute(task: Task): Promise<TaskResult>`
+```typescript
+constructor(
+  chainClient?: ChainClient,
+  contracts?: SomniaContracts,
+  config?: ExecutorConfig
+)
+```
 
-Execute a single task.
+**ExecutorConfig**:
+```typescript
+interface ExecutorConfig {
+  maxRetries?: number;         // Default: 3
+  retryDelay?: number;          // Default: 1000ms
+  timeout?: number;             // Default: 30000ms
+  enableParallel?: boolean;     // Default: true
+  dryRun?: boolean;             // Default: false
+}
+```
+
+#### Methods
+
+##### `execute(action: Action): Promise<ExecutionResult>`
+
+Execute single action with retry logic.
 
 **Parameters**:
-- `task`: Task to execute
+- `action`: Action to execute `{ type: string, params: Record<string, any> }`
 
-**Returns**: `Promise<TaskResult>`
+**Returns**: `Promise<ExecutionResult>`
+```typescript
+interface ExecutionResult {
+  stepId: string;
+  status: ExecutionStatus;
+  result?: any;
+  error?: string;
+  retryCount?: number;
+  duration: number;
+  txReceipt?: TxReceipt;  // For on-chain actions
+  dryRun?: boolean;       // Indicates simulation
+}
+```
+
+**Example**:
+```typescript
+const executor = new Executor(chainClient, contracts);
+const result = await executor.execute({
+  type: 'execute_transfer',
+  params: { to: '0x123...', amount: '1.0' }
+});
+console.log('TX Hash:', result.txReceipt?.hash);
+```
 
 ---
 
-##### `async executeAll(tasks: Task[]): Promise<TaskResult[]>`
+##### `executeAll(actions: Action[]): Promise<ExecutionResult[]>`
 
-Execute multiple tasks concurrently.
+Execute multiple actions (parallel or sequential).
 
 **Parameters**:
-- `tasks`: Array of tasks
+- `actions`: Array of actions
 
-**Returns**: `Promise<TaskResult[]>`
+**Returns**: `Promise<ExecutionResult[]>`
+
+**Example**:
+```typescript
+const actions = [
+  { type: 'validate_address', params: { address: '0x123...' } },
+  { type: 'check_balance', params: { amount: '1.0' } },
+  { type: 'execute_transfer', params: { to: '0x123...', amount: '1.0' } }
+];
+
+const results = await executor.executeAll(actions);
+```
 
 ---
 
-##### `async executeSequential(tasks: Task[]): Promise<TaskResult[]>`
+##### `registerHandler(action: string, handler: Function): void`
 
-Execute tasks sequentially.
+Register custom action handler.
 
 **Parameters**:
-- `tasks`: Array of tasks
+- `action`: Action type
+- `handler`: `async (params: any) => Promise<any>`
 
-**Returns**: `Promise<TaskResult[]>`
+**Example**:
+```typescript
+executor.registerHandler('my_custom_action', async (params) => {
+  // Custom logic
+  return { success: true, data: params };
+});
+```
+
+#### Built-in Handlers
+
+- **validate_address**: Validates Ethereum address using ethers.isAddress()
+- **validate_contract**: Checks if address has bytecode
+- **check_balance**: Gets balance via ChainClient
+- **execute_transfer**: Sends ETH transfer with receipt
+- **estimate_gas**: Estimates transaction gas
+- **approve_token**: Token approval (placeholder)
+- **get_quote**: DEX quote (placeholder)
+- **execute_swap**: Token swap (placeholder)
+- **call_contract**: Contract method call (placeholder)
+- **execute**: Generic execution
+
+#### Dry-Run Mode
+
+```typescript
+const executor = new Executor(chainClient, contracts, { dryRun: true });
+const result = await executor.execute(action);
+// No real transaction sent, result.dryRun === true
+```
 
 ---
 
 ### Trigger
 
-**Event Triggers** - Time, event, and condition-based triggers
+**Event Sources** - Blockchain, interval, and webhook triggers
 
 **Location**: `packages/agent-kit/src/runtime/trigger.ts`
 
-#### Trigger Types
+#### Interfaces
+
+##### `ITrigger`
+
+Base trigger interface.
 
 ```typescript
-enum TriggerType {
-  Time = 'time',
-  Event = 'event',
-  Condition = 'condition',
-  Manual = 'manual',
+interface ITrigger {
+  start(callback: (data: any) => void): Promise<void>;
+  stop(): Promise<void>;
+  isRunning(): boolean;
 }
 ```
 
-#### Methods
+#### Trigger Classes
 
-##### `register(config: TriggerConfig): string`
+##### `OnChainTrigger`
 
-Register a trigger.
+Listen to blockchain events via ChainClient.
 
-**Parameters**:
-- `config`: Trigger configuration
+**Constructor**:
+```typescript
+constructor(
+  client: ChainClient,
+  contract: ethers.Contract,
+  eventName: string,
+  filter?: any
+)
+```
 
-**Returns**: `string` - Trigger ID
+**Usage**:
+```typescript
+const trigger = new OnChainTrigger(
+  chainClient,
+  agentRegistry,
+  'AgentRegistered',
+  { owner: myAddress }
+);
 
----
+await trigger.start((data) => {
+  console.log('Event:', data.eventName);
+  console.log('Args:', data.args);
+  console.log('TX Hash:', data.transactionHash);
+});
 
-##### `async trigger(triggerId: string, data?: any): Promise<void>`
-
-Manually trigger a trigger.
-
-**Parameters**:
-- `triggerId`: Trigger ID
-- `data` (optional): Trigger data
-
-**Returns**: `Promise<void>`
-
----
-
-##### `enable(triggerId: string): void`
-
-Enable a trigger.
-
----
-
-##### `disable(triggerId: string): void`
-
-Disable a trigger.
-
----
-
-##### `deleteTrigger(triggerId: string): boolean`
-
-Delete a trigger.
-
-**Returns**: `boolean` - Success status
+// Later...
+await trigger.stop();
+```
 
 ---
 
-##### `getTrigger(triggerId: string): TriggerConfig | undefined`
+##### `IntervalTrigger`
 
-Get trigger configuration.
+Time-based periodic execution.
 
-**Returns**: `TriggerConfig | undefined`
+**Constructor**:
+```typescript
+constructor(
+  intervalMs: number,
+  options?: {
+    startImmediately?: boolean;
+    maxExecutions?: number;
+  }
+)
+```
+
+**Usage**:
+```typescript
+const trigger = new IntervalTrigger(5000, {
+  startImmediately: true,
+  maxExecutions: 100
+});
+
+await trigger.start((data) => {
+  console.log('Execution #', data.execution);
+  console.log('Timestamp:', data.timestamp);
+});
+```
 
 ---
 
-##### `getAllTriggers(): TriggerConfig[]`
+##### `WebhookTrigger`
 
-Get all triggers.
+HTTP webhook receiver with Express.
 
-**Returns**: `TriggerConfig[]`
+**Constructor**:
+```typescript
+constructor(options: {
+  port: number;
+  path: string;
+  secret?: string;
+})
+```
+
+**Usage**:
+```typescript
+const trigger = new WebhookTrigger({
+  port: 3000,
+  path: '/webhook',
+  secret: 'my-secret'
+});
+
+await trigger.start((data) => {
+  console.log('Webhook body:', data.body);
+  console.log('Headers:', data.headers);
+});
+```
 
 ---
 
-##### `cleanup(): void`
+##### `Trigger` (Manager)
 
-Cleanup all triggers and intervals.
+Trigger manager with factory methods.
+
+**Methods**:
+- `register(config)`: Register trigger
+- `enable(triggerId)`: Enable trigger
+- `disable(triggerId)`: Disable trigger
+- `getAllTriggers()`: Get all registered triggers
+- `cleanup()`: Stop and cleanup all triggers
+- `createOnChainTrigger(...)`: Factory for OnChainTrigger
+- `createIntervalTrigger(...)`: Factory for IntervalTrigger
+- `createWebhookTrigger(...)`: Factory for WebhookTrigger
 
 ---
 
 ### Storage
 
-**State Persistence** - Multi-backend storage support
+**Event & Action Persistence** - Memory and file-based storage
 
 **Location**: `packages/agent-kit/src/runtime/storage.ts`
 
-#### Storage Backends
+#### Interfaces
+
+##### `IStorage`
+
+Base storage interface for events and actions.
+
+```typescript
+interface IStorage {
+  saveEvent(event: any, metadata?: Record<string, any>): Promise<void>;
+  saveAction(action: any, result?: any, metadata?: Record<string, any>): Promise<void>;
+  getEvents(filter?: any): Promise<EventEntry[]>;
+  getActions(filter?: any): Promise<ActionEntry[]>;
+  getHistory(): Promise<{ events: EventEntry[]; actions: ActionEntry[] }>;
+  clear(): Promise<void>;
+  size(): Promise<{ events: number; actions: number }>;
+}
+```
+
+##### `EventEntry`
+
+Event storage format.
+
+```typescript
+interface EventEntry {
+  id: string;
+  event: any;
+  timestamp: number;
+  agentId?: string;
+  metadata?: Record<string, any>;
+}
+```
+
+##### `ActionEntry`
+
+Action storage format.
+
+```typescript
+interface ActionEntry {
+  id: string;
+  action: any;
+  result?: any;
+  status?: 'pending' | 'success' | 'failed';
+  timestamp: number;
+  agentId?: string;
+  metadata?: Record<string, any>;
+}
+```
+
+#### Storage Classes
+
+##### `MemoryStorage`
+
+In-memory storage (perfect for testing).
+
+**Usage**:
+```typescript
+const storage = new MemoryStorage();
+await storage.saveEvent({ type: 'transfer', data: {...} });
+await storage.saveAction({ type: 'execute_transfer' }, result);
+
+const history = await storage.getHistory();
+console.log('Events:', history.events.length);
+console.log('Actions:', history.actions.length);
+
+// Filter by time range
+const recent = await storage.getEvents({
+  from: Date.now() - 86400000  // Last 24h
+});
+```
+
+---
+
+##### `FileStorage`
+
+Persistent JSON file storage.
+
+**Constructor**:
+```typescript
+constructor(filePath: string = './data')
+```
+
+**Usage**:
+```typescript
+const storage = new FileStorage('./agent-data');
+await storage.saveEvent(event);
+await storage.saveAction(action, result);
+
+// Data persisted to:
+// ./agent-data/events.json
+// ./agent-data/actions.json
+
+const events = await storage.getEvents();
+const actions = await storage.getActions({ status: 'success' });
+```
+
+**Features**:
+- Auto-creates directories
+- Atomic file operations
+- Error handling for missing files
+- JSON pretty-printing
+
+---
+
+##### `StorageBackend`
+
+Enum for Agent options.
 
 ```typescript
 enum StorageBackend {
   Memory = 'memory',
   File = 'file',
-  OnChain = 'onchain',
-  IPFS = 'ipfs',
 }
 ```
 
-#### Methods
-
-##### `async set(key: string, value: any): Promise<void>`
-
-Store value.
-
-**Parameters**:
-- `key`: Storage key
-- `value`: Value to store
-
-**Returns**: `Promise<void>`
-
----
-
-##### `async get<T>(key: string): Promise<T | null>`
-
-Retrieve value.
-
-**Parameters**:
-- `key`: Storage key
-
-**Returns**: `Promise<T | null>`
-
----
-
-##### `async delete(key: string): Promise<void>`
-
-Delete value.
-
-**Parameters**:
-- `key`: Storage key
-
-**Returns**: `Promise<void>`
-
----
-
-##### `async has(key: string): Promise<boolean>`
-
-Check if key exists.
-
-**Parameters**:
-- `key`: Storage key
-
-**Returns**: `Promise<boolean>`
-
----
-
-##### `async clear(): Promise<void>`
-
-Clear all storage.
-
-**Returns**: `Promise<void>`
+**Usage with Agent**:
+```typescript
+const agent = new Agent(config, {
+  storageBackend: StorageBackend.File,
+  storagePath: './my-agent-data'
+});
+```
 
 ---
 
 ### Policy
 
-**Access Control** - Role-based permissions and governance
+**Guards & Access Control** - Operational policies and permissions
 
 **Location**: `packages/agent-kit/src/runtime/policy.ts`
 
-#### Roles
+#### Operational Policy
+
+##### `OperationalPolicy`
+
+Configuration for operational guards.
 
 ```typescript
-enum Role {
-  Owner = 'owner',
-  Admin = 'admin',
-  User = 'user',
+interface OperationalPolicy {
+  maxGasLimit?: bigint;
+  maxRetries?: number;
+  maxTransferAmount?: bigint;
+  minTransferAmount?: bigint;
+  allowedActions?: string[];
+  blockedActions?: string[];
+  rateLimit?: {
+    maxActions: number;
+    windowMs: number;
+  };
+  requireApproval?: boolean;
 }
 ```
 
 #### Methods
 
-##### `setRole(address: string, role: Role): void`
-
-Set role for address.
-
-**Parameters**:
-- `address`: Ethereum address
-- `role`: Role to assign
-
----
-
-##### `getRole(address: string): Role | undefined`
-
-Get role for address.
-
-**Parameters**:
-- `address`: Ethereum address
-
-**Returns**: `Role | undefined`
-
----
-
-##### `hasRole(address: string, role: Role): boolean`
-
-Check if address has role.
-
-**Parameters**:
-- `address`: Ethereum address
-- `role`: Role to check
-
-**Returns**: `boolean`
-
----
-
 ##### `checkPermission(address: string, action: string): boolean`
 
-Check if address has permission for action.
+Check if address has permission (for Agent.ts compatibility).
+
+**Returns**: `boolean` - true if allowed
+
+---
+
+##### `shouldExecute(action: Action): boolean`
+
+Main guard - check all operational policies.
 
 **Parameters**:
-- `address`: Ethereum address
-- `action`: Action name
+- `action`: Action to check
 
-**Returns**: `boolean`
+**Returns**: `boolean` - true if should execute
+
+**Checks**:
+- Action type allowed/blocked?
+- Transfer amount within limits?
+- Rate limit not exceeded?
+- Approval required?
+
+**Example**:
+```typescript
+const policy = new Policy();
+policy.setTransferLimit(0n, ethers.parseEther('10'));
+policy.addAllowedAction('execute_transfer');
+policy.setRateLimit(10, 60000); // 10 actions per minute
+
+if (policy.shouldExecute(action)) {
+  await executor.execute(action);
+  policy.recordAction(action.type);
+}
+```
 
 ---
 
+##### `shouldDelay(action: Action): number | false`
+
+Check if action should be delayed.
+
+**Returns**: Delay in milliseconds, or `false` for no delay
+
+**Example**:
+```typescript
+const delay = policy.shouldDelay(action);
+if (delay) {
+  console.log(`Waiting ${delay}ms due to rate limit...`);
+  await sleep(delay);
+}
+```
+
 ---
 
+##### `overrideAction(action: Action): Action`
+
+Modify action before execution (e.g., cap amounts).
+
+**Returns**: Modified action
+
+**Example**:
+```typescript
+const finalAction = policy.overrideAction(action);
+// If action.params.amount > maxTransferAmount, it's capped
+await executor.execute(finalAction);
+```
+
+---
+
+#### Convenience Methods
+
+- `setOperationalPolicy(policy: OperationalPolicy)`: Set complete policy
+- `getOperationalPolicy()`: Get current policy
+- `setGasLimit(limit: bigint)`: Set max gas
+- `setRetryLimit(limit: number)`: Set max retries
+- `setTransferLimit(min: bigint, max: bigint)`: Set transfer limits
+- `addAllowedAction(action: string)`: Whitelist action type
+- `addBlockedAction(action: string)`: Blacklist action type
+- `setRateLimit(maxActions: number, windowMs: number)`: Set rate limit
+- `recordAction(action: string)`: Record for rate limiting
+- `clearActionHistory()`: Clear rate limit history
+
+#### Access Control (Enterprise)
+
+For enterprise use cases, Policy also supports rule-based access control:
+
+**Methods**:
+- `addRule(rule: PolicyRule)`: Add permission rule
+- `removeRule(ruleId: string)`: Remove rule
+- `assignRole(role: string, address: string)`: Assign role
+- `revokeRole(role: string, address: string)`: Revoke role
+- `hasRole(role: string, address: string)`: Check role
+- `evaluate(context: PolicyContext)`: Evaluate permission
+
+**Example**:
+```typescript
+policy.assignRole('admin', '0xOwnerAddress');
+policy.addRule({
+  name: 'Admin can execute',
+  action: 'execute',
+  effect: PolicyEffect.Allow,
+  conditions: [{ type: 'role', operator: 'eq', field: 'role', value: 'admin' }],
+  enabled: true
+});
+```
+
+---
+
+### Memory
+
+**Agent Memory System** - Short-term and long-term memory for context-aware agents
+
+**Location**: `packages/agent-kit/src/runtime/memory.ts`
+
+#### Overview
+
+The Memory module enables agents to maintain conversational context and state across interactions. It provides:
+- **Short-term memory**: Recent interactions within token limits
+- **Long-term memory**: Persistent storage of all interactions
+- **Context building**: Token-aware context construction for LLMs
+- **Multiple backends**: In-memory or file-based storage
+- **Session management**: Separate memory spaces for different conversations
+
+#### Types and Interfaces
+
+##### `MemoryType`
+
+```typescript
+type MemoryType = 'input' | 'output' | 'state' | 'system';
+```
+
+Memory entry types:
+- `input`: User inputs, events, goals
+- `output`: Agent responses, results
+- `state`: Agent state changes
+- `system`: System messages, errors
+
+---
+
+##### `MemoryEntry`
+
+Memory entry structure.
+
+```typescript
+interface MemoryEntry {
+  id: string;
+  sessionId: string;
+  type: MemoryType;
+  content: any;
+  timestamp: number;
+  tokens?: number;
+  metadata?: Record<string, any>;
+}
+```
+
+---
+
+##### `MemoryBackend`
+
+Interface for storage backends.
+
+```typescript
+interface MemoryBackend {
+  save(entry: MemoryEntry): Promise<void>;
+  load(sessionId: string, filter?: MemoryFilter): Promise<MemoryEntry[]>;
+  clear(sessionId?: string): Promise<void>;
+  count(sessionId: string): Promise<number>;
+}
+```
+
+---
+
+##### `MemoryFilter`
+
+Filter options for querying memory.
+
+```typescript
+interface MemoryFilter {
+  type?: MemoryType;
+  fromTimestamp?: number;
+  toTimestamp?: number;
+  limit?: number;
+}
+```
+
+---
+
+##### `MemoryConfig`
+
+Configuration for Memory instance.
+
+```typescript
+interface MemoryConfig {
+  backend?: MemoryBackend;
+  sessionId?: string;
+  maxTokens?: number;    // default: 4000
+  maxEntries?: number;   // default: 100
+  summarizeOld?: boolean; // default: false
+}
+```
+
+---
+
+#### Backend Implementations
+
+##### `InMemoryBackend`
+
+Fast in-memory storage (for development/testing).
+
+**Usage**:
+```typescript
+import { InMemoryBackend, Memory } from '@somnia/agent-kit';
+
+const backend = new InMemoryBackend();
+const memory = new Memory({ backend });
+```
+
+**Features**:
+- Fast read/write operations
+- No disk I/O
+- Data lost on process restart
+- Perfect for testing and development
+
+---
+
+##### `FileBackend`
+
+Persistent JSON file storage.
+
+**Constructor**:
+```typescript
+constructor(basePath: string = './data/memory')
+```
+
+**Usage**:
+```typescript
+import { FileBackend, Memory } from '@somnia/agent-kit';
+
+const backend = new FileBackend('./agent-memory');
+const memory = new Memory({ backend });
+
+// Data persisted to:
+// ./agent-memory/<sessionId>.json
+```
+
+**Features**:
+- Persistent storage across restarts
+- One JSON file per session
+- Automatic directory creation
+- Pretty-printed JSON for debugging
+
+---
+
+#### Memory Class
+
+##### Constructor
+
+```typescript
+new Memory(config?: MemoryConfig)
+```
+
+**Example**:
+```typescript
+import { Memory, FileBackend } from '@somnia/agent-kit';
+
+// In-memory (default)
+const memory1 = new Memory();
+
+// File-based with custom config
+const memory2 = new Memory({
+  backend: new FileBackend('./data/memory'),
+  sessionId: 'user-123',
+  maxTokens: 8000,
+  maxEntries: 200
+});
+```
+
+---
+
+##### `async addMemory(type: MemoryType, content: any, metadata?: Record<string, any>): Promise<string>`
+
+Add memory entry.
+
+**Parameters**:
+- `type`: Memory type
+- `content`: Content to store (any type)
+- `metadata` (optional): Additional metadata
+
+**Returns**: Entry ID
+
+**Example**:
+```typescript
+const entryId = await memory.addMemory('input', {
+  goal: 'Send 1 ETH to Alice',
+  sender: '0x123...'
+}, {
+  agentId: 'agent-001'
+});
+```
+
+---
+
+##### `async addInput(content: any, metadata?: Record<string, any>): Promise<string>`
+
+Add input memory (convenience method).
+
+**Example**:
+```typescript
+await memory.addInput({
+  type: 'transfer',
+  to: '0xAlice...',
+  amount: '1.0'
+});
+```
+
+---
+
+##### `async addOutput(content: any, metadata?: Record<string, any>): Promise<string>`
+
+Add output memory (convenience method).
+
+**Example**:
+```typescript
+await memory.addOutput({
+  tasks: [...],
+  results: [...],
+  success: true
+});
+```
+
+---
+
+##### `async addState(content: any, metadata?: Record<string, any>): Promise<string>`
+
+Add state memory (convenience method).
+
+**Example**:
+```typescript
+await memory.addState({
+  state: 'active',
+  address: '0x123...'
+});
+```
+
+---
+
+##### `async getContext(maxTokens?: number): Promise<string>`
+
+**CRITICAL METHOD** - Build context string for LLM within token limit.
+
+**Parameters**:
+- `maxTokens` (optional): Max tokens to include (default: from config)
+
+**Returns**: Formatted context string
+
+**Algorithm**:
+1. Retrieves all memory entries
+2. Starts from most recent
+3. Adds entries until token limit reached
+4. Formats with timestamps and types
+5. Returns chronologically ordered context
+
+**Example**:
+```typescript
+// Get up to 1000 tokens of context
+const context = await memory.getContext(1000);
+
+// Use with LLM
+const prompt = `${context}\n\nNew goal: ${userGoal}`;
+const response = await llm.generate(prompt);
+```
+
+**Output Format**:
+```
+[2025-01-16T10:30:00.000Z] [INPUT]
+{"goal": "Check balance", "sender": "0x123..."}
+
+[2025-01-16T10:30:05.000Z] [OUTPUT]
+{"tasks": [...], "results": [...]}
+```
+
+---
+
+##### `async getHistory(filter?: MemoryFilter): Promise<MemoryEntry[]>`
+
+Get all memory entries with optional filtering.
+
+**Parameters**:
+- `filter` (optional): Filter criteria
+
+**Returns**: Array of memory entries
+
+**Example**:
+```typescript
+// Get all entries
+const all = await memory.getHistory();
+
+// Get only inputs from last hour
+const recentInputs = await memory.getHistory({
+  type: 'input',
+  fromTimestamp: Date.now() - 3600000
+});
+
+// Get last 10 entries
+const recent = await memory.getHistory({ limit: 10 });
+```
+
+---
+
+##### `async getRecent(limit: number = 10): Promise<MemoryEntry[]>`
+
+Get recent memory entries.
+
+**Parameters**:
+- `limit`: Number of entries to retrieve
+
+**Returns**: Array of recent entries
+
+**Example**:
+```typescript
+const last5 = await memory.getRecent(5);
+```
+
+---
+
+##### `async getByType(type: MemoryType, limit?: number): Promise<MemoryEntry[]>`
+
+Get memory entries by type.
+
+**Parameters**:
+- `type`: Memory type
+- `limit` (optional): Limit number of results
+
+**Example**:
+```typescript
+const inputs = await memory.getByType('input', 20);
+const outputs = await memory.getByType('output');
+```
+
+---
+
+##### `async clear(): Promise<void>`
+
+Clear all memory for current session.
+
+**Example**:
+```typescript
+await memory.clear();
+console.log('Memory cleared');
+```
+
+---
+
+##### `async clearAll(): Promise<void>`
+
+Clear all sessions (all memory).
+
+**Example**:
+```typescript
+await memory.clearAll();
+console.log('All sessions cleared');
+```
+
+---
+
+##### `async count(): Promise<number>`
+
+Get memory entry count for current session.
+
+**Returns**: Number of entries
+
+**Example**:
+```typescript
+const count = await memory.count();
+console.log(`Memory has ${count} entries`);
+```
+
+---
+
+##### `getSessionId(): string`
+
+Get current session ID.
+
+**Returns**: Session ID string
+
+---
+
+##### `setSessionId(sessionId: string): void`
+
+Switch to different session.
+
+**Parameters**:
+- `sessionId`: New session ID
+
+**Example**:
+```typescript
+// Switch to different user's session
+memory.setSessionId('user-456');
+
+// Now all operations use the new session
+await memory.addInput({ message: 'Hello' });
+```
+
+---
+
+##### `async summarize(): Promise<string>`
+
+Get summary of memory contents.
+
+**Returns**: Summary string with statistics
+
+**Example**:
+```typescript
+const summary = await memory.summarize();
+console.log(summary);
+// Session: user-123
+// Total entries: 42
+// Time range: 2025-01-16T10:00:00.000Z to 2025-01-16T12:00:00.000Z
+//
+// Entry types:
+// - input: 15
+// - output: 15
+// - state: 10
+// - system: 2
+```
+
+---
+
+##### `async export(): Promise<MemoryEntry[]>`
+
+Export all memory entries as JSON.
+
+**Returns**: Array of all entries
+
+**Example**:
+```typescript
+const backup = await memory.export();
+await fs.writeFile('backup.json', JSON.stringify(backup, null, 2));
+```
+
+---
+
+##### `async import(entries: MemoryEntry[]): Promise<void>`
+
+Import memory entries from JSON.
+
+**Parameters**:
+- `entries`: Array of memory entries
+
+**Example**:
+```typescript
+const backup = JSON.parse(await fs.readFile('backup.json', 'utf-8'));
+await memory.import(backup);
+console.log('Memory restored');
+```
+
+---
+
+#### Integration with Agent
+
+The Agent class automatically integrates with Memory:
+
+**Constructor Options**:
+```typescript
+interface AgentOptions {
+  memoryBackend?: 'memory' | 'file';
+  memoryPath?: string;
+  sessionId?: string;
+  enableMemory?: boolean;  // default: true
+}
+```
+
+**Agent Methods**:
+
+##### `async addMemory(type: MemoryType, content: any, metadata?: Record<string, any>): Promise<string>`
+
+Add memory entry via agent.
+
+**Example**:
+```typescript
+const agent = new Agent(config, {
+  memoryBackend: 'file',
+  memoryPath: './agent-memory'
+});
+
+await agent.addMemory('state', { status: 'initialized' });
+```
+
+---
+
+##### `async getMemoryContext(maxTokens?: number): Promise<string>`
+
+Get memory context for LLM.
+
+**Example**:
+```typescript
+const context = await agent.getMemoryContext(1000);
+const prompt = `${context}\n\nNew task: ${task}`;
+```
+
+---
+
+##### `async getMemoryHistory(limit?: number): Promise<MemoryEntry[]>`
+
+Get memory history.
+
+**Example**:
+```typescript
+const recent = await agent.getMemoryHistory(10);
+```
+
+---
+
+##### `async clearMemory(): Promise<void>`
+
+Clear agent memory.
+
+**Example**:
+```typescript
+await agent.clearMemory();
+```
+
+---
+
+##### `getMemorySessionId(): string`
+
+Get current session ID.
+
+---
+
+##### `setMemorySessionId(sessionId: string): void`
+
+Switch memory session.
+
+**Example**:
+```typescript
+agent.setMemorySessionId('new-session-123');
+```
+
+---
+
+##### `getMemoryModule(): Memory`
+
+Get direct access to Memory instance (for advanced usage).
+
+**Example**:
+```typescript
+const memory = agent.getMemoryModule();
+const stats = await memory.summarize();
+```
+
+---
+
+#### Automatic Memory Integration
+
+When an agent processes events, memory is automatically managed:
+
+```typescript
+// In agent.onEvent():
+// 1. Save incoming event as input
+await this.memory.addInput(event, { agentId: this.agentAddress });
+
+// 2. Get memory context for planning
+const memoryContext = await this.memory.getContext(1000);
+const context = `${event.context}\n\nRecent Memory:\n${memoryContext}`;
+
+// 3. Plan with context
+const tasks = await this.planner.plan(event.goal, context);
+
+// 4. Execute tasks
+const results = await this.executor.executeAll(tasks);
+
+// 5. Save results as output
+await this.memory.addOutput({ tasks, results }, { agentId: this.agentAddress });
+```
+
+This creates a complete memory trail of all agent interactions.
+
+---
+
+#### Complete Usage Example
+
+```typescript
+import { Agent, AgentConfig, Memory, FileBackend } from '@somnia/agent-kit';
+
+// Option 1: Memory via Agent (recommended)
+const agent = new Agent({
+  name: 'MyAgent',
+  description: 'Agent with memory',
+  owner: '0x123...'
+}, {
+  memoryBackend: 'file',
+  memoryPath: './data/memory',
+  sessionId: 'user-456',
+  enableMemory: true
+});
+
+// Memory automatically used in event processing
+await agent.start();
+
+// Manual memory operations
+await agent.addMemory('system', { status: 'started' });
+const context = await agent.getMemoryContext();
+const history = await agent.getMemoryHistory(20);
+
+// Option 2: Standalone Memory
+const memory = new Memory({
+  backend: new FileBackend('./memory'),
+  sessionId: 'session-123',
+  maxTokens: 4000,
+  maxEntries: 100
+});
+
+// Add memories
+await memory.addInput({ goal: 'Transfer 1 ETH' });
+await memory.addOutput({ success: true, txHash: '0x...' });
+await memory.addState({ balance: '5.0 ETH' });
+
+// Build context for LLM
+const llmContext = await memory.getContext(2000);
+
+// Query memory
+const inputs = await memory.getByType('input', 10);
+const recent = await memory.getRecent(5);
+const filtered = await memory.getHistory({
+  type: 'output',
+  fromTimestamp: Date.now() - 86400000 // Last 24h
+});
+
+// Statistics
+console.log(await memory.summarize());
+console.log(`Total entries: ${await memory.count()}`);
+
+// Backup/restore
+const backup = await memory.export();
+await fs.writeFile('backup.json', JSON.stringify(backup));
+
+// Later...
+const restored = JSON.parse(await fs.readFile('backup.json', 'utf-8'));
+await memory.import(restored);
+
+// Switch sessions
+memory.setSessionId('another-session');
+```
+
+---
+
+#### Helper Functions
+
+##### `createMemory(sessionId?: string): Memory`
+
+Create memory with in-memory backend.
+
+**Example**:
+```typescript
+import { createMemory } from '@somnia/agent-kit';
+
+const memory = createMemory('session-123');
+```
+
+---
+
+##### `createFileMemory(basePath?: string, sessionId?: string): Memory`
+
+Create memory with file backend.
+
+**Example**:
+```typescript
+import { createFileMemory } from '@somnia/agent-kit';
+
+const memory = createFileMemory('./data/memory', 'session-123');
+```
+
+---
+
+#### Best Practices
+
+1. **Use file backend for production**:
+```typescript
+const agent = new Agent(config, {
+  memoryBackend: 'file',
+  memoryPath: './data/memory'
+});
+```
+
+2. **Set appropriate token limits**:
+```typescript
+// For GPT-3.5 (4k context)
+const context = await memory.getContext(2000);
+
+// For GPT-4 (8k context)
+const context = await memory.getContext(6000);
+```
+
+3. **Use session IDs for multi-user systems**:
+```typescript
+const getUserSession = (userId) => `user-${userId}`;
+agent.setMemorySessionId(getUserSession(req.user.id));
+```
+
+4. **Backup memory periodically**:
+```typescript
+setInterval(async () => {
+  const backup = await memory.export();
+  await fs.writeFile(`backup-${Date.now()}.json`, JSON.stringify(backup));
+}, 3600000); // Every hour
+```
+
+5. **Clean up old sessions**:
+```typescript
+// Clear old sessions to save disk space
+const oldSessionId = 'session-old';
+await memory.backend.clear(oldSessionId);
+```
+
+---
 ## LLM Adapters
+
+### Standard Interface: LLMAdapter
+
+All LLM adapters implement a unified `LLMAdapter` interface for consistent usage across different providers.
+
+**Location**: `packages/agent-kit/src/llm/types.ts`
+
+```typescript
+interface LLMAdapter {
+  readonly name: string;
+  generate(input: string, options?: GenerateOptions): Promise<LLMResponse>;
+  chat?(messages: Message[], options?: GenerateOptions): Promise<LLMResponse>;
+  embed?(text: string, model?: string): Promise<number[]>;
+  stream?(input: string, options?: GenerateOptions): AsyncGenerator<string, void, unknown>;
+  testConnection?(): Promise<boolean>;
+}
+```
+
+### Standard Types
+
+#### LLMResponse
+```typescript
+interface LLMResponse {
+  content: string;
+  model?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  finishReason?: 'stop' | 'length' | 'error';
+  metadata?: Record<string, any>;
+}
+```
+
+#### GenerateOptions
+```typescript
+interface GenerateOptions {
+  model?: string;
+  temperature?: number;      // 0-2, default: 0.7
+  maxTokens?: number;        // default: 1000
+  topP?: number;             // 0-1, default: 1.0
+  frequencyPenalty?: number; // -2 to 2, default: 0
+  presencePenalty?: number;  // -2 to 2, default: 0
+  stop?: string[];           // Stop sequences
+  timeout?: number;          // Request timeout in ms (default: 30000)
+  retries?: number;          // Max retry attempts (default: 3)
+}
+```
+
+#### Message
+```typescript
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+```
+
+---
 
 ### OpenAIAdapter
 
-**OpenAI Integration** - GPT-3.5, GPT-4, embeddings, streaming
+**OpenAI GPT Integration** - GPT-3.5, GPT-4, embeddings, streaming
 
 **Location**: `packages/agent-kit/src/llm/openaiAdapter.ts`
 
@@ -1736,154 +2815,894 @@ new OpenAIAdapter(config: OpenAIConfig)
 ```typescript
 interface OpenAIConfig {
   apiKey: string;
-  defaultModel?: string; // default: 'gpt-3.5-turbo'
   organization?: string;
+  baseURL?: string;          // default: 'https://api.openai.com/v1'
+  defaultModel?: string;     // default: 'gpt-3.5-turbo'
+  timeout?: number;          // default: 30000ms
+  retries?: number;          // default: 3
+  logger?: LLMLogger;        // Custom logger
 }
 ```
 
 #### Methods
 
-##### `async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>`
+##### `async generate(input: string, options?: GenerateOptions): Promise<LLMResponse>`
 
-Generate chat completion.
+Generate text completion.
 
-**Parameters**:
-- `messages`: Array of chat messages
-- `options` (optional): Chat options (model, temperature, maxTokens, etc.)
+**Example**:
+```typescript
+const adapter = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
 
-**Returns**: `Promise<string>` - Generated response
+const response = await adapter.generate('Explain quantum computing', {
+  model: 'gpt-4',
+  temperature: 0.7,
+  maxTokens: 500,
+});
+
+console.log(response.content);
+console.log('Tokens used:', response.usage?.totalTokens);
+```
+
+---
+
+##### `async chat(messages: Message[], options?: GenerateOptions): Promise<LLMResponse>`
+
+Chat completion with message history.
 
 **Example**:
 ```typescript
 const response = await adapter.chat([
   { role: 'system', content: 'You are a helpful assistant.' },
-  { role: 'user', content: 'Hello!' }
-]);
+  { role: 'user', content: 'What is blockchain?' }
+], {
+  temperature: 0.3,
+  maxTokens: 200,
+});
+
+console.log(response.content);
 ```
-
----
-
-##### `async generate(prompt: string, options?: GenerateOptions): Promise<string>`
-
-Generate text completion.
-
-**Parameters**:
-- `prompt`: Prompt text
-- `options` (optional): Generation options
-
-**Returns**: `Promise<string>` - Generated text
 
 ---
 
 ##### `async embed(text: string, model?: string): Promise<number[]>`
 
-Generate embeddings.
-
-**Parameters**:
-- `text`: Text to embed
-- `model` (optional): Embedding model (default: 'text-embedding-ada-002')
-
-**Returns**: `Promise<number[]>` - Embedding vector
-
----
-
-##### `async streamChat(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string>`
-
-Stream chat completion.
-
-**Parameters**:
-- `messages`: Array of chat messages
-- `options` (optional): Chat options
-
-**Returns**: `AsyncGenerator<string>` - Stream of response chunks
+Generate embeddings for semantic search.
 
 **Example**:
 ```typescript
-for await (const chunk of adapter.streamChat(messages)) {
+const embedding = await adapter.embed('Hello world', 'text-embedding-ada-002');
+console.log('Vector dimension:', embedding.length); // 1536 for ada-002
+```
+
+---
+
+##### `async *stream(input: string, options?: GenerateOptions): AsyncGenerator<string>`
+
+Stream text completion for real-time responses.
+
+**Example**:
+```typescript
+for await (const chunk of adapter.stream('Write a story about AI')) {
   process.stdout.write(chunk);
 }
 ```
 
 ---
 
+##### `async testConnection(): Promise<boolean>`
+
+Test connection to OpenAI API.
+
+**Example**:
+```typescript
+const isConnected = await adapter.testConnection();
+console.log('OpenAI connected:', isConnected);
+```
+
+---
+
+### AnthropicAdapter
+
+**Anthropic Claude Integration** - Claude 3 Opus, Sonnet, Haiku
+
+**Location**: `packages/agent-kit/src/llm/anthropicAdapter.ts`
+
+#### Constructor
+
+```typescript
+new AnthropicAdapter(config: AnthropicConfig)
+```
+
+**AnthropicConfig**:
+```typescript
+interface AnthropicConfig {
+  apiKey: string;
+  baseURL?: string;          // default: 'https://api.anthropic.com/v1'
+  defaultModel?: string;     // default: 'claude-3-sonnet-20240229'
+  timeout?: number;          // default: 30000ms
+  retries?: number;          // default: 3
+  logger?: LLMLogger;        // Custom logger
+}
+```
+
+**Supported Models**:
+- `claude-3-opus-20240229` - Most powerful, best for complex tasks
+- `claude-3-sonnet-20240229` - Balanced performance and speed
+- `claude-3-haiku-20240307` - Fastest, best for simple tasks
+
+#### Methods
+
+##### `async generate(input: string, options?: GenerateOptions): Promise<LLMResponse>`
+
+Generate text completion with Claude.
+
+**Example**:
+```typescript
+const adapter = new AnthropicAdapter({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const response = await adapter.generate('Analyze this code', {
+  model: 'claude-3-opus-20240229',
+  temperature: 0.5,
+  maxTokens: 1024,
+});
+
+console.log(response.content);
+console.log('Model:', response.model);
+console.log('Tokens:', response.usage);
+```
+
+---
+
+##### `async chat(messages: Message[], options?: GenerateOptions): Promise<LLMResponse>`
+
+Chat with message history. System messages are automatically extracted.
+
+**Example**:
+```typescript
+const response = await adapter.chat([
+  { role: 'system', content: 'You are a code review expert.' },
+  { role: 'user', content: 'Review this function: ...' }
+], {
+  model: 'claude-3-sonnet-20240229',
+  maxTokens: 2048,
+});
+```
+
+---
+
+##### `async *stream(input: string, options?: GenerateOptions): AsyncGenerator<string>`
+
+Stream responses from Claude.
+
+**Example**:
+```typescript
+for await (const chunk of adapter.stream('Write a poem about coding')) {
+  process.stdout.write(chunk);
+}
+```
+
+---
+
+##### `async testConnection(): Promise<boolean>`
+
+Test connection to Anthropic API.
+
+---
+
 ### OllamaAdapter
 
-**Ollama Integration** - Local LLM support with model management
+**Local LLM Integration** - Llama, Mistral, and other local models
 
 **Location**: `packages/agent-kit/src/llm/ollamaAdapter.ts`
 
 #### Constructor
 
 ```typescript
-new OllamaAdapter(config: OllamaConfig)
+new OllamaAdapter(config?: OllamaConfig)
 ```
 
 **OllamaConfig**:
 ```typescript
 interface OllamaConfig {
-  baseUrl?: string; // default: 'http://localhost:11434'
-  defaultModel?: string; // default: 'llama2'
+  baseURL?: string;          // default: 'http://localhost:11434'
+  defaultModel?: string;     // default: 'llama2'
+  timeout?: number;          // default: 30000ms
+  retries?: number;          // default: 3
+  logger?: LLMLogger;        // Custom logger
 }
 ```
 
+**Supported Models** (examples):
+- `llama2`, `llama3` - Meta's Llama models
+- `mistral`, `mixtral` - Mistral AI models
+- `codellama` - Code-specialized model
+- `phi` - Microsoft's small models
+
 #### Methods
 
-##### `async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string>`
+##### `async generate(input: string, options?: GenerateOptions): Promise<LLMResponse>`
 
-Generate chat completion.
+Generate text with local model.
+
+**Example**:
+```typescript
+const adapter = new OllamaAdapter({ baseURL: 'http://localhost:11434' });
+
+const response = await adapter.generate('Explain machine learning', {
+  model: 'llama3',
+  temperature: 0.8,
+  maxTokens: 500,
+});
+
+console.log(response.content);
+console.log('Evaluation time:', response.metadata?.eval_duration);
+```
 
 ---
 
-##### `async generate(prompt: string, options?: GenerateOptions): Promise<string>`
+##### `async chat(messages: Message[], options?: GenerateOptions): Promise<LLMResponse>`
 
-Generate text completion.
+Chat completion with local model.
+
+**Example**:
+```typescript
+const response = await adapter.chat([
+  { role: 'system', content: 'You are a helpful coding assistant.' },
+  { role: 'user', content: 'How do I sort an array in Python?' }
+], {
+  model: 'codellama',
+});
+```
 
 ---
 
 ##### `async embed(text: string, model?: string): Promise<number[]>`
 
-Generate embeddings.
+Generate embeddings with local model.
 
 ---
 
-##### `async streamChat(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string>`
+##### `async *stream(input: string, options?: GenerateOptions): AsyncGenerator<string>`
 
-Stream chat completion.
+Stream responses from local model.
+
+---
+
+##### `async listModels(): Promise<OllamaModel[]>`
+
+List all available local models.
+
+**Example**:
+```typescript
+const models = await adapter.listModels();
+models.forEach(model => {
+  console.log(`${model.name} - ${(model.size / 1e9).toFixed(2)} GB`);
+});
+```
 
 ---
 
 ##### `async pullModel(model: string): Promise<void>`
 
-Pull model from Ollama registry.
+Download a model from Ollama registry.
 
-**Parameters**:
-- `model`: Model name
-
-**Returns**: `Promise<void>`
+**Example**:
+```typescript
+await adapter.pullModel('llama3');
+console.log('Model downloaded!');
+```
 
 ---
 
 ##### `async deleteModel(model: string): Promise<void>`
 
-Delete local model.
-
-**Parameters**:
-- `model`: Model name
-
-**Returns**: `Promise<void>`
+Delete a local model.
 
 ---
 
-##### `async listModels(): Promise<string[]>`
+##### `async hasModel(model: string): Promise<boolean>`
 
-List available models.
+Check if model exists locally.
 
-**Returns**: `Promise<string[]>` - Array of model names
+**Example**:
+```typescript
+const hasLlama = await adapter.hasModel('llama3');
+if (!hasLlama) {
+  await adapter.pullModel('llama3');
+}
+```
 
 ---
 
+##### `async testConnection(): Promise<boolean>`
+
+Test connection to Ollama server.
+
 ---
 
+### Unified Usage Example
+
+All adapters implement the same interface, making it easy to switch providers:
+
+```typescript
+import { OpenAIAdapter, AnthropicAdapter, OllamaAdapter, LLMAdapter } from '@somnia/agent-kit';
+
+// Choose adapter based on environment
+let llm: LLMAdapter;
+
+if (process.env.OPENAI_API_KEY) {
+  llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
+} else if (process.env.ANTHROPIC_API_KEY) {
+  llm = new AnthropicAdapter({ apiKey: process.env.ANTHROPIC_API_KEY });
+} else {
+  llm = new OllamaAdapter(); // Use local model
+}
+
+// Same interface for all adapters
+const response = await llm.generate('Explain blockchain in simple terms', {
+  temperature: 0.7,
+  maxTokens: 200,
+});
+
+console.log(response.content);
+console.log('Provider:', llm.name);
+console.log('Tokens used:', response.usage?.totalTokens);
+```
+
+### Retry and Timeout Configuration
+
+All adapters support automatic retry with exponential backoff:
+
+```typescript
+const adapter = new OpenAIAdapter({
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 60000,  // 60 second timeout
+  retries: 5,      // Retry up to 5 times
+});
+
+// Retry logic:
+// Attempt 1: immediate
+// Attempt 2: wait 1s
+// Attempt 3: wait 2s
+// Attempt 4: wait 4s
+// Attempt 5: wait 8s
+// Attempt 6: wait 10s (capped at maxDelay)
+```
+
+### Custom Logging
+
+All adapters support custom loggers:
+
+```typescript
+import { OpenAIAdapter, LLMLogger } from '@somnia/agent-kit';
+
+class MyLogger implements LLMLogger {
+  debug(message: string, data?: any) { /* custom implementation */ }
+  info(message: string, data?: any) { /* custom implementation */ }
+  warn(message: string, data?: any) { /* custom implementation */ }
+  error(message: string, data?: any) { /* custom implementation */ }
+}
+
+const adapter = new OpenAIAdapter({
+  apiKey: process.env.OPENAI_API_KEY,
+  logger: new MyLogger(),
+});
+```
+
+---
+## Prompt Management
+
+Dynamic prompt building and template system for AI agents.
+
+**Location**: `packages/agent-kit/src/prompt/`
+
+### Overview
+
+The prompt module provides:
+- **Templates**: Pre-built prompt templates for common agent tasks
+- **Builder**: Dynamic prompt construction with placeholder replacement
+- **Validation**: Template validation and variable checking
+- **Sanitization**: Security features to prevent prompt injection
+
+---
+
+### Prompt Templates
+
+#### PromptTemplate Interface
+
+```typescript
+interface PromptTemplate {
+  name: string;
+  description: string;
+  template: string;
+  variables: string[];
+  examples?: Record<string, any>[];
+}
+```
+
+#### Built-in Templates
+
+##### ACTION_PLANNER_PROMPT
+Plans actions from user goals. Used by `LLMPlanner`.
+
+**Variables**: `goal`, `context`
+
+**Example**:
+```typescript
+import { getTemplate, buildPrompt } from '@somnia/agent-kit';
+
+const template = getTemplate('action_planner');
+const prompt = buildPrompt(template.template, {
+  goal: 'Send 1 ETH to Alice',
+  context: 'My balance: 5 ETH'
+});
+```
+
+---
+
+##### BLOCKCHAIN_ANALYZER_PROMPT
+Analyzes blockchain state and provides recommendations.
+
+**Variables**: `blockNumber`, `network`, `gasPrice`, `task`, `events`, `state`
+
+**Example**:
+```typescript
+const prompt = buildFromTemplate('blockchain_analyzer', {
+  blockNumber: 1000000,
+  network: 'mainnet',
+  gasPrice: '20 gwei',
+  task: 'Monitor for high-value transfers'
+});
+```
+
+---
+
+##### EVENT_HANDLER_PROMPT
+Handles blockchain events and determines appropriate actions.
+
+**Variables**: `eventType`, `contractAddress`, `blockNumber`, `txHash`, `eventData`, `instructions`
+
+---
+
+##### TRANSACTION_BUILDER_PROMPT
+Builds blockchain transactions based on requirements.
+
+**Variables**: `txType`, `target`, `amount`, `data`, `requirements`
+
+---
+
+##### Additional Templates
+- **BASIC_AGENT_PROMPT**: General purpose AI agent
+- **TOOL_EXECUTOR_PROMPT**: Executes tools and handles results
+- **DATA_QUERY_PROMPT**: Queries blockchain data
+- **ERROR_HANDLER_PROMPT**: Handles errors and suggests recovery
+- **RISK_ASSESSMENT_PROMPT**: Assesses transaction risks
+
+---
+
+### Prompt Builder
+
+#### buildPrompt()
+
+Build prompt from template string and data.
+
+```typescript
+function buildPrompt(
+  template: string,
+  data: Record<string, any>,
+  options?: BuildOptions
+): string
+```
+
+**BuildOptions**:
+```typescript
+interface BuildOptions {
+  strict?: boolean;    // Throw error on missing variables (default: false)
+  trim?: boolean;      // Trim whitespace (default: true)
+  maxLength?: number;  // Max prompt length
+  sanitize?: boolean;  // Sanitize inputs (default: true)
+}
+```
+
+**Placeholder Syntax**:
+- `{{variable}}` - Simple placeholder
+- `${variable}` - Alternative syntax
+- `{{#if variable}}...{{/if}}` - Conditional blocks
+
+**Example**:
+```typescript
+import { buildPrompt } from '@somnia/agent-kit';
+
+const template = `You are an AI agent.
+Goal: {{goal}}
+{{#if context}}
+Context: {{context}}
+{{/if}}`;
+
+const prompt = buildPrompt(template, {
+  goal: 'Check balance',
+  context: 'User: 0x123...'
+}, {
+  strict: true,
+  maxLength: 1000
+});
+```
+
+---
+
+#### buildFromTemplate()
+
+Build prompt from named template.
+
+```typescript
+function buildFromTemplate(
+  templateName: string,
+  data: Record<string, any>,
+  options?: BuildOptions
+): string
+```
+
+**Example**:
+```typescript
+import { buildFromTemplate } from '@somnia/agent-kit';
+
+const prompt = buildFromTemplate('action_planner', {
+  goal: 'Swap 1 ETH for USDC',
+  context: 'Balance: 2 ETH'
+});
+```
+
+---
+
+#### composePrompts()
+
+Combine multiple prompts together.
+
+```typescript
+function composePrompts(
+  prompts: string[],
+  separator?: string  // default: '\n\n'
+): string
+```
+
+**Example**:
+```typescript
+import { composePrompts, buildFromTemplate } from '@somnia/agent-kit';
+
+const systemPrompt = buildFromTemplate('basic_agent', { goal: 'Monitor' });
+const contextPrompt = 'Current block: 1000000';
+
+const fullPrompt = composePrompts([systemPrompt, contextPrompt]);
+```
+
+---
+
+#### injectContext()
+
+Inject context into prompt.
+
+```typescript
+function injectContext(
+  prompt: string,
+  context: Record<string, any>,
+  position?: 'start' | 'end'  // default: 'end'
+): string
+```
+
+**Example**:
+```typescript
+import { injectContext } from '@somnia/agent-kit';
+
+const prompt = 'Analyze the blockchain state.';
+const enhanced = injectContext(prompt, {
+  blockNumber: 1000000,
+  network: 'mainnet',
+  gasPrice: '20 gwei'
+}, 'end');
+
+// Result:
+// Analyze the blockchain state.
+//
+// Context:
+// - blockNumber: 1000000
+// - network: mainnet
+// - gasPrice: 20 gwei
+```
+
+---
+
+#### sanitizeData()
+
+Sanitize data to prevent injection attacks.
+
+```typescript
+function sanitizeData(
+  data: Record<string, any>
+): Record<string, any>
+```
+
+Removes:
+- Control characters (\x00-\x1F, \x7F)
+- Leading/trailing whitespace
+- Recursively sanitizes nested objects
+
+**Example**:
+```typescript
+import { sanitizeData } from '@somnia/agent-kit';
+
+const dirty = {
+  goal: 'Test\x00Goal\n',
+  context: '  spaces  '
+};
+
+const clean = sanitizeData(dirty);
+// { goal: 'TestGoal', context: 'spaces' }
+```
+
+---
+
+#### validateTemplate()
+
+Validate template against data.
+
+```typescript
+function validateTemplate(
+  template: PromptTemplate | string,
+  data: Record<string, any>
+): { valid: boolean; missing: string[] }
+```
+
+**Example**:
+```typescript
+import { getTemplate, validateTemplate } from '@somnia/agent-kit';
+
+const template = getTemplate('action_planner');
+const result = validateTemplate(template, {
+  goal: 'Send ETH'
+  // missing: context
+});
+
+console.log(result);
+// { valid: false, missing: ['context'] }
+```
+
+---
+
+#### extractVariables()
+
+Extract variables from template string.
+
+```typescript
+function extractVariables(template: string): string[]
+```
+
+**Example**:
+```typescript
+import { extractVariables } from '@somnia/agent-kit';
+
+const template = 'Goal: {{goal}}, Context: {{context}}';
+const vars = extractVariables(template);
+console.log(vars); // ['goal', 'context']
+```
+
+---
+
+#### previewTemplate()
+
+Preview template with example data.
+
+```typescript
+function previewTemplate(templateName: string): string
+```
+
+**Example**:
+```typescript
+import { previewTemplate } from '@somnia/agent-kit';
+
+const preview = previewTemplate('action_planner');
+console.log(preview);
+// Shows template name and rendered example
+```
+
+---
+
+#### createTemplate()
+
+Create custom prompt template.
+
+```typescript
+function createTemplate(
+  name: string,
+  description: string,
+  template: string
+): PromptTemplate
+```
+
+**Example**:
+```typescript
+import { createTemplate } from '@somnia/agent-kit';
+
+const myTemplate = createTemplate(
+  'my_custom_agent',
+  'Custom agent for specific task',
+  `You are a custom AI agent.
+  Task: {{task}}
+  Requirements: {{requirements}}`
+);
+
+console.log(myTemplate.variables); // ['task', 'requirements']
+```
+
+---
+
+### Template Helpers
+
+#### getTemplate()
+
+Get template by name.
+
+```typescript
+function getTemplate(name: string): PromptTemplate | undefined
+```
+
+**Example**:
+```typescript
+import { getTemplate } from '@somnia/agent-kit';
+
+const template = getTemplate('action_planner');
+console.log(template.description);
+console.log(template.variables);
+```
+
+---
+
+#### listTemplates()
+
+List all available templates.
+
+```typescript
+function listTemplates(): string[]
+```
+
+**Example**:
+```typescript
+import { listTemplates } from '@somnia/agent-kit';
+
+const templates = listTemplates();
+console.log(templates);
+// ['basic_agent', 'action_planner', 'blockchain_analyzer', ...]
+```
+
+---
+
+#### getTemplateVariables()
+
+Get variables for a template.
+
+```typescript
+function getTemplateVariables(name: string): string[]
+```
+
+**Example**:
+```typescript
+import { getTemplateVariables } from '@somnia/agent-kit';
+
+const vars = getTemplateVariables('action_planner');
+console.log(vars); // ['goal', 'context']
+```
+
+---
+
+### Complete Usage Example
+
+```typescript
+import {
+  buildFromTemplate,
+  composePrompts,
+  injectContext,
+  validateTemplate,
+  getTemplate,
+  sanitizeData
+} from '@somnia/agent-kit';
+
+// 1. Get and validate template
+const template = getTemplate('action_planner');
+const data = {
+  goal: 'Swap 1 ETH for USDC',
+  context: 'Balance: 2 ETH, Gas: 20 gwei'
+};
+
+const validation = validateTemplate(template, data);
+if (!validation.valid) {
+  console.error('Missing variables:', validation.missing);
+}
+
+// 2. Sanitize data
+const cleanData = sanitizeData(data);
+
+// 3. Build prompt
+const prompt = buildFromTemplate('action_planner', cleanData, {
+  strict: true,
+  trim: true,
+  maxLength: 2000
+});
+
+// 4. Add additional context
+const enhanced = injectContext(prompt, {
+  blockNumber: 1000000,
+  network: 'mainnet'
+});
+
+// 5. Use with LLM
+import { OpenAIAdapter } from '@somnia/agent-kit';
+
+const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
+const response = await llm.generate(enhanced);
+console.log(response.content);
+```
+
+---
+
+### Integration with LLMPlanner
+
+The `LLMPlanner` automatically uses the `ACTION_PLANNER_PROMPT` template:
+
+```typescript
+import { LLMPlanner, OpenAIAdapter } from '@somnia/agent-kit';
+
+const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
+const planner = new LLMPlanner(llm);
+
+// Uses ACTION_PLANNER_PROMPT internally
+const actions = await planner.plan('Send 1 ETH to Alice', {
+  balance: '5 ETH',
+  address: '0x123...'
+});
+```
+
+You can override with custom prompt:
+
+```typescript
+import { LLMPlanner, OpenAIAdapter, buildFromTemplate } from '@somnia/agent-kit';
+
+const customPrompt = buildFromTemplate('my_custom_planner', {...});
+
+const planner = new LLMPlanner(llm, {
+  systemPrompt: customPrompt
+});
+```
+
+---
+
+### Security Best Practices
+
+1. **Always sanitize user input**:
+```typescript
+const userInput = req.body.goal; // From user
+const cleanInput = sanitizeData({ goal: userInput });
+const prompt = buildFromTemplate('action_planner', cleanInput);
+```
+
+2. **Use strict mode for required variables**:
+```typescript
+const prompt = buildPrompt(template, data, { strict: true });
+```
+
+3. **Enforce max length**:
+```typescript
+const prompt = buildPrompt(template, data, { maxLength: 2000 });
+```
+
+4. **Validate before building**:
+```typescript
+const validation = validateTemplate(template, data);
+if (!validation.valid) {
+  throw new Error(`Missing: ${validation.missing.join(', ')}`);
+}
+```
+
+---
 ## Monitoring
 
 ### Logger

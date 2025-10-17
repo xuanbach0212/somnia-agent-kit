@@ -1,9 +1,12 @@
 /**
  * LLM module exports
- * OpenAI and Ollama adapters for AI capabilities
+ * Unified LLM adapters for OpenAI, Anthropic, and Ollama
  */
 
-export * from './openaiAdapter';
-export * from './ollamaAdapter';
+// Standard types and interfaces
+export * from './types';
 
-export { type Message, type GenerateOptions } from './openaiAdapter';
+// Adapters
+export * from './openaiAdapter';
+export * from './anthropicAdapter';
+export * from './ollamaAdapter';

@@ -1,6 +1,6 @@
 /**
- * OpenAI GPT Integration
- * Adapter for OpenAI API (GPT-3.5, GPT-4, etc.)
+ * Anthropic Claude Integration
+ * Adapter for Anthropic API (Claude 3 Opus, Sonnet, Haiku)
  */
 
 import type {
@@ -13,9 +13,8 @@ import type {
 } from './types';
 import { ConsoleLogger } from './types';
 
-export interface OpenAIConfig {
+export interface AnthropicConfig {
   apiKey: string;
-  organization?: string;
   baseURL?: string;
   defaultModel?: string;
   timeout?: number;
@@ -24,18 +23,18 @@ export interface OpenAIConfig {
 }
 
 /**
- * OpenAI Adapter for LLM operations
+ * Anthropic Adapter for Claude LLM operations
  */
-export class OpenAIAdapter implements LLMAdapter {
-  readonly name = 'openai';
-  private config: OpenAIConfig;
+export class AnthropicAdapter implements LLMAdapter {
+  readonly name = 'anthropic';
+  private config: AnthropicConfig;
   private baseURL: string;
   private logger: LLMLogger;
   private retryConfig: RetryConfig;
 
-  constructor(config: OpenAIConfig) {
+  constructor(config: AnthropicConfig) {
     this.config = config;
-    this.baseURL = config.baseURL || 'https://api.openai.com/v1';
+    this.baseURL = config.baseURL || 'https://api.anthropic.com/v1';
     this.logger = config.logger || new ConsoleLogger();
     this.retryConfig = {
       maxRetries: config.retries || 3,
@@ -48,32 +47,30 @@ export class OpenAIAdapter implements LLMAdapter {
   /**
    * Generate text completion (implements LLMAdapter interface)
    */
-  async generate(prompt: string, options?: GenerateOptions): Promise<LLMResponse> {
+  async generate(input: string, options?: GenerateOptions): Promise<LLMResponse> {
     const startTime = Date.now();
 
     try {
       this.logger.debug('Generate request', {
         model: options?.model || this.config.defaultModel,
-        inputLength: prompt.length,
+        inputLength: input.length,
       });
 
-      const response = await this.makeRequestWithRetry('/chat/completions', {
-        model: options?.model || this.config.defaultModel || 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: options?.temperature || 0.7,
-        max_tokens: options?.maxTokens || 1000,
-        top_p: options?.topP || 1.0,
-        frequency_penalty: options?.frequencyPenalty || 0,
-        presence_penalty: options?.presencePenalty || 0,
-        stop: options?.stop,
+      const response = await this.makeRequestWithRetry('/messages', {
+        model: options?.model || this.config.defaultModel || 'claude-3-sonnet-20240229',
+        max_tokens: options?.maxTokens || 1024,
+        messages: [{ role: 'user', content: input }],
+        temperature: options?.temperature,
+        top_p: options?.topP,
+        stop_sequences: options?.stop,
       });
 
-      const content = response.choices[0]?.message?.content || '';
+      const content = response.content[0]?.text || '';
       const duration = Date.now() - startTime;
 
       this.logger.info('Generate success', {
         model: response.model,
-        tokens: response.usage?.total_tokens,
+        tokens: response.usage?.output_tokens,
         duration,
       });
 
@@ -82,12 +79,12 @@ export class OpenAIAdapter implements LLMAdapter {
         model: response.model,
         usage: response.usage
           ? {
-              promptTokens: response.usage.prompt_tokens,
-              completionTokens: response.usage.completion_tokens,
-              totalTokens: response.usage.total_tokens,
+              promptTokens: response.usage.input_tokens,
+              completionTokens: response.usage.output_tokens,
+              totalTokens: response.usage.input_tokens + response.usage.output_tokens,
             }
           : undefined,
-        finishReason: response.choices[0]?.finish_reason || 'stop',
+        finishReason: response.stop_reason === 'end_turn' ? 'stop' : 'length',
         metadata: {
           id: response.id,
           duration,
@@ -111,23 +108,25 @@ export class OpenAIAdapter implements LLMAdapter {
         messageCount: messages.length,
       });
 
-      const response = await this.makeRequestWithRetry('/chat/completions', {
-        model: options?.model || this.config.defaultModel || 'gpt-3.5-turbo',
-        messages,
-        temperature: options?.temperature || 0.7,
-        max_tokens: options?.maxTokens || 1000,
-        top_p: options?.topP || 1.0,
-        frequency_penalty: options?.frequencyPenalty || 0,
-        presence_penalty: options?.presencePenalty || 0,
-        stop: options?.stop,
+      // Convert messages to Anthropic format
+      // Anthropic requires alternating user/assistant messages
+      const anthropicMessages = this.convertMessages(messages);
+
+      const response = await this.makeRequestWithRetry('/messages', {
+        model: options?.model || this.config.defaultModel || 'claude-3-sonnet-20240229',
+        max_tokens: options?.maxTokens || 1024,
+        messages: anthropicMessages,
+        temperature: options?.temperature,
+        top_p: options?.topP,
+        stop_sequences: options?.stop,
       });
 
-      const content = response.choices[0]?.message?.content || '';
+      const content = response.content[0]?.text || '';
       const duration = Date.now() - startTime;
 
       this.logger.info('Chat success', {
         model: response.model,
-        tokens: response.usage?.total_tokens,
+        tokens: response.usage?.output_tokens,
         duration,
       });
 
@@ -136,12 +135,12 @@ export class OpenAIAdapter implements LLMAdapter {
         model: response.model,
         usage: response.usage
           ? {
-              promptTokens: response.usage.prompt_tokens,
-              completionTokens: response.usage.completion_tokens,
-              totalTokens: response.usage.total_tokens,
+              promptTokens: response.usage.input_tokens,
+              completionTokens: response.usage.output_tokens,
+              totalTokens: response.usage.input_tokens + response.usage.output_tokens,
             }
           : undefined,
-        finishReason: response.choices[0]?.finish_reason || 'stop',
+        finishReason: response.stop_reason === 'end_turn' ? 'stop' : 'length',
         metadata: {
           id: response.id,
           duration,
@@ -154,38 +153,37 @@ export class OpenAIAdapter implements LLMAdapter {
   }
 
   /**
-   * Generate embeddings
-   */
-  async embed(text: string, model?: string): Promise<number[]> {
-    const response = await this.makeRequest('/embeddings', {
-      model: model || 'text-embedding-ada-002',
-      input: text,
-    });
-
-    return response.data[0]?.embedding || [];
-  }
-
-  /**
    * Stream text completion
    */
   async *stream(
-    prompt: string,
+    input: string,
     options?: GenerateOptions
   ): AsyncGenerator<string, void, unknown> {
-    const response = await fetch(`${this.baseURL}/chat/completions`, {
+    this.logger.debug('Stream request', {
+      model: options?.model || this.config.defaultModel,
+    });
+
+    const response = await fetch(`${this.baseURL}/messages`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({
-        model: options?.model || this.config.defaultModel || 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: options?.temperature || 0.7,
-        max_tokens: options?.maxTokens || 1000,
+        model: options?.model || this.config.defaultModel || 'claude-3-sonnet-20240229',
+        max_tokens: options?.maxTokens || 1024,
+        messages: [{ role: 'user', content: input }],
+        temperature: options?.temperature,
+        top_p: options?.topP,
+        stop_sequences: options?.stop,
         stream: true,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      const error = await response.json().catch(() => ({}));
+      throw new Error(
+        `Anthropic API error: ${response.status} ${response.statusText}${
+          error.error?.message ? ` - ${error.error.message}` : ''
+        }`
+      );
     }
 
     const reader = response.body?.getReader();
@@ -209,13 +207,17 @@ export class OpenAIAdapter implements LLMAdapter {
           const trimmed = line.trim();
           if (trimmed.startsWith('data: ')) {
             const data = trimmed.slice(6);
-            if (data === '[DONE]') continue;
 
             try {
               const parsed = JSON.parse(data);
-              const content = parsed.choices[0]?.delta?.content;
-              if (content) {
-                yield content;
+
+              if (parsed.type === 'content_block_delta') {
+                const text = parsed.delta?.text;
+                if (text) {
+                  yield text;
+                }
+              } else if (parsed.type === 'message_stop') {
+                return;
               }
             } catch (e) {
               // Skip invalid JSON
@@ -226,6 +228,28 @@ export class OpenAIAdapter implements LLMAdapter {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  /**
+   * Convert standard messages to Anthropic format
+   */
+  private convertMessages(messages: Message[]): any[] {
+    const anthropicMessages: any[] = [];
+    let systemMessage = '';
+
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        // Anthropic puts system messages in a separate field
+        systemMessage += msg.content + '\n';
+      } else {
+        anthropicMessages.push({
+          role: msg.role,
+          content: msg.content,
+        });
+      }
+    }
+
+    return anthropicMessages;
   }
 
   /**
@@ -278,9 +302,9 @@ export class OpenAIAdapter implements LLMAdapter {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({})) as any;
+        const error = await response.json().catch(() => ({}));
         throw new Error(
-          `OpenAI API error: ${response.status} ${response.statusText}${
+          `Anthropic API error: ${response.status} ${response.statusText}${
             error.error?.message ? ` - ${error.error.message}` : ''
           }`
         );
@@ -293,6 +317,17 @@ export class OpenAIAdapter implements LLMAdapter {
   }
 
   /**
+   * Get request headers
+   */
+  private getHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': this.config.apiKey,
+      'anthropic-version': '2023-06-01',
+    };
+  }
+
+  /**
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
@@ -300,38 +335,24 @@ export class OpenAIAdapter implements LLMAdapter {
   }
 
   /**
-   * Get request headers
+   * Test connection
    */
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.config.apiKey}`,
-    };
-
-    if (this.config.organization) {
-      headers['OpenAI-Organization'] = this.config.organization;
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.generate('Hello', { maxTokens: 10 });
+      return true;
+    } catch (error) {
+      this.logger.error('Connection test failed', error);
+      return false;
     }
-
-    return headers;
   }
 
   /**
    * Count tokens (rough estimate)
    */
   countTokens(text: string): number {
+    // Claude uses similar tokenization to GPT
     // Rough estimate: ~4 characters per token
     return Math.ceil(text.length / 4);
-  }
-
-  /**
-   * Test connection
-   */
-  async testConnection(): Promise<boolean> {
-    try {
-      await this.generate('Hello', { maxTokens: 5 });
-      return true;
-    } catch (error) {
-      return false;
-    }
   }
 }
