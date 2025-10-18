@@ -33,6 +33,9 @@ importers:
         specifier: ^5.0.1
         version: 5.4.0
     devDependencies:
+      '@nomicfoundation/hardhat-chai-matchers':
+        specifier: ^2.1.0
+        version: 2.1.0(@nomicfoundation/hardhat-ethers@3.1.0)(chai@4.5.0)(ethers@6.15.0)(hardhat@2.26.3)
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^4.0.0
         version: 4.0.0(@nomicfoundation/hardhat-chai-matchers@2.1.0)(@nomicfoundation/hardhat-ethers@3.1.0)(@nomicfoundation/hardhat-network-helpers@1.1.0)(@nomicfoundation/hardhat-verify@2.1.1)(@typechain/ethers-v6@0.5.1)(@typechain/hardhat@9.1.0)(@types/chai@4.3.20)(@types/mocha@10.0.10)(@types/node@20.19.21)(chai@4.5.0)(ethers@6.15.0)(hardhat-gas-reporter@1.0.10)(hardhat@2.26.3)(solidity-coverage@0.8.16)(ts-node@10.9.2)(typechain@8.3.2)(typescript@5.9.3)
@@ -48,6 +51,9 @@ importers:
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.21
+      chai-as-promised:
+        specifier: ^8.0.2
+        version: 8.0.2(chai@4.5.0)
       hardhat:
         specifier: ^2.19.2
         version: 2.26.3(ts-node@10.9.2)(typescript@5.9.3)
@@ -2483,6 +2489,15 @@ packages:
       check-error: 1.0.3
     dev: true
 
+  /chai-as-promised@8.0.2(chai@4.5.0):
+    resolution: {integrity: sha512-1GadL+sEJVLzDjcawPM4kjfnL+p/9vrxiEUonowKOAzvVg0PixJUdtuDzdkDeQhK3zfOE76GqGkZIQ7/Adcrqw==}
+    peerDependencies:
+      chai: '>= 2.1.2 < 7'
+    dependencies:
+      chai: 4.5.0
+      check-error: 2.1.1
+    dev: true
+
   /chai@4.5.0:
     resolution: {integrity: sha512-RITGBfijLkBddZvnn8jdqoTypxvqbOLYQkGGxXzeFjVHvudaPw0HNFD9x928/eUwYWd2dPCugVqspGALTZZQKw==}
     engines: {node: '>=4'}
@@ -2521,6 +2536,11 @@ packages:
     resolution: {integrity: sha512-iKEoDYaRmd1mxM90a2OEfWhjsjPpYPuQ+lMYsoxB126+t8fw7ySEO48nmDg5COTjxDI65/Y2OWpeEHk3ZOe8zg==}
     dependencies:
       get-func-name: 2.0.2
+    dev: true
+
+  /check-error@2.1.1:
+    resolution: {integrity: sha512-OAlb+T7V4Op9OwdkjmguYRqncdlx5JiofwOAUkmTF+jNdHwzTaTs4sRAGpzLF3oOz5xAyDGrPgeIDFQmDOTiJw==}
+    engines: {node: '>= 16'}
     dev: true
 
   /chokidar@3.6.0:

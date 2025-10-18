@@ -1,0 +1,11 @@
+{
+  "AgentRegistry": "0xC9f3452090EEB519467DEa4a390976D38C008347",
+  "AgentManager": "0x77F6dC5924652e32DBa0B4329De0a44a2C95691E",
+  "AgentExecutor": "0x157C56dEdbAB6caD541109daabA4663Fc016026e",
+  "AgentVault": "0x7cEe3142A9c6d15529C322035041af697B2B5129",
+  "network": "testnet",
+  "chainId": 50312,
+  "deployer": "0xde92f4931b922925383C9040aea5e4088d4078b9",
+  "timestamp": "2025-10-18T13:55:35.515Z",
+  "status": "partial - need more STT to deploy AgentVault"
+}
