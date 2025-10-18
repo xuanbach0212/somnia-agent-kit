@@ -24,5 +24,6 @@
  * ```
  */
 
-export { OpenAIAdapter } from './openaiAdapter';
+export { DeepSeekAdapter } from './deepseekAdapter';
 export { OllamaAdapter } from './ollamaAdapter';
+export { OpenAIAdapter } from './openaiAdapter';
