@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/xuanbach0212/somnia-agent-kit#readme
+    about: Read the documentation
+  - name: 📦 npm Package
+    url: https://www.npmjs.com/package/somnia-agent-kit
+    about: View on npm
+  - name: 💬 Discord
+    url: https://discord.gg/somnia
+    about: Join Somnia Discord
