@@ -6,7 +6,7 @@ body:
   - type: dropdown
     id: type
     attributes:
-      label: Issue Type
+      label: 📝 Type
       options:
         - Missing documentation
         - Incorrect information
@@ -15,29 +15,36 @@ body:
         - Broken link
         - Missing example
         - Outdated content
+        - Other
     validations:
       required: true
 
   - type: input
     id: location
     attributes:
-      label: Location
-      description: Which file/section?
-      placeholder: e.g., README.md, API_REFERENCE.md line 123
+      label: 📍 Location
+      placeholder: e.g., README.md line 123, API_REFERENCE.md section "Agent Runtime"
     validations:
       required: true
 
   - type: textarea
     id: issue
     attributes:
-      label: What's Wrong?
-      description: Describe the issue
+      label: ❌ Issue
+      description: What's wrong?
+      placeholder: The documentation says... but it should say...
     validations:
       required: true
 
   - type: textarea
     id: suggestion
     attributes:
-      label: Suggested Fix
+      label: ✅ Suggestion
       description: How to fix it?
       placeholder: Change "..." to "..."
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📎 Additional
+      placeholder: Screenshots, links, etc.

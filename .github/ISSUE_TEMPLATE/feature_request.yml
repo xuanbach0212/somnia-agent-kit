@@ -3,16 +3,10 @@ description: Suggest a new feature
 title: "[Feature]: "
 labels: ["enhancement", "needs-triage"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for suggesting a feature!
-
   - type: dropdown
     id: scope
     attributes:
-      label: Scope
-      description: Which part should this feature be added to?
+      label: 📦 Scope
       options:
         - Core SDK
         - Agent Runtime
@@ -29,7 +23,7 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem
+      label: 💡 Problem
       description: What problem does this solve?
       placeholder: I'm frustrated when...
     validations:
@@ -38,7 +32,7 @@ body:
   - type: textarea
     id: solution
     attributes:
-      label: Proposed Solution
+      label: ✨ Solution
       description: How should it work?
       placeholder: I would like to...
     validations:
@@ -47,47 +41,36 @@ body:
   - type: textarea
     id: example
     attributes:
-      label: Example Usage
+      label: 💻 Example
       render: typescript
       placeholder: |
         import { SomniaAgentKit } from 'somnia-agent-kit';
-        
         // Example of how the feature would work
-        const result = await kit.newFeature();
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives
-      description: Any alternative solutions you've considered?
+      label: 🔄 Alternatives
+      placeholder: Other solutions I've considered...
 
   - type: dropdown
     id: priority
     attributes:
-      label: Priority
+      label: ⚡ Priority
       options:
         - Low - Nice to have
         - Medium - Would improve workflow
         - High - Blocking my project
-    validations:
-      required: true
-
-  - type: textarea
-    id: test
-    attributes:
-      label: How to Test This Feature
-      description: How can we verify this feature works correctly?
-      placeholder: |
-        1. Install the package
-        2. Call the new method with...
-        3. Should return...
-        4. Verify that...
-    validations:
-      required: true
 
   - type: checkboxes
     id: contribute
     attributes:
-      label: Contribution
+      label: 🤝 Contribution
       options:
-        - label: I'm willing to help implement this feature
+        - label: I'm willing to help implement this
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📎 Additional
+      placeholder: Links, mockups, etc.
