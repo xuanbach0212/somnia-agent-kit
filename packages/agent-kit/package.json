@@ -1,7 +1,7 @@
 {
-  "name": "@somnia/agent-kit",
-  "version": "2.0.0",
-  "description": "Core SDK for building AI agents on Somnia Network",
+  "name": "somnia-agent-kit",
+  "version": "2.0.1",
+  "description": "Production-ready SDK for building, deploying, and managing AI agents on Somnia blockchain",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -13,7 +13,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
@@ -22,16 +24,33 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "somnia",
     "ai-agents",
     "blockchain",
-    "sdk"
+    "sdk",
+    "web3",
+    "llm",
+    "ai",
+    "agents",
+    "smart-contracts",
+    "ethereum",
+    "typescript"
   ],
-  "author": "",
+  "author": "Somnia Network",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xuanbach0212/somnia-agent-kit.git",
+    "directory": "packages/agent-kit"
+  },
+  "homepage": "https://github.com/xuanbach0212/somnia-agent-kit#readme",
+  "bugs": {
+    "url": "https://github.com/xuanbach0212/somnia-agent-kit/issues"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "deepmerge": "^4.3.1",

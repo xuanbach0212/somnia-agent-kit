@@ -1,511 +1,426 @@
-# Somnia AI Agent Framework v2.0
+# Somnia AI Agent Framework
 
-> A comprehensive framework, SDK, and monitoring tools for designing, deploying, and scaling AI agents on Somnia Network
+> Production-ready infrastructure for building, deploying, and managing AI agents on Somnia blockchain
 
+[![npm version](https://img.shields.io/npm/v/somnia-agent-kit.svg)](https://www.npmjs.com/package/somnia-agent-kit)
+[![npm downloads](https://img.shields.io/npm/dm/somnia-agent-kit.svg)](https://www.npmjs.com/package/somnia-agent-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)](./COMPLETE_TESTING_SUMMARY.md)
+[![Somnia](https://img.shields.io/badge/Somnia-Testnet-purple)](https://explorer.somnia.network)
 
-## 🎯 Overview
+---
 
-The Somnia AI Agent Framework is a production-ready infrastructure for building, deploying, and managing AI agents on the Somnia blockchain network. Version 2.0 brings a completely refactored architecture with native LLM support, improved developer experience, and enhanced modularity.
+## 🎯 What is This?
 
-### 🆕 What's New in v2.0
+A **complete framework** for building AI agents on blockchain that combines:
+- 🧠 **AI reasoning** (LLM integration)
+- ⛓️ **Blockchain execution** (Smart contracts)
+- 📊 **Real-time monitoring** (Dashboard & metrics)
 
-- **🧠 Native LLM Support**: Built-in providers for OpenAI, Anthropic Claude, with mock provider for testing
-- **🏗️ Refactored Architecture**: Separation of concerns with `SomniaClient` (low-level) and `SomniaAgent` (high-level)
-- **🔗 Fluent API**: Chain methods for intuitive agent configuration
-- **📡 Event-Driven**: Rich event system for monitoring agent lifecycle and task execution
-- **🎯 Better Type Safety**: Comprehensive TypeScript types for all components
-- **🧪 Testing Ready**: Mock LLM provider for unit testing without API costs
+**Bridge the gap between AI and Web3** - AI thinks, blockchain executes, you build the future.
 
-### Key Features
+---
 
-- 🚀 **Easy Agent Deployment**: Fluent API for creating and deploying AI agents with minimal code
-- 🧠 **AI-Powered Agents**: Built-in support for OpenAI GPT-4, Claude 3, and custom LLMs
-- 📊 **Real-time Monitoring**: WebSocket-based monitoring with REST API
-- 💎 **Smart Contracts**: Battle-tested Solidity contracts for agent registry and task management
-- 🔧 **Developer-Friendly SDK**: TypeScript SDK with comprehensive type safety
-- 📈 **Metrics & Analytics**: Track agent performance, success rates, and execution times
-- 🎨 **Flexible Architecture**: Support for any AI model or processing logic
-- 🔐 **Secure & Decentralized**: Built on Somnia's high-performance blockchain
+## ✨ Key Features
 
-## 🚀 Quick Start (5 minutes)
+- **🆓 FREE Local AI** - Ollama integration (no API costs)
+- **⚡ Fast** - Sub-second finality on Somnia
+- **🔧 Developer-Friendly** - TypeScript SDK with full type safety
+- **📊 Complete Monitoring** - Logger, Metrics, Web Dashboard
+- **🎨 Production Ready** - Battle-tested contracts, comprehensive docs
+- **🚀 Quick Start** - Working examples in 5 minutes
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    YOUR APPLICATION                      │
+│  (DeFi Bot, AI Assistant, Game NPC, Oracle, etc.)      │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│              SOMNIA AI AGENT FRAMEWORK                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Runtime    │  │     LLM      │  │  Monitoring  │  │
+│  │   - Agent    │  │  - OpenAI    │  │  - Logger    │  │
+│  │   - Planner  │  │  - Ollama    │  │  - Metrics   │  │
+│  │   - Executor │  │  - DeepSeek  │  │  - Dashboard │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │         Core (Blockchain Integration)            │   │
+│  │  - Chain Client  - Contract Wrappers            │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│                  SOMNIA BLOCKCHAIN                       │
+│  Smart Contracts: Registry, Manager, Executor, Vault   │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/yourusername/somnia-agent-kit.git
-cd somnia-agent-kit
-npm install
-
-# 2. Set up environment
-cp .env.example .env
+# Install the SDK
+npm install somnia-agent-kit
+# or
+pnpm add somnia-agent-kit
 ```
 
-### Get Test Tokens
+### Basic Usage
 
-1. Join [Somnia Discord](https://discord.gg/somnia)
-2. Go to #dev-chat channel
-3. Tag @emma_odia and request STT tokens
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
 
-### Deploy Contracts
+// Initialize SDK
+const kit = new SomniaAgentKit({
+  network: {
+    name: 'somnia-testnet',
+    rpcUrl: 'https://dream-rpc.somnia.network',
+    chainId: 50312,
+  },
+  contracts: {
+    agentRegistry: '0xC9f3452090EEB519467DEa4a390976D38C008347',
+    agentManager: '0x77F6dC5924652e32DBa0B4329De0a44a2C95691E',
+    agentExecutor: '0x157C56dEdbAB6caD541109daabA4663Fc016026e',
+    agentVault: '0x7cEe3142A9c6d15529C322035041af697B2B5129',
+  },
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+await kit.initialize();
+
+// Register an AI agent
+const tx = await kit.contracts.registry.registerAgent(
+  'My AI Agent',
+  'Autonomous agent on Somnia',
+  'ipfs://metadata',
+  ['trading', 'analysis']
+);
+await tx.wait();
+console.log('Agent registered!');
+```
+
+### With Local AI (FREE)
 
 ```bash
-# Add your PRIVATE_KEY to .env
-npm run build
-npm run deploy:contracts
+# 1. Install Ollama
+brew install ollama
 
-# Update .env with deployed contract addresses
-```
+# 2. Start Ollama & pull model
+ollama serve
+ollama pull llama3.2
 
-### Run Your First Agent
+# 3. Use in your code
+import { OllamaAdapter } from 'somnia-agent-kit';
 
-```typescript
-import { SomniaClient, SomniaAgent, OpenAIProvider } from './src';
-
-async function main() {
-  // 1. Initialize blockchain client
-  const client = new SomniaClient();
-  await client.connect({
-    rpcUrl: process.env.SOMNIA_RPC_URL!,
-    privateKey: process.env.PRIVATE_KEY,
-    contracts: {
-      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
-      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
-    },
-  });
-
-  // 2. Create agent with fluent API
-  const agent = new SomniaAgent(client)
-    .configure({
-      name: 'My First Agent',
-      description: 'A simple AI agent',
-      capabilities: ['greeting'],
-      autoStart: true,
-    })
-    .withExecutor(async (input, context) => {
-      console.log('Processing:', input);
-      return { success: true, result: 'Hello World!' };
-    });
-
-  // 3. Register and start
-  const agentId = await agent.register();
-  console.log(`Agent registered: ${agentId}`);
-  
-  await agent.start();
-  console.log('Agent is running and listening for tasks!');
-}
-
-main().catch(console.error);
-```
-
-Run it:
-
-```bash
-npm run example:basic
-```
-
-## 📦 Core Components
-
-### 1. Smart Contracts (On-chain)
-
-- **AgentRegistry.sol** - Agent registration, metrics tracking, lifecycle management
-- **AgentManager.sol** - Task queue, payment escrow, execution tracking
-
-### 2. Core SDK (v2.0)
-
-#### `SomniaClient` (Low-level)
-- Blockchain interaction layer
-- Contract calls and transactions
-- Event subscriptions
-- IPFS integration
-
-#### `SomniaAgent` (High-level)
-- Agent lifecycle management
-- Task processing and automation
-- Event-driven architecture
-- LLM integration
-
-#### LLM Providers
-- **OpenAIProvider** - GPT-3.5, GPT-4, GPT-4o
-- **AnthropicProvider** - Claude 3 (Opus, Sonnet, Haiku)
-- **MockProvider** - Testing without API costs
-
-### 3. Monitoring System
-
-- **MonitoringClient** - SDK wrapper for monitoring API
-- **MetricsCollector** - Performance tracking with alerts
-- **AgentMonitor** - Real-time monitoring with events
-- **Monitoring Server** - REST API + WebSocket
-
-## 💻 Usage Examples
-
-### Example 1: Basic Agent
-
-```typescript
-import { SomniaClient, SomniaAgent } from 'somnia-agent-kit';
-
-const client = new SomniaClient();
-await client.connect({...});
-
-const agent = new SomniaAgent(client)
-  .configure({
-    name: 'Calculator Agent',
-    description: 'Performs calculations',
-    capabilities: ['math'],
-  })
-  .withExecutor(async (input, context) => {
-    const result = eval(input.expression);
-    return { success: true, result };
-  });
-
-await agent.register();
-await agent.start();
-```
-
-### Example 2: AI Agent with OpenAI
-
-```typescript
-import { SomniaClient, SomniaAgent, OpenAIProvider } from 'somnia-agent-kit';
-
-const llm = new OpenAIProvider({
-  apiKey: process.env.OPENAI_API_KEY,
-  model: 'gpt-4o',
+const llm = new OllamaAdapter({
+  baseURL: 'http://localhost:11434',
+  model: 'llama3.2',
 });
 
-const agent = new SomniaAgent(client)
-  .configure({
-    name: 'AI Assistant',
-    description: 'Helpful AI assistant powered by GPT-4',
-    capabilities: ['chat', 'analysis'],
-  })
-  .withLLM(llm)
-  .withExecutor(async (input, context) => {
-    const response = await context.llm!.chat([
-      { role: 'system', content: 'You are a helpful assistant' },
-      { role: 'user', content: input.prompt },
-    ]);
-    return { success: true, result: { response } };
-  });
-
-await agent.register();
-await agent.start();
+const response = await llm.chat([
+  { role: 'user', content: 'Analyze this market data...' }
+]);
 ```
-
-### Example 3: Event-Driven Agent
-
-```typescript
-const agent = new SomniaAgent(client)
-  .configure({...})
-  .withExecutor(async (input, context) => {
-    // Your logic
-  });
-
-// Listen to agent events
-agent.on('agent:registered', (agentId) => {
-  console.log(`✅ Agent registered: ${agentId}`);
-});
-
-agent.on('task:completed', ({ taskId, result }) => {
-  console.log(`✅ Task ${taskId} completed`);
-});
-
-agent.on('task:failed', ({ taskId, error }) => {
-  console.error(`❌ Task ${taskId} failed:`, error);
-});
-
-agent.on('metrics:updated', (metrics) => {
-  console.log(`📊 Success rate: ${metrics.successRate}%`);
-});
-
-await agent.register();
-await agent.start();
-```
-
-### Example 4: Using Anthropic Claude
-
-```typescript
-import { AnthropicProvider } from 'somnia-agent-kit';
-
-const llm = new AnthropicProvider({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  model: 'claude-3-5-sonnet-20240620',
-});
-
-const agent = new SomniaAgent(client)
-  .configure({
-    name: 'Claude Agent',
-    description: 'AI agent powered by Claude 3.5 Sonnet',
-    capabilities: ['analysis', 'reasoning'],
-  })
-  .withLLM(llm)
-  .withExecutor(async (input, context) => {
-    const response = await context.llm!.generate(input.prompt);
-    return { success: true, result: { response } };
-  });
-```
-
-### Example 5: Task Management
-
-```typescript
-// Create a task for an agent
-const taskId = await client.createTask({
-  agentId: '1',
-  taskData: { prompt: 'Analyze this data' },
-  reward: ethers.parseEther('0.1'),
-});
-
-console.log(`Task created: ${taskId}`);
-
-// Agent will automatically pick up and process the task
-// You can also manually process a specific task
-const result = await agent.processTask(taskId);
-console.log('Task result:', result);
-```
-
-### Example 6: Monitoring
-
-```typescript
-import { MonitoringClient } from 'somnia-agent-kit';
-
-const monitoring = new MonitoringClient({
-  baseUrl: 'http://localhost:3001',
-  autoConnect: true,
-});
-
-// REST API
-const health = await monitoring.getHealth();
-const metrics = await monitoring.getAgentMetrics('1');
-const aggregated = await monitoring.getAggregatedMetrics();
-
-// WebSocket real-time updates
-monitoring.on('connected', () => {
-  console.log('Connected to monitoring server');
-  monitoring.subscribeToAgent('1');
-});
-
-monitoring.on('metrics', (data) => {
-  console.log('Agent metrics update:', data);
-});
-
-monitoring.on('alert', (alert) => {
-  console.warn('Alert:', alert);
-});
-```
-
-## 🎨 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Your Application                         │
-└─────────────────────────────────────────────────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           │               │               │
-           ▼               ▼               ▼
-    ┌──────────┐    ┌──────────┐   ┌──────────┐
-    │ Somnia   │    │ Somnia   │   │Monitoring│
-    │ Client   │    │  Agent   │   │  Client  │
-    └──────────┘    └──────────┘   └──────────┘
-           │               │               │
-           │         ┌─────┴─────┐         │
-           │         │           │         │
-           ▼         ▼           ▼         ▼
-    ┌──────────┐  ┌────┐    ┌────────┐ ┌────────┐
-    │Blockchain│  │LLM │    │  IPFS  │ │Monitor │
-    │Contracts │  │API │    │Storage │ │ Server │
-    └──────────┘  └────┘    └────────┘ └────────┘
-```
-
-### Layer Breakdown
-
-1. **Application Layer**: Your custom agent logic and business rules
-2. **SDK Layer**: `SomniaClient` (low-level) + `SomniaAgent` (high-level)
-3. **Integration Layer**: LLM providers, IPFS, Monitoring
-4. **Infrastructure Layer**: Somnia blockchain, external services
-
-## 📚 Documentation
-
-- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation for v2.0
-- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start guide
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Detailed deployment instructions
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and diagrams
-- **[HACKATHON_SUBMISSION.md](HACKATHON_SUBMISSION.md)** - Hackathon submission details
-
-## 🔧 Available Scripts
-
-```bash
-# Development
-npm run build          # Compile TypeScript
-npm run dev            # Run in development mode
-npm test               # Run tests
-npm run lint           # Lint code
-npm run format         # Format code
-
-# Deployment
-npm run deploy:contracts  # Deploy to Somnia testnet
-npm run deploy:local      # Deploy to local network
-npm run verify            # Verify contracts
-
-# Monitoring
-npm run start:monitor  # Start monitoring server
-
-# Examples
-npm run example:basic      # Basic agent example
-npm run example:openai     # OpenAI GPT agent
-npm run example:claude     # Anthropic Claude agent
-npm run example:events     # Event-driven agent
-npm run example:tasks      # Task management
-npm run example:client     # Monitoring client
-```
-
-## 🌐 Network Information
-
-**Somnia Testnet**:
-- RPC URL: `https://dream-rpc.somnia.network`
-- Chain ID: `50311`
-- Currency: `STT`
-- Explorer: `https://explorer.somnia.network`
-- Block Time: ~0.4 seconds
-- Finality: Sub-second
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-npm test
-
-# Use MockProvider for testing
-import { MockProvider } from 'somnia-agent-kit';
-
-const mockLLM = new MockProvider({});
-const agent = new SomniaAgent(client)
-  .withLLM(mockLLM)
-  .withExecutor(async (input, context) => {
-    // Test your logic without real API calls
-  });
-```
-
-## 🔐 Environment Variables
-
-Create a `.env` file:
-
-```env
-# Blockchain
-SOMNIA_RPC_URL=https://dream-rpc.somnia.network
-SOMNIA_CHAIN_ID=50311
-PRIVATE_KEY=your_private_key_here
-
-# Contracts (after deployment)
-AGENT_REGISTRY_ADDRESS=0x...
-AGENT_MANAGER_ADDRESS=0x...
-
-# LLM APIs (optional)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Monitoring
-MONITORING_PORT=3001
-```
-
-## 🚨 Migration from v1.x
-
-If you're upgrading from v1.x, here's what changed:
-
-### Before (v1.x)
-```typescript
-import { SomniaAgentSDK, AgentBuilder } from '@somnia/sdk';
-
-const sdk = new SomniaAgentSDK({...});
-const agent = await AgentBuilder.quick('Name', 'Desc', executor)
-  .connectSDK(sdk)
-  .build();
-```
-
-### After (v2.0)
-```typescript
-import { SomniaClient, SomniaAgent } from '@somnia/sdk';
-
-const client = new SomniaClient();
-await client.connect({...});
-
-const agent = new SomniaAgent(client)
-  .configure({ name: 'Name', description: 'Desc', capabilities: [] })
-  .withExecutor(executor);
-
-await agent.register();
-```
-
-**Key Changes:**
-- `SomniaAgentSDK` → `SomniaClient`
-- `AgentBuilder` → `SomniaAgent` with fluent API
-- Explicit lifecycle: `register()` → `start()`
-- Built-in LLM support
-- Rich event system
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🏆 Hackathon Submission
-
-This project is submitted to the **Somnia Hackathon - Infra Agents Track**.
-
-**Requirements Met:**
-- ✅ Public GitHub repository
-- ✅ Minimum 2 commits with detailed history
-- ✅ Comprehensive README with documentation
-- ✅ MIT open-source license
-- ✅ Working Web3 dApp on Somnia Testnet
-- ✅ Contract addresses in documentation
-- ✅ Architecture diagrams
-
-**Innovation Highlights:**
-- Native LLM integration (OpenAI, Anthropic)
-- Modular architecture with separation of concerns
-- Real-time monitoring with WebSocket support
-- Developer-friendly SDK with fluent API
-- Comprehensive TypeScript support
-- Production-ready smart contracts
-
-## 🙏 Acknowledgments
-
-- [Somnia Network](https://docs.somnia.network/) for the blockchain infrastructure
-- Infrastructure partners: Ankr, DIA, Protofire, Ormi
-- OpenAI and Anthropic for LLM APIs
-
-## 🔗 Links
-
-- **Documentation**: https://docs.somnia.network/developer/infrastructure-dev-tools
-- **Discord**: https://discord.gg/somnia
-- **Explorer**: https://explorer.somnia.network
-- **Get Test Tokens**: Tag @emma_odia in #dev-chat
-
-## 💡 Use Cases
-
-- **AI Assistants**: Deploy conversational agents with GPT-4 or Claude
-- **Data Processing**: Automate data analysis and transformation
-- **Task Automation**: Create autonomous agents for repetitive tasks
-- **Oracle Services**: Fetch and process external data on-chain
-- **Gaming NPCs**: Build intelligent NPCs for blockchain games
-- **DeFi Automation**: Automated trading strategies and monitoring
-
-## 📊 Performance
-
-- **Transaction Speed**: Sub-second finality on Somnia
-- **Scalability**: 400,000+ TPS potential
-- **Cost**: Extremely low gas fees
-- **Latency**: ~0.4s block time
 
 ---
 
-**Built with ❤️ for the Somnia Hackathon | Infra Agents Track**
+## 📦 Deployed Contracts (Somnia Testnet)
 
-*Framework Version: 2.0.0*
-*Last Updated: 2025-01-04*
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| **AgentRegistry** | `0xC9f3452090EEB519467DEa4a390976D38C008347` | Register & manage agents |
+| **AgentManager** | `0x77F6dC5924652e32DBa0B4329De0a44a2C95691E` | Task queue & lifecycle |
+| **AgentExecutor** | `0x157C56dEdbAB6caD541109daabA4663Fc016026e` | Execute agent tasks |
+| **AgentVault** | `0x7cEe3142A9c6d15529C322035041af697B2B5129` | Manage agent funds |
+
+**Explorer**: https://explorer.somnia.network
+
+---
+
+## 💡 Use Cases
+
+### 1. AI Trading Bot
+```typescript
+// AI analyzes market → decides trade → executes on-chain
+const analysis = await llm.generate("Analyze ETH market");
+if (analysis.includes("bullish")) {
+  await kit.contracts.executor.executeTask(agentId, "buy_eth");
+}
+```
+
+### 2. Autonomous Task Agent
+```typescript
+// AI plans → creates tasks → executes → records results
+const plan = await llm.generate("Plan optimization tasks");
+for (const task of plan.tasks) {
+  await kit.contracts.manager.createTask(agentId, task);
+}
+```
+
+### 3. AI Assistant with Blockchain Memory
+```typescript
+// Chat with AI → store conversation on-chain
+const response = await llm.chat(messages);
+await kit.contracts.registry.updateAgent(agentId, {
+  metadata: ipfs.upload(conversation)
+});
+```
+
+---
+
+## 📊 Examples
+
+| Example | Description | Status |
+|---------|-------------|--------|
+| **ai-agent-ollama** | Register agent with FREE local LLM | ✅ Working |
+| **use-deployed-agent** | Execute tasks with deployed agent | ✅ Working |
+| **monitoring-demo** | Logger & Metrics tracking | ✅ Working |
+| **dashboard-demo** | Web UI for monitoring | ✅ Working |
+
+**Run any example:**
+```bash
+cd examples/<example-name>
+npx ts-node index.ts
+```
+
+---
+
+## 🧠 LLM Support
+
+| Provider | Cost | Status | Setup |
+|----------|------|--------|-------|
+| **Ollama** | FREE | ✅ | `brew install ollama` |
+| **OpenAI** | Paid | ✅ | Add API key to .env |
+| **DeepSeek** | Paid | ✅ | Add API key to .env |
+
+**Recommended**: Start with Ollama (100% FREE, runs locally)
+
+---
+
+## 📈 Monitoring
+
+### Logger (Structured Logging)
+```typescript
+import { Logger } from 'somnia-agent-kit';
+const logger = new Logger();
+logger.info('Agent started', { agentId: 1 });
+```
+
+### Metrics (Performance Tracking)
+```typescript
+import { Metrics } from 'somnia-agent-kit';
+const metrics = new Metrics();
+metrics.recordLLMCall(duration, success);
+metrics.recordTransaction(success, gasUsed);
+```
+
+### Dashboard (Web UI)
+```typescript
+import { Dashboard } from 'somnia-agent-kit';
+const dashboard = new Dashboard({ port: 3001, logger, metrics });
+await dashboard.start();
+// Open http://localhost:3001
+```
+
+---
+
+## 🔧 SDK Usage
+
+### Initialize SDK
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+const kit = new SomniaAgentKit({
+  network: {
+    name: 'somnia-testnet',
+    rpcUrl: 'https://dream-rpc.somnia.network',
+    chainId: 50312,
+  },
+  contracts: {
+    agentRegistry: '0xC9f3452090EEB519467DEa4a390976D38C008347',
+    agentManager: '0x77F6dC5924652e32DBa0B4329De0a44a2C95691E',
+    agentExecutor: '0x157C56dEdbAB6caD541109daabA4663Fc016026e',
+    agentVault: '0x7cEe3142A9c6d15529C322035041af697B2B5129',
+  },
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+await kit.initialize();
+```
+
+### Register Agent
+```typescript
+const tx = await kit.contracts.registry.registerAgent(
+  'My AI Agent',
+  'Autonomous agent on Somnia',
+  'ipfs://QmHash',
+  ['trading', 'analysis']
+);
+await tx.wait();
+```
+
+### Create & Execute Task
+```typescript
+// Create task
+const taskTx = await kit.contracts.manager.createTask(
+  agentId,
+  JSON.stringify({ action: 'analyze', data: {...} }),
+  { value: ethers.parseEther('0.001') }
+);
+
+// Start task
+await kit.contracts.manager.startTask(taskId);
+
+// Complete task
+await kit.contracts.manager.completeTask(taskId, result);
+```
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[API_REFERENCE.md](./API_REFERENCE.md)** | Complete API documentation |
+| **[DEPLOYMENT_COMPLETE.md](./DEPLOYMENT_COMPLETE.md)** | Deployed contract addresses |
+| **[COMPLETE_TESTING_SUMMARY.md](./COMPLETE_TESTING_SUMMARY.md)** | Testing results (41 tests) |
+| **[docs/](./docs/)** | Architecture, guides, SDK design |
+| **[examples/](./examples/)** | 7 working examples |
+
+**Start here**: `docs/quickstart.md` → `examples/` → Build!
+
+---
+
+## 🧪 Testing
+
+### Smart Contracts
+```bash
+cd contracts
+pnpm test
+# 41 tests, 0 failures ✅
+```
+
+### SDK Examples
+```bash
+cd examples/ai-agent-ollama
+npx ts-node index.ts
+# Agent registered successfully ✅
+```
+
+### Monitoring
+```bash
+cd examples/dashboard-demo
+npx ts-node index.ts
+# Dashboard running at http://localhost:3001 ✅
+```
+
+---
+
+## 🎯 Why Somnia?
+
+| Feature | Somnia | Ethereum | Solana |
+|---------|--------|----------|--------|
+| **TPS** | 400,000+ | ~15 | ~65,000 |
+| **Finality** | Sub-second | ~15 min | ~13s |
+| **Block Time** | ~0.4s | ~12s | ~0.4s |
+| **Gas Fees** | Very Low | High | Low |
+| **EVM Compatible** | ✅ | ✅ | ❌ |
+
+**Perfect for AI Agents**: Fast execution, low cost, high throughput
+
+---
+
+## 🚀 Get Started
+
+### For New Users
+1. Read this README
+2. Install Ollama (FREE AI)
+3. Run `examples/ai-agent-ollama`
+4. Build your agent!
+
+### For Developers
+1. Check `API_REFERENCE.md`
+2. Review `docs/architecture.md`
+3. Explore `examples/`
+4. Start building!
+
+### For Reviewers
+1. See `COMPLETE_TESTING_SUMMARY.md`
+2. Check deployed contracts
+3. Run examples
+4. Review code!
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please:
+1. Fork the repo
+2. Create feature branch
+3. Make changes
+4. Submit PR
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file
+
+---
+
+## 🔗 Links
+
+- **Somnia Network**: https://somnia.network
+- **Documentation**: https://docs.somnia.network
+- **Discord**: https://discord.gg/somnia
+- **Explorer**: https://explorer.somnia.network
+
+---
+
+## 🙏 Acknowledgments
+
+- Somnia Network team
+- Infrastructure partners: Ankr, DIA, Protofire, Ormi
+- OpenAI, Ollama, DeepSeek for LLM APIs
+
+---
+
+## 💬 Support
+
+- **Discord**: Join #dev-chat for help
+- **Issues**: Open GitHub issue
+- **Docs**: Check `DOCUMENTATION_GUIDE.md`
+
+---
+
+## 🎉 Summary
+
+**Somnia AI Agent Framework** = AI + Blockchain + Monitoring
+
+- ✅ **4 Smart Contracts** deployed on Somnia
+- ✅ **3 LLM Providers** (including FREE Ollama)
+- ✅ **Complete Monitoring** (Logger, Metrics, Dashboard)
+- ✅ **7 Working Examples** ready to run
+- ✅ **Production Ready** with comprehensive docs
+
+**Start building AI agents on blockchain today!** 🚀
+
+---
+
+**Built with ❤️ for Somnia Network**
+
+*Making AI agents on blockchain accessible to everyone* 🌟
+
+**Version**: 2.0.0  
+**License**: MIT  
+**Status**: ✅ PRODUCTION READY
