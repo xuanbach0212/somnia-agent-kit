@@ -1,36 +1,110 @@
 name: 🐛 Bug Report
 description: Report a bug
-labels: ["bug"]
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the information below.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which part is affected?
+      options:
+        - Core SDK
+        - Agent Runtime
+        - LLM Integration
+        - Monitoring
+        - Smart Contracts
+        - Documentation
+        - Examples
+        - Other
+    validations:
+      required: true
+
   - type: textarea
     id: description
     attributes:
-      label: What happened?
-      description: Describe the bug
+      label: Bug Description
+      description: What's the bug?
+      placeholder: Describe the bug clearly
     validations:
       required: true
 
   - type: textarea
     id: reproduction
     attributes:
-      label: How to reproduce?
+      label: Steps to Reproduce
       placeholder: |
-        1. Step 1
-        2. Step 2
+        1. Initialize SDK with...
+        2. Call method...
         3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
     validations:
       required: true
 
   - type: textarea
     id: code
     attributes:
-      label: Code sample
+      label: Code Sample
       render: typescript
+      placeholder: |
+        import { SomniaAgentKit } from 'somnia-agent-kit';
+        // Your code here
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      render: shell
+      placeholder: Paste error logs here
 
   - type: input
     id: version
     attributes:
-      label: Package version
+      label: Package Version
       placeholder: e.g., 2.0.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Node.js
+        - Browser
+        - React Native
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: test
+    attributes:
+      label: How to Test the Fix
+      description: How can we verify the bug is fixed?
+      placeholder: |
+        1. Run the code sample above
+        2. Should not throw error
+        3. Should return expected result
     validations:
       required: true

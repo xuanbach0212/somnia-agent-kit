@@ -1,17 +1,12 @@
 name: 📚 Documentation
-description: Report an issue with documentation
+description: Report documentation issues
 title: "[Docs]: "
 labels: ["documentation"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Help us improve our documentation!
-
   - type: dropdown
     id: type
     attributes:
-      label: Documentation Issue Type
+      label: Issue Type
       options:
         - Missing documentation
         - Incorrect information
@@ -19,16 +14,16 @@ body:
         - Typo or grammar
         - Broken link
         - Missing example
-        - Other
+        - Outdated content
     validations:
       required: true
 
   - type: input
     id: location
     attributes:
-      label: Documentation Location
-      description: Where is the documentation issue?
-      placeholder: e.g., README.md, API_REFERENCE.md, examples/ai-agent-ollama
+      label: Location
+      description: Which file/section?
+      placeholder: e.g., README.md, API_REFERENCE.md line 123
     validations:
       required: true
 
@@ -36,8 +31,7 @@ body:
     id: issue
     attributes:
       label: What's Wrong?
-      description: Describe the issue with the documentation
-      placeholder: The documentation says... but it should say...
+      description: Describe the issue
     validations:
       required: true
 
@@ -45,12 +39,5 @@ body:
     id: suggestion
     attributes:
       label: Suggested Fix
-      description: How should we fix this?
-      placeholder: I suggest changing it to...
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Any other information that might be helpful
-
+      description: How to fix it?
+      placeholder: Change "..." to "..."

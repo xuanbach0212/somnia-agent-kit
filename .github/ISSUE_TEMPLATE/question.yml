@@ -1,16 +1,47 @@
 name: ❓ Question
 description: Ask a question
+title: "[Question]: "
 labels: ["question"]
 body:
-  - type: textarea
-    id: question
+  - type: markdown
     attributes:
-      label: Your question
+      value: |
+        Have a question? We're here to help!
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Getting Started
+        - Installation
+        - Configuration
+        - Core SDK
+        - Agent Runtime
+        - LLM Integration
+        - Smart Contracts
+        - Monitoring
+        - Best Practices
+        - Other
     validations:
       required: true
 
   - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      placeholder: How do I...?
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What Have You Tried?
+      placeholder: I tried... but...
+
+  - type: textarea
     id: code
     attributes:
-      label: Related code (optional)
+      label: Related Code
       render: typescript

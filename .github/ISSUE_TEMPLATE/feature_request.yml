@@ -1,25 +1,93 @@
 name: ✨ Feature Request
 description: Suggest a new feature
-labels: ["enhancement"]
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature!
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which part should this feature be added to?
+      options:
+        - Core SDK
+        - Agent Runtime
+        - LLM Integration
+        - Monitoring
+        - Smart Contracts
+        - Documentation
+        - Examples
+        - CLI
+        - Other
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
       label: Problem
       description: What problem does this solve?
+      placeholder: I'm frustrated when...
     validations:
       required: true
 
   - type: textarea
     id: solution
     attributes:
-      label: Proposed solution
+      label: Proposed Solution
       description: How should it work?
+      placeholder: I would like to...
     validations:
       required: true
 
   - type: textarea
     id: example
     attributes:
-      label: Example usage
+      label: Example Usage
       render: typescript
+      placeholder: |
+        import { SomniaAgentKit } from 'somnia-agent-kit';
+        
+        // Example of how the feature would work
+        const result = await kit.newFeature();
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Any alternative solutions you've considered?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow
+        - High - Blocking my project
+    validations:
+      required: true
+
+  - type: textarea
+    id: test
+    attributes:
+      label: How to Test This Feature
+      description: How can we verify this feature works correctly?
+      placeholder: |
+        1. Install the package
+        2. Call the new method with...
+        3. Should return...
+        4. Verify that...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to help implement this feature
