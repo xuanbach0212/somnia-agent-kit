@@ -1,18 +1,12 @@
 name: 🔧 Improvement
-description: Suggest an improvement to existing functionality
+description: Improve existing functionality
 title: "[Improvement]: "
-labels: ["improvement"]
+labels: ["improvement", "enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Suggest an improvement to make existing features better!
-
   - type: dropdown
     id: scope
     attributes:
-      label: Scope
-      description: What needs improvement?
+      label: 📦 Scope
       options:
         - Core SDK
         - Agent Runtime
@@ -31,7 +25,7 @@ body:
   - type: dropdown
     id: type
     attributes:
-      label: Improvement Type
+      label: 🎯 Type
       options:
         - Performance optimization
         - Better error messages
@@ -41,13 +35,11 @@ body:
         - Developer experience
         - Testing
         - Other
-    validations:
-      required: true
 
   - type: textarea
     id: current
     attributes:
-      label: Current Behavior
+      label: 📌 Current
       description: How does it work now?
       placeholder: Currently, when I...
     validations:
@@ -56,7 +48,7 @@ body:
   - type: textarea
     id: proposed
     attributes:
-      label: Proposed Improvement
+      label: ✨ Proposed
       description: How should it work instead?
       placeholder: It would be better if...
     validations:
@@ -65,32 +57,24 @@ body:
   - type: textarea
     id: example
     attributes:
-      label: Example
+      label: 💻 Example
       render: typescript
       placeholder: |
         // Current way
-        const result = await kit.currentMethod();
         
         // Proposed way
-        const result = await kit.improvedMethod();
 
   - type: textarea
     id: benefits
     attributes:
-      label: Benefits
-      description: Why is this improvement valuable?
+      label: 🎁 Benefits
       placeholder: |
         - Easier to use
         - Better performance
         - Clearer API
 
   - type: textarea
-    id: test
+    id: additional
     attributes:
-      label: How to Test
-      description: How to verify the improvement works?
-      placeholder: |
-        1. Use the improved method
-        2. Compare performance/usability
-        3. Verify backward compatibility
-
+      label: 📎 Additional
+      placeholder: Any other context

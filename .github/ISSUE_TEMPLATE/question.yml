@@ -3,15 +3,10 @@ description: Ask a question
 title: "[Question]: "
 labels: ["question"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Have a question? We're here to help!
-
   - type: dropdown
     id: category
     attributes:
-      label: Category
+      label: 📚 Category
       options:
         - Getting Started
         - Installation
@@ -29,7 +24,7 @@ body:
   - type: textarea
     id: question
     attributes:
-      label: Your Question
+      label: ❓ Question
       placeholder: How do I...?
     validations:
       required: true
@@ -37,11 +32,21 @@ body:
   - type: textarea
     id: tried
     attributes:
-      label: What Have You Tried?
-      placeholder: I tried... but...
+      label: 🔍 What I've Tried
+      placeholder: |
+        - I tried...
+        - I also tried...
 
   - type: textarea
     id: code
     attributes:
-      label: Related Code
+      label: 💻 Code
       render: typescript
+      placeholder: |
+        // Related code (if any)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📎 Additional
+      placeholder: Any other context
