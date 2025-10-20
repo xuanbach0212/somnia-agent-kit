@@ -69,38 +69,38 @@ event AgentRegistered(
 **Example Usage:**
 
 ```typescript
-import { SomniaAgentKit } from '@somnia/agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
+import 'dotenv/config';
 
-const kit = new SomniaAgentKit({ /* config */ });
+const kit = new SomniaAgentKit({
+  network: SOMNIA_NETWORKS.testnet,
+  contracts: {
+    agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+    agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+    agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+    agentVault: process.env.AGENT_VAULT_ADDRESS!,
+  },
+  privateKey: process.env.PRIVATE_KEY!,
+});
+
 await kit.initialize();
 
-// Prepare metadata
-const metadata = {
-  name: 'Trading Bot',
-  description: 'AI-powered trading assistant',
-  version: '1.0.0',
-  llm: {
-    recommended: {
-      provider: 'openai',
-      model: 'gpt-4',
-    },
-  },
-  capabilities: ['trading', 'analysis', 'risk-management'],
-};
-
-// Upload to IPFS
-const metadataURI = await kit.uploadToIPFS(metadata);
-
 // Register agent
-const tx = await kit.contracts.AgentRegistry.registerAgent(
-  metadata.name,
-  metadata.description,
-  metadataURI,
-  metadata.capabilities
+const tx = await kit.contracts.registry.registerAgent(
+  'Trading Bot',
+  'AI-powered trading assistant',
+  'ipfs://QmExample', // Metadata URI
+  ['trading', 'analysis', 'risk-management']
 );
 
 const receipt = await tx.wait();
-console.log('Agent registered:', receipt.transactionHash);
+console.log('Agent registered:', receipt.hash);
+
+// Get agent ID
+const myAddress = await kit.getSigner()?.getAddress();
+const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
+const agentId = myAgents[myAgents.length - 1];
+console.log('Agent ID:', agentId.toString());
 ```
 
 ### 2. Get Agent Info
@@ -123,8 +123,8 @@ function getAgent(uint256 agentId)
 **Example:**
 
 ```typescript
-const agentId = 1;
-const agent = await kit.contracts.AgentRegistry.getAgent(agentId);
+const agentId = 1n;
+const agent = await kit.contracts.registry.getAgent(agentId);
 
 console.log('Agent Info:', {
   id: agent.id.toString(),
@@ -155,17 +155,17 @@ function updateAgent(
 **Example:**
 
 ```typescript
-const agentId = 1;
-const newMetadataURI = await kit.uploadToIPFS(updatedMetadata);
+const agentId = 1n;
 
-const tx = await kit.contracts.AgentRegistry.updateAgent(
+const tx = await kit.contracts.registry.updateAgent(
   agentId,
   'Updated description',
-  newMetadataURI,
+  'ipfs://QmNewMetadata',
   ['new-capability', 'another-capability']
 );
 
 await tx.wait();
+console.log('Agent updated');
 ```
 
 ### 4. Deactivate Agent
@@ -183,7 +183,7 @@ function deactivateAgent(uint256 agentId) external
 **Example:**
 
 ```typescript
-const tx = await kit.contracts.AgentRegistry.deactivateAgent(agentId);
+const tx = await kit.contracts.registry.deactivateAgent(agentId);
 await tx.wait();
 console.log('Agent deactivated');
 ```
@@ -199,7 +199,7 @@ function reactivateAgent(uint256 agentId) external
 **Example:**
 
 ```typescript
-const tx = await kit.contracts.AgentRegistry.reactivateAgent(agentId);
+const tx = await kit.contracts.registry.reactivateAgent(agentId);
 await tx.wait();
 console.log('Agent reactivated');
 ```
@@ -224,7 +224,7 @@ function transferAgentOwnership(
 ```typescript
 const newOwner = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb';
 
-const tx = await kit.contracts.AgentRegistry.transferAgentOwnership(
+const tx = await kit.contracts.registry.transferAgentOwnership(
   agentId,
   newOwner
 );
@@ -247,8 +247,8 @@ function getAgentsByOwner(address owner)
 **Example:**
 
 ```typescript
-const myAddress = await kit.signer.getAddress();
-const myAgents = await kit.contracts.AgentRegistry.getAgentsByOwner(myAddress);
+const myAddress = await kit.getSigner()?.getAddress();
+const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
 
 console.log('My agents:', myAgents.map(id => id.toString()));
 ```
@@ -265,11 +265,14 @@ function getAllAgents()
 **Example:**
 
 ```typescript
-const allAgents = await kit.contracts.AgentRegistry.getAllAgents();
+const agentCount = await kit.contracts.registry.agentCount();
+console.log('Total agents:', agentCount.toString());
 
-allAgents.forEach(agent => {
+// Get individual agents
+for (let i = 1n; i <= agentCount; i++) {
+  const agent = await kit.contracts.registry.getAgent(i);
   console.log(`${agent.name} (ID: ${agent.id}) - ${agent.description}`);
-});
+}
 ```
 
 ### Get Active Agents
@@ -293,7 +296,17 @@ function getAgentsByCapability(string memory capability)
 **Example:**
 
 ```typescript
-const tradingAgents = await kit.contracts.AgentRegistry.getAgentsByCapability('trading');
+// Note: This function may not be available in current contract version
+// Alternative: Query all agents and filter by capability
+const agentCount = await kit.contracts.registry.agentCount();
+const tradingAgents = [];
+
+for (let i = 1n; i <= agentCount; i++) {
+  const agent = await kit.contracts.registry.getAgent(i);
+  if (agent.capabilities.includes('trading')) {
+    tradingAgents.push(agent);
+  }
+}
 
 console.log('Trading agents:', tradingAgents);
 ```
@@ -313,8 +326,8 @@ event AgentRegistered(
 **Listen for new agents:**
 
 ```typescript
-kit.contracts.AgentRegistry.on('AgentRegistered', (agentId, owner, name) => {
-  console.log(`New agent registered: ${name} (ID: ${agentId})`);
+kit.contracts.registry.on('AgentRegistered', (agentId, owner, name) => {
+  console.log(`New agent registered: ${name} (ID: ${agentId.toString()})`);
 });
 ```
 
@@ -419,7 +432,7 @@ Always handle potential errors:
 
 ```typescript
 try {
-  const tx = await kit.contracts.AgentRegistry.registerAgent(
+  const tx = await kit.contracts.registry.registerAgent(
     name,
     description,
     metadataURI,
@@ -427,12 +440,12 @@ try {
   );
   
   const receipt = await tx.wait();
-  console.log('Success:', receipt.transactionHash);
+  console.log('Success:', receipt.hash);
   
-} catch (error) {
+} catch (error: any) {
   if (error.code === 'INSUFFICIENT_FUNDS') {
     console.error('Not enough gas');
-  } else if (error.message.includes('Agent name already exists')) {
+  } else if (error.message?.includes('Agent name already exists')) {
     console.error('Name taken, choose another');
   } else {
     console.error('Registration failed:', error);
@@ -495,12 +508,12 @@ describe('AgentRegistry', () => {
 
 ### Somnia Testnet
 ```
-AgentRegistry: 0x1234... (update with actual address)
+AgentRegistry: 0xC9f3452090EEB519467DEa4a390976D38C008347
 ```
 
 ### Somnia Mainnet
 ```
-AgentRegistry: 0x5678... (update with actual address)
+AgentRegistry: Coming soon
 ```
 
 ## ⚠️ Security Considerations

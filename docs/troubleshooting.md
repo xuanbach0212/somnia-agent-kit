@@ -94,18 +94,18 @@ Error: Cannot find module '@somnia/agent-kit'
 
 1. **Verify installation:**
 ```bash
-npm list @somnia/agent-kit
+npm list somnia-agent-kit
 ```
 
 2. **Reinstall package:**
 ```bash
-npm uninstall @somnia/agent-kit
-npm install @somnia/agent-kit
+npm uninstall somnia-agent-kit
+npm install somnia-agent-kit
 ```
 
 3. **Check node_modules:**
 ```bash
-ls -la node_modules/@somnia/
+ls -la node_modules/somnia-agent-kit/
 ```
 
 ---

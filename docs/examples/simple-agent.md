@@ -1,172 +1,373 @@
 # 🤖 Simple Agent Demo
 
-This example demonstrates how to create a basic AI agent using Somnia AI.
+Learn how to create a basic AI agent using Somnia Agent Kit.
 
-## Overview
+## 🎯 Overview
 
-The simple agent demo shows:
-- Creating an agent with minimal configuration
-- Executing basic tasks
-- Handling responses
-- Error management
+This example demonstrates:
+- ✅ Creating an agent with minimal configuration
+- ✅ Registering agent on-chain
+- ✅ Integrating with LLM (Ollama - FREE)
+- ✅ Executing tasks
+- ✅ Handling responses
 
-## Code Example
+## 📋 Prerequisites
+
+- Somnia Agent Kit installed
+- Wallet with testnet tokens
+- Ollama installed (or OpenAI API key)
+- Basic TypeScript knowledge
+
+## 🚀 Quick Start
+
+### Step 1: Install Dependencies
+
+```bash
+npm install somnia-agent-kit dotenv
+npm install -D typescript ts-node @types/node
+```
+
+### Step 2: Setup Environment
+
+Create `.env`:
+
+```bash
+PRIVATE_KEY=your_private_key
+SOMNIA_RPC_URL=https://dream-rpc.somnia.network
+AGENT_REGISTRY_ADDRESS=0xC9f3452090EEB519467DEa4a390976D38C008347
+AGENT_MANAGER_ADDRESS=0x77F6dC5924652e32DBa0B4329De0a44a2C95691E
+AGENT_EXECUTOR_ADDRESS=0x157C56dEdbAB6caD541109daabA4663Fc016026e
+AGENT_VAULT_ADDRESS=0x7cEe3142A9c6d15529C322035041af697B2B5129
+```
+
+### Step 3: Create Simple Agent
+
+Create `simple-agent.ts`:
 
 ```typescript
-import { SomniaAgentSDK } from '@somnia/agent-sdk';
-import { OpenAIProvider } from '@somnia/agent-sdk/llm';
+import { SomniaAgentKit, SOMNIA_NETWORKS, OllamaAdapter } from 'somnia-agent-kit';
+import 'dotenv/config';
 
 async function main() {
-  // Initialize SDK
-  const sdk = new SomniaAgentSDK({
-    privateKey: process.env.PRIVATE_KEY!,
-    rpcUrl: process.env.RPC_URL!,
+  console.log('🤖 Starting Simple Agent Demo\n');
+
+  // 1. Initialize SDK
+  const kit = new SomniaAgentKit({
+    network: SOMNIA_NETWORKS.testnet,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+      agentVault: process.env.AGENT_VAULT_ADDRESS!,
+    },
+    privateKey: process.env.PRIVATE_KEY,
   });
 
-  // Create LLM provider
-  const llmProvider = new OpenAIProvider({
-    apiKey: process.env.OPENAI_API_KEY!,
-    model: 'gpt-4',
+  await kit.initialize();
+  console.log('✅ SDK initialized\n');
+
+  // 2. Setup LLM (Ollama - FREE local AI)
+  const llm = new OllamaAdapter({
+    baseURL: 'http://localhost:11434',
+    model: 'llama3.2',
   });
+  console.log('✅ LLM configured (Ollama)\n');
 
-  // Create agent
-  const agent = await sdk.createAgent({
-    name: 'Simple Assistant',
-    description: 'A helpful AI assistant',
-    llmProvider,
-    capabilities: ['chat', 'analysis'],
-  });
+  // 3. Register Agent
+  console.log('📝 Registering agent on-chain...');
+  const tx = await kit.contracts.registry.registerAgent(
+    'Simple AI Assistant',
+    'A helpful AI agent for answering questions',
+    'ipfs://QmExample',
+    ['chat', 'qa', 'assistance']
+  );
 
-  console.log(`✅ Agent created with ID: ${agent.id}`);
+  const receipt = await tx.wait();
+  console.log('✅ Agent registered!');
+  console.log('   Transaction:', receipt.hash);
 
-  // Execute a task
-  const response = await agent.execute({
-    prompt: 'What is blockchain technology?',
-    maxTokens: 500,
-  });
+  // Get agent ID
+  const myAddress = await kit.getSigner()?.getAddress();
+  const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
+  const agentId = myAgents[myAgents.length - 1];
+  console.log('   Agent ID:', agentId.toString(), '\n');
 
-  console.log('Agent Response:', response.content);
+  // 4. Execute Tasks
+  const tasks = [
+    'What is blockchain technology?',
+    'Explain smart contracts in simple terms',
+    'What are the benefits of decentralization?',
+  ];
 
-  // Get agent info
-  const info = await sdk.getAgentInfo(agent.id);
-  console.log('Agent Info:', info);
+  for (const task of tasks) {
+    console.log(`💬 Task: "${task}"`);
+    
+    const response = await llm.generate(task, {
+      temperature: 0.7,
+      maxTokens: 200,
+    });
+
+    console.log(`🤖 Response: ${response.content.substring(0, 150)}...`);
+    console.log(`📊 Tokens: ${response.usage.totalTokens}\n`);
+  }
+
+  console.log('🎉 Demo complete!');
 }
 
 main().catch(console.error);
 ```
 
-## Running the Example
+## ▶️ Run the Demo
 
 ```bash
-# Navigate to examples directory
-cd examples/simple-agent-demo
+# Make sure Ollama is running
+ollama serve
 
-# Install dependencies (if needed)
-npm install
-
-# Set environment variables
-export PRIVATE_KEY="your_private_key"
-export RPC_URL="your_rpc_url"
-export OPENAI_API_KEY="your_openai_key"
-
-# Run the example
-npx ts-node index.ts
+# In another terminal
+npx ts-node simple-agent.ts
 ```
 
-## Expected Output
+## 📊 Expected Output
 
 ```
-✅ Agent created with ID: 0x1234...
-Agent Response: Blockchain technology is a decentralized, distributed ledger...
-Agent Info: {
-  id: '0x1234...',
-  name: 'Simple Assistant',
-  owner: '0xabcd...',
-  isActive: true
-}
+🤖 Starting Simple Agent Demo
+
+✅ SDK initialized
+
+✅ LLM configured (Ollama)
+
+📝 Registering agent on-chain...
+✅ Agent registered!
+   Transaction: 0xabc123...
+   Agent ID: 5
+
+💬 Task: "What is blockchain technology?"
+🤖 Response: Blockchain technology is a decentralized, distributed ledger system that records transactions across multiple computers in a secure and transparent way...
+📊 Tokens: 156
+
+💬 Task: "Explain smart contracts in simple terms"
+🤖 Response: Smart contracts are self-executing programs stored on a blockchain that automatically execute when predetermined conditions are met...
+📊 Tokens: 142
+
+💬 Task: "What are the benefits of decentralization?"
+🤖 Response: Decentralization offers several key benefits: 1) No single point of failure, 2) Increased security, 3) Transparency, 4) Censorship resistance...
+📊 Tokens: 178
+
+🎉 Demo complete!
 ```
 
-## Key Concepts
+## 🎨 Customization
 
-### 1. SDK Initialization
-The SDK requires a private key and RPC URL to interact with the blockchain.
+### Use Different LLM Providers
 
-### 2. LLM Provider
-Choose from multiple providers:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- DeepSeek
-- Ollama (self-hosted)
+**OpenAI:**
 
-### 3. Agent Creation
-Agents are registered on-chain and can be discovered by others.
-
-### 4. Task Execution
-Execute prompts and receive AI-generated responses.
-
-## Customization
-
-### Using Different LLM Providers
-
-**Anthropic:**
 ```typescript
-import { AnthropicProvider } from '@somnia/agent-sdk/llm';
+import { OpenAIAdapter } from 'somnia-agent-kit';
 
-const llmProvider = new AnthropicProvider({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-  model: 'claude-3-opus-20240229',
+const llm = new OpenAIAdapter({
+  apiKey: process.env.OPENAI_API_KEY!,
+  model: 'gpt-4',
+  temperature: 0.7,
 });
 ```
 
 **DeepSeek:**
-```typescript
-import { DeepSeekProvider } from '@somnia/agent-sdk/llm';
 
-const llmProvider = new DeepSeekProvider({
+```typescript
+import { DeepSeekAdapter } from 'somnia-agent-kit';
+
+const llm = new DeepSeekAdapter({
   apiKey: process.env.DEEPSEEK_API_KEY!,
   model: 'deepseek-chat',
 });
 ```
 
-### Adding Capabilities
+### Add More Capabilities
 
 ```typescript
-const agent = await sdk.createAgent({
-  name: 'Advanced Assistant',
-  description: 'Multi-capability agent',
-  llmProvider,
-  capabilities: [
+const tx = await kit.contracts.registry.registerAgent(
+  'Advanced Assistant',
+  'Multi-capability AI agent',
+  'ipfs://QmExample',
+  [
     'chat',
     'analysis',
-    'code-generation',
-    'data-processing',
-  ],
+    'coding',
+    'translation',
+    'summarization',
+  ]
+);
+```
+
+### Customize LLM Parameters
+
+```typescript
+const response = await llm.generate(prompt, {
+  temperature: 0.9,      // More creative (0.0 - 1.0)
+  maxTokens: 500,        // Longer responses
+  topP: 0.95,           // Nucleus sampling
+  frequencyPenalty: 0.5, // Reduce repetition
+  presencePenalty: 0.5,  // Encourage diversity
 });
 ```
 
-## Error Handling
+## 🔧 Advanced Features
+
+### Error Handling
 
 ```typescript
-try {
-  const response = await agent.execute({
-    prompt: 'Your prompt here',
-  });
-  console.log(response.content);
-} catch (error) {
-  if (error.code === 'INSUFFICIENT_FUNDS') {
-    console.error('Not enough funds in vault');
-  } else if (error.code === 'RATE_LIMIT') {
-    console.error('LLM API rate limit exceeded');
-  } else {
-    console.error('Unexpected error:', error);
+async function executeWithRetry(llm: OllamaAdapter, prompt: string, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await llm.generate(prompt);
+    } catch (error) {
+      console.error(`Attempt ${i + 1} failed:`, error.message);
+      
+      if (i === maxRetries - 1) throw error;
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+    }
   }
 }
 ```
 
-## Next Steps
+### Streaming Responses
 
-- 🔗 [On-chain Chatbot Example](onchain-chatbot.md)
-- 📊 [Monitoring Demo](monitoring.md)
-- 💰 [Vault Demo](vault.md)
-- 📚 [API Reference](../../API_REFERENCE.md)
+```typescript
+import { OllamaAdapter } from 'somnia-agent-kit';
 
+const llm = new OllamaAdapter({
+  baseURL: 'http://localhost:11434',
+  model: 'llama3.2',
+});
+
+// Stream response token by token
+const stream = await llm.generateStream('Tell me a story');
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+```
+
+### Agent with Memory
+
+```typescript
+import { Agent, Memory } from 'somnia-agent-kit';
+
+const agent = new Agent({
+  name: 'Memory Agent',
+  capabilities: ['chat'],
+});
+
+// Initialize with memory
+await agent.initialize(
+  kit.contracts.registry,
+  kit.contracts.executor,
+  { enableMemory: true }
+);
+
+// Agent remembers conversation
+await agent.chat('My name is Alice');
+await agent.chat('What is my name?'); // Will remember "Alice"
+```
+
+## 📊 Monitoring
+
+Add monitoring to track performance:
+
+```typescript
+import { Logger, Metrics } from 'somnia-agent-kit';
+
+const logger = new Logger({ level: 'info' });
+const metrics = new Metrics();
+
+// Log events
+logger.info('Agent started', { agentId });
+
+// Track metrics
+const startTime = Date.now();
+const response = await llm.generate(prompt);
+const duration = Date.now() - startTime;
+
+metrics.recordLLMCall(duration, true);
+metrics.recordTokenUsage(response.usage.totalTokens);
+
+// View metrics
+console.log('Metrics:', metrics.getStats());
+```
+
+## 🧪 Testing
+
+Create `simple-agent.test.ts`:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
+
+describe('Simple Agent', () => {
+  it('should initialize SDK', async () => {
+    const kit = new SomniaAgentKit({
+      network: SOMNIA_NETWORKS.testnet,
+      contracts: {
+        agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+        agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+        agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+        agentVault: process.env.AGENT_VAULT_ADDRESS!,
+      },
+    });
+
+    await kit.initialize();
+    expect(kit.isInitialized()).toBe(true);
+  });
+
+  it('should query agents', async () => {
+    const kit = new SomniaAgentKit({
+      network: SOMNIA_NETWORKS.testnet,
+      contracts: {
+        agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+        agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+        agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+        agentVault: process.env.AGENT_VAULT_ADDRESS!,
+      },
+    });
+
+    await kit.initialize();
+    const count = await kit.contracts.registry.agentCount();
+    expect(count).toBeGreaterThanOrEqual(0n);
+  });
+});
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+## 🎓 Key Learnings
+
+1. ✅ **SDK Initialization** - Connect to Somnia blockchain
+2. ✅ **LLM Integration** - Use Ollama for FREE local AI
+3. ✅ **Agent Registration** - Store agent metadata on-chain
+4. ✅ **Task Execution** - Generate AI responses
+5. ✅ **Error Handling** - Handle failures gracefully
+
+## 🚀 Next Steps
+
+- **[On-chain Chatbot](./onchain-chatbot.md)** - Build a chatbot with conversation history
+- **[Monitoring Demo](./monitoring.md)** - Add comprehensive monitoring
+- **[Vault Demo](./vault.md)** - Manage agent funds
+- **[API Reference](../../API_REFERENCE.md)** - Full API documentation
+
+## 📚 Related Documentation
+
+- **[Quick Start](../quickstart.md)** - Get started guide
+- **[Installation](../installation.md)** - Setup instructions
+- **[LLM Architecture](../LLM_ARCHITECTURE.md)** - Understanding AI integration
+- **[Troubleshooting](../troubleshooting.md)** - Common issues
+
+---
+
+**Congratulations!** 🎉 You've created your first AI agent on Somnia blockchain!

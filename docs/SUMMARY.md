@@ -11,7 +11,7 @@
 ## Core Concepts
 
 * [🏗️ Architecture](architecture.md)
-* [🤖 LLM Architecture](LLM_ARCHITECTURE.md)
+* [🤖 LLM Architecture](llm-architecture.md)
 * [📋 Smart Contracts Overview](contracts-overview.md)
 * [🛠️ SDK Design](sdk-design.md)
 
@@ -25,9 +25,9 @@
 ## SDK & API
 
 * [📚 API Reference](../API_REFERENCE.md)
-* [🔧 SDK Usage](sdk/usage.md)
-* [🏗️ Agent Builder](sdk/agent-builder.md)
-* [🤖 LLM Providers](sdk/llm-providers.md)
+* [🔧 SDK Usage](sdk-usage.md)
+* [🏗️ Agent Builder](agent-builder.md)
+* [🤖 LLM Providers](llm-providers.md)
 
 ## Examples & Tutorials
 
@@ -40,30 +40,30 @@
 
 ## Deployment & Production
 
-* [🚀 Production Deployment](deployment/production.md)
-* [🐳 Docker Deployment](deployment/docker.md)
-* [☸️ Kubernetes Deployment](deployment/kubernetes.md)
-* [📊 Monitoring & Alerts](deployment/monitoring.md)
+* [🚀 Production Deployment](deployment-production.md)
+* [🐳 Docker Deployment](deployment-docker.md)
+* [☸️ Kubernetes Deployment](deployment-kubernetes.md)
+* [📊 Monitoring & Alerts](deployment-monitoring.md)
 
 ## Troubleshooting & Support
 
 * [🔧 Troubleshooting Guide](troubleshooting.md)
 * [❓ FAQ](faq.md)
-* [🐛 Common Errors](troubleshooting/common-errors.md)
-* [⚡ Performance Tips](troubleshooting/performance.md)
+* [🐛 Common Errors](common-errors.md)
+* [⚡ Performance Tips](performance-tips.md)
 
 ## Security
 
-* [🔒 Security Best Practices](security/best-practices.md)
-* [🔑 Key Management](security/key-management.md)
-* [🛡️ Smart Contract Security](security/contract-security.md)
+* [🔒 Security Best Practices](security-best-practices.md)
+* [🔑 Key Management](key-management.md)
+* [🛡️ Smart Contract Security](contract-security.md)
 
 ## Advanced Topics
 
 * [🔧 Testing Guide](../COMPLETE_TESTING_SUMMARY.md)
-* [🏗️ Custom LLM Providers](advanced/custom-llm.md)
-* [⚡ Performance Optimization](advanced/optimization.md)
-* [🔌 Plugin Development](advanced/plugins.md)
+* [🏗️ Custom LLM Providers](custom-llm-providers.md)
+* [⚡ Performance Optimization](performance-optimization.md)
+* [🔌 Plugin Development](plugin-development.md)
 
 ## Resources
 

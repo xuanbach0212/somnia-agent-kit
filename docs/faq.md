@@ -133,7 +133,7 @@ npx hardhat run scripts/deploy.ts --network your-network
 
 ### Q: How do I get testnet tokens?
 
-**A:** Visit the [Somnia Faucet](https://faucet.somnia.network):
+**A:** Visit the Somnia Faucet:
 1. Enter your wallet address
 2. Complete captcha
 3. Receive testnet STM tokens

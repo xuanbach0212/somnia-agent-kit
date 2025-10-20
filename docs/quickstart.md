@@ -1,29 +1,27 @@
 # 🚀 Quick Start Guide
 
-Get your first AI agent running in **5 minutes**!
+Get your first AI agent running in **5 minutes** with Somnia Agent Kit!
 
 ## 📋 Prerequisites
 
 Before you begin, make sure you have:
 
-- ✅ **Node.js 16+** installed
+- ✅ **Node.js 18+** installed
 - ✅ **npm** or **pnpm** package manager
 - ✅ A **wallet with testnet tokens** (for blockchain transactions)
-- ✅ An **LLM API key** (OpenAI, Anthropic, or local Ollama)
+- ✅ An **LLM API key** (OpenAI, DeepSeek) or **Ollama** installed locally
 
 ## 📦 Step 1: Installation
 
-Choose your preferred package manager:
-
 ```bash
-# Using pnpm (recommended)
-pnpm add @somnia/agent-kit
-
 # Using npm
-npm install @somnia/agent-kit
+npm install somnia-agent-kit
+
+# Using pnpm (recommended)
+pnpm add somnia-agent-kit
 
 # Using yarn
-yarn add @somnia/agent-kit
+yarn add somnia-agent-kit
 ```
 
 ## 🔑 Step 2: Environment Setup
@@ -33,22 +31,20 @@ Create a `.env` file in your project root:
 ```bash
 # Blockchain Configuration
 PRIVATE_KEY=your_wallet_private_key_here
-RPC_URL=https://dream-rpc.somnia.network
+SOMNIA_RPC_URL=https://dream-rpc.somnia.network
+SOMNIA_CHAIN_ID=50312
 
 # Smart Contract Addresses (Somnia Testnet)
-AGENT_REGISTRY_ADDRESS=0x1234...
-AGENT_EXECUTOR_ADDRESS=0x5678...
-AGENT_MANAGER_ADDRESS=0x9abc...
-AGENT_VAULT_ADDRESS=0xdef0...
+AGENT_REGISTRY_ADDRESS=0xC9f3452090EEB519467DEa4a390976D38C008347
+AGENT_MANAGER_ADDRESS=0x77F6dC5924652e32DBa0B4329De0a44a2C95691E
+AGENT_EXECUTOR_ADDRESS=0x157C56dEdbAB6caD541109daabA4663Fc016026e
+AGENT_VAULT_ADDRESS=0x7cEe3142A9c6d15529C322035041af697B2B5129
 
-# LLM Provider (choose one or more)
+# LLM Provider (choose one)
 OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# OR
 DEEPSEEK_API_KEY=sk-...
-
-# Optional: Monitoring
-MONITORING_ENABLED=true
-MONITORING_PORT=3001
+# OR use Ollama (no API key needed)
 ```
 
 {% hint style="info" %}
@@ -59,124 +55,54 @@ MONITORING_PORT=3001
 **Security**: Never commit your `.env` file to version control! Add it to `.gitignore`.
 {% endhint %}
 
-## 🎯 Step 3: Create Your First Agent
+## 🎯 Step 3: Your First Agent
 
-Create a new file `my-first-agent.ts`:
+Create a file `my-first-agent.ts`:
 
 ```typescript
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '@somnia/agent-kit';
-import { OpenAIAdapter } from '@somnia/agent-kit/llm';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
+import 'dotenv/config';
 
 async function main() {
-  // 1. Initialize the SDK
   console.log('🔧 Initializing Somnia Agent Kit...');
   
+  // Initialize SDK with testnet
   const kit = new SomniaAgentKit({
     network: SOMNIA_NETWORKS.testnet,
     contracts: {
       agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
-      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
       agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
       agentVault: process.env.AGENT_VAULT_ADDRESS!,
     },
-    privateKey: process.env.PRIVATE_KEY!,
+    privateKey: process.env.PRIVATE_KEY,
   });
 
   await kit.initialize();
   console.log('✅ SDK initialized successfully!');
 
-  // 2. Create an LLM provider
-  console.log('🤖 Setting up AI provider...');
-  
-  const llm = new OpenAIAdapter({
-    apiKey: process.env.OPENAI_API_KEY!,
-    model: 'gpt-4',
-    temperature: 0.7,
-  });
+  // Get network info
+  const networkInfo = kit.getNetworkInfo();
+  console.log('📡 Network:', networkInfo);
 
-  // 3. Register your agent on-chain
-  console.log('📝 Registering agent on blockchain...');
-  
-  const agentMetadata = {
-    name: 'My First AI Agent',
-    description: 'A helpful AI assistant that can answer questions',
-    capabilities: ['chat', 'analysis', 'reasoning'],
-    version: '1.0.0',
-    llm: {
-      recommended: {
-        provider: 'openai',
-        model: 'gpt-4',
-      },
-    },
-  };
+  // Query existing agents
+  const agentCount = await kit.contracts.registry.agentCount();
+  console.log(`📊 Total agents registered: ${agentCount}`);
 
-  // Upload metadata to IPFS
-  const metadataUri = await kit.uploadToIPFS(agentMetadata);
-  
-  // Register on-chain
-  const tx = await kit.contracts.AgentRegistry.registerAgent(
-    agentMetadata.name,
-    agentMetadata.description,
-    metadataUri,
-    agentMetadata.capabilities
-  );
-  
-  await tx.wait();
-  console.log('✅ Agent registered! Transaction:', tx.hash);
+  // Get agent details (if any exist)
+  if (agentCount > 0n) {
+    const agent = await kit.contracts.registry.getAgent(1);
+    console.log('🤖 First agent:', {
+      id: agent.id.toString(),
+      name: agent.name,
+      owner: agent.owner,
+      isActive: agent.isActive,
+    });
+  }
 
-  // 4. Get your agent's ID
-  const agents = await kit.contracts.AgentRegistry.getAgentsByOwner(
-    await kit.signer.getAddress()
-  );
-  const myAgentId = agents[agents.length - 1]; // Latest agent
-  console.log('🎉 Your Agent ID:', myAgentId.toString());
-
-  // 5. Execute a task with your agent
-  console.log('💬 Testing agent...');
-  
-  const prompt = 'What is blockchain technology and how does it work?';
-  const response = await llm.generate({
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a helpful AI assistant specialized in explaining technical concepts clearly.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    maxTokens: 500,
-  });
-
-  console.log('\n📤 Prompt:', prompt);
-  console.log('📥 Response:', response.content);
-  console.log('\n💰 Tokens used:', response.usage);
-
-  // 6. Create a vault for your agent (optional)
-  console.log('\n💰 Creating agent vault...');
-  
-  const vaultTx = await kit.contracts.AgentVault.createVault(
-    myAgentId,
-    ethers.utils.parseEther('1.0') // Daily limit: 1 token
-  );
-  await vaultTx.wait();
-  
-  console.log('✅ Vault created!');
-  
-  // 7. Deposit funds to vault
-  const depositTx = await kit.contracts.AgentVault.depositNative(
-    myAgentId,
-    { value: ethers.utils.parseEther('0.1') } // Deposit 0.1 tokens
-  );
-  await depositTx.wait();
-  
-  console.log('✅ Deposited 0.1 tokens to vault');
-
-  console.log('\n🎊 Setup complete! Your agent is ready to use.');
+  console.log('\n🎉 Setup complete!');
 }
 
-// Run the script
 main()
   .then(() => process.exit(0))
   .catch((error) => {
@@ -200,55 +126,154 @@ npx ts-node my-first-agent.ts
 ```
 🔧 Initializing Somnia Agent Kit...
 ✅ SDK initialized successfully!
-🤖 Setting up AI provider...
-📝 Registering agent on blockchain...
-✅ Agent registered! Transaction: 0xabc123...
-🎉 Your Agent ID: 1
-💬 Testing agent...
+📡 Network: {
+  name: 'Somnia Dream Testnet',
+  rpcUrl: 'https://dream-rpc.somnia.network',
+  chainId: 50312
+}
+📊 Total agents registered: 5
+🤖 First agent: {
+  id: '1',
+  name: 'Trading Bot',
+  owner: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  isActive: true
+}
 
-📤 Prompt: What is blockchain technology and how does it work?
-📥 Response: Blockchain technology is a decentralized, distributed ledger 
-system that records transactions across multiple computers...
-
-💰 Tokens used: { promptTokens: 45, completionTokens: 234, totalTokens: 279 }
-
-💰 Creating agent vault...
-✅ Vault created!
-✅ Deposited 0.1 tokens to vault
-
-🎊 Setup complete! Your agent is ready to use.
+🎉 Setup complete!
 ```
+
+## 🚀 Step 5: Register Your Own Agent
+
+Now let's register your own agent:
+
+```typescript
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
+import 'dotenv/config';
+
+async function registerAgent() {
+  const kit = new SomniaAgentKit({
+    network: SOMNIA_NETWORKS.testnet,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+      agentVault: process.env.AGENT_VAULT_ADDRESS!,
+    },
+    privateKey: process.env.PRIVATE_KEY!,
+  });
+
+  await kit.initialize();
+
+  console.log('📝 Registering new agent...');
+
+  // Register agent on-chain
+  const tx = await kit.contracts.registry.registerAgent(
+    'My AI Assistant',
+    'A helpful AI agent powered by Somnia',
+    'ipfs://QmExample', // Metadata URI (can be empty for now)
+    ['chat', 'analysis'] // Capabilities
+  );
+
+  console.log('⏳ Waiting for transaction...');
+  const receipt = await tx.wait();
+  
+  console.log('✅ Agent registered!');
+  console.log('📄 Transaction:', receipt.hash);
+
+  // Get your agent ID
+  const myAddress = await kit.getSigner()?.getAddress();
+  const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
+  const myAgentId = myAgents[myAgents.length - 1];
+
+  console.log('🎉 Your Agent ID:', myAgentId.toString());
+}
+
+registerAgent();
+```
+
+## 🧠 Step 6: Add AI with LLM
+
+Let's add AI capabilities using Ollama (FREE local AI):
+
+```typescript
+import { SomniaAgentKit, SOMNIA_NETWORKS, OllamaAdapter } from 'somnia-agent-kit';
+import 'dotenv/config';
+
+async function aiAgent() {
+  // Initialize SDK
+  const kit = new SomniaAgentKit({
+    network: SOMNIA_NETWORKS.testnet,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+      agentVault: process.env.AGENT_VAULT_ADDRESS!,
+    },
+  });
+
+  await kit.initialize();
+
+  // Initialize Ollama (FREE local LLM)
+  const llm = new OllamaAdapter({
+    baseURL: 'http://localhost:11434',
+    model: 'llama3.2',
+  });
+
+  console.log('🤖 AI Agent ready!');
+
+  // Generate response
+  const response = await llm.generate(
+    'What is blockchain technology in simple terms?'
+  );
+
+  console.log('💬 AI Response:', response.content);
+  console.log('📊 Tokens used:', response.usage);
+}
+
+aiAgent();
+```
+
+{% hint style="info" %}
+**Using Ollama (FREE)**:
+```bash
+# Install Ollama
+brew install ollama  # macOS
+# or download from https://ollama.ai
+
+# Start Ollama
+ollama serve
+
+# Pull a model
+ollama pull llama3.2
+```
+{% endhint %}
 
 ## 🎯 What Just Happened?
 
-1. ✅ **Initialized SDK** - Connected to Somnia blockchain
-2. ✅ **Created LLM Provider** - Set up OpenAI GPT-4
-3. ✅ **Registered Agent** - Stored agent metadata on-chain
-4. ✅ **Executed Task** - Agent answered a question
-5. ✅ **Created Vault** - Set up fund management
-6. ✅ **Deposited Funds** - Added tokens for agent operations
+1. ✅ **Installed SDK** - Added `somnia-agent-kit` package
+2. ✅ **Initialized SDK** - Connected to Somnia blockchain
+3. ✅ **Queried Agents** - Read data from smart contracts
+4. ✅ **Registered Agent** - Created your own agent on-chain
+5. ✅ **Added AI** - Integrated LLM for intelligent responses
 
 ## 🚀 Next Steps
 
-Now that you have a working agent, explore more advanced features:
+Now that you have a working setup, explore more:
 
-### 📚 Learn More
-- **[Architecture Overview](./architecture.md)** - Understand how everything works
-- **[Smart Contracts](./contracts-overview.md)** - Deep dive into on-chain logic
+### 📚 Learn Core Concepts
+- **[Architecture](./architecture.md)** - Understand how everything works
+- **[Smart Contracts](./contracts-overview.md)** - Deep dive into contracts
 - **[LLM Architecture](./LLM_ARCHITECTURE.md)** - Learn about AI integration
-- **[SDK Design](./sdk-design.md)** - Explore SDK capabilities
 
 ### 💡 Try Examples
-- **[Simple Agent Demo](../examples/simple-agent.md)** - Basic agent usage
-- **[On-chain Chatbot](../examples/onchain-chatbot.md)** - Build a chatbot
-- **[Monitoring Demo](../examples/monitoring.md)** - Track agent performance
-- **[Vault Demo](../examples/vault.md)** - Advanced fund management
+- **[Simple Agent Demo](./examples/simple-agent.md)** - Basic agent usage
+- **[On-chain Chatbot](./examples/onchain-chatbot.md)** - Build a chatbot
+- **[Monitoring Demo](./examples/monitoring.md)** - Track performance
 
 ### 🛠️ Advanced Topics
-- **[Agent Builder](./sdk/agent-builder.md)** - Use the builder pattern
-- **[Monitoring & Metrics](./monitoring/overview.md)** - Production monitoring
-- **[Security Best Practices](./security/best-practices.md)** - Keep agents secure
-- **[Deployment Guide](./deployment/production.md)** - Deploy to production
+- **[Agent Runtime](./sdk/agent-runtime.md)** - Autonomous agents
+- **[LLM Integration](./sdk/llm-providers.md)** - Multiple LLM providers
+- **[Production Deployment](./deployment/production.md)** - Deploy to production
 
 ## 🆘 Troubleshooting
 
@@ -256,34 +281,36 @@ Now that you have a working agent, explore more advanced features:
 
 **Problem: "Insufficient funds" error**
 ```bash
-# Solution: Get testnet tokens from faucet
+# Solution: Get testnet tokens
 # Visit: https://faucet.somnia.network
 ```
 
 **Problem: "Contract not deployed" error**
 ```bash
 # Solution: Check contract addresses in .env
-# Make sure you're using the correct network
+# Verify you're using testnet addresses
 ```
 
-**Problem: "LLM API key invalid"**
+**Problem: "Ollama connection failed"**
 ```bash
-# Solution: Verify your API key
-# OpenAI keys start with 'sk-'
-# Anthropic keys start with 'sk-ant-'
+# Solution: Start Ollama service
+ollama serve
+
+# Verify it's running
+curl http://localhost:11434/api/tags
 ```
 
 **Problem: TypeScript errors**
 ```bash
 # Solution: Install type definitions
-npm install -D @types/node
+npm install -D typescript @types/node ts-node
 ```
 
 ### Need Help?
 
 - 📖 Check the [FAQ](./faq.md)
-- 🐛 [Report an issue](https://github.com/your-repo/somnia-ai/issues)
-- 💬 [Join our Discord](https://discord.gg/somnia-ai)
+- 🐛 [Report an issue](https://github.com/xuanbach0212/somnia-agent-kit/issues)
+- 💬 [Join Discord](https://discord.gg/somnia)
 - 📧 Email: support@somnia.network
 
 ## 🎓 Quick Reference
@@ -292,43 +319,57 @@ npm install -D @types/node
 
 ```bash
 # Install SDK
-pnpm add @somnia/agent-kit
+npm install somnia-agent-kit
 
 # Run TypeScript
 npx ts-node script.ts
 
-# Check balance
-npx hardhat run scripts/check-balance.js
-
-# Deploy contracts
-cd contracts && npx hardhat run scripts/deploy.ts
+# Install Ollama (macOS)
+brew install ollama
+ollama serve
+ollama pull llama3.2
 ```
 
 ### Essential Imports
 
 ```typescript
 // Core SDK
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
 // LLM Providers
-import { OpenAIAdapter } from '@somnia/agent-kit/llm';
-import { AnthropicAdapter } from '@somnia/agent-kit/llm';
-import { OllamaAdapter } from '@somnia/agent-kit/llm';
+import { OpenAIAdapter, OllamaAdapter, DeepSeekAdapter } from 'somnia-agent-kit';
+
+// Agent Runtime
+import { Agent, AgentPlanner, AgentExecutor } from 'somnia-agent-kit';
 
 // Monitoring
-import { AgentMonitor } from '@somnia/agent-kit/monitoring';
+import { Logger, Metrics, Dashboard } from 'somnia-agent-kit';
 ```
 
 ### Key Concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Agent** | An AI entity registered on-chain |
+| **SomniaAgentKit** | Main SDK class for blockchain interaction |
+| **Agent** | Autonomous AI entity with lifecycle management |
 | **Registry** | Smart contract storing agent metadata |
 | **Executor** | Handles agent task execution |
-| **Vault** | Manages agent funds |
-| **LLM** | Language model (OpenAI, Claude, etc.) |
-| **IPFS** | Decentralized storage for metadata |
+| **Vault** | Manages agent funds with daily limits |
+| **LLM Adapter** | Interface to AI models (OpenAI, Ollama, etc.) |
+
+### Network Configuration
+
+```typescript
+// Testnet (recommended for development)
+network: SOMNIA_NETWORKS.testnet
+// RPC: https://dream-rpc.somnia.network
+// Chain ID: 50312
+
+// Mainnet (production)
+network: SOMNIA_NETWORKS.mainnet
+// RPC: https://rpc.somnia.network
+// Chain ID: 50311
+```
 
 ---
 
