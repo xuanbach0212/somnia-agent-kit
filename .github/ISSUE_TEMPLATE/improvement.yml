@@ -1,0 +1,96 @@
+name: 🔧 Improvement
+description: Suggest an improvement to existing functionality
+title: "[Improvement]: "
+labels: ["improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest an improvement to make existing features better!
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: What needs improvement?
+      options:
+        - Core SDK
+        - Agent Runtime
+        - LLM Integration
+        - Monitoring
+        - Smart Contracts
+        - Documentation
+        - Examples
+        - Performance
+        - Developer Experience
+        - Error Messages
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Improvement Type
+      options:
+        - Performance optimization
+        - Better error messages
+        - API simplification
+        - Documentation clarity
+        - Code quality
+        - Developer experience
+        - Testing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: How does it work now?
+      placeholder: Currently, when I...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Improvement
+      description: How should it work instead?
+      placeholder: It would be better if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      render: typescript
+      placeholder: |
+        // Current way
+        const result = await kit.currentMethod();
+        
+        // Proposed way
+        const result = await kit.improvedMethod();
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: Why is this improvement valuable?
+      placeholder: |
+        - Easier to use
+        - Better performance
+        - Clearer API
+
+  - type: textarea
+    id: test
+    attributes:
+      label: How to Test
+      description: How to verify the improvement works?
+      placeholder: |
+        1. Use the improved method
+        2. Compare performance/usability
+        3. Verify backward compatibility
+
