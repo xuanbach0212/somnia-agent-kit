@@ -57,10 +57,23 @@ console.log('Agent:', agent);
 
 ## 📚 Documentation Structure
 
-- **[Quick Start](quickstart.md)**: Get up and running in 5 minutes
-- **[Architecture](architecture.md)**: Understand the system design
-- **[API Reference](../API_REFERENCE.md)**: Complete API documentation
-- **[Examples](../examples/README.md)**: 5 working examples (quickstart, register, AI, tasks, monitoring)
+### Getting Started
+- **[Quick Start](quickstart.md)** - Get up and running in 5 minutes
+- **[Installation](installation.md)** - Install the SDK
+- **[FAQ](faq.md)** - Common questions
+
+### SDK Usage
+- **[Working with Agents](sdk-agents.md)** - Register and manage agents
+- **[Task Management](sdk-tasks.md)** - Create and execute tasks
+- **[Vault Operations](sdk-vault.md)** - Manage agent funds
+- **[LLM Integration](sdk-llm.md)** - Use AI with your agents
+- **[API Reference](../API_REFERENCE.md)** - Complete API docs
+
+### CLI Tools
+- **[CLI Guide](cli-guide.md)** - Command-line interface
+
+### Examples
+- **[Examples Overview](../examples/README.md)** - 5 working examples
 
 ## 🛠️ Tech Stack
 
