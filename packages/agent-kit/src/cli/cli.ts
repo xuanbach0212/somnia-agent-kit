@@ -171,7 +171,7 @@ export class CLI {
   showHelp(): void {
     console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║              Somnia Agent Kit CLI v2.0.1                      ║
+║              Somnia Agent Kit CLI v2.1.0                      ║
 ║     Command-line interface for AI agents on Somnia            ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -277,7 +277,7 @@ Usage: somnia-agent <command> [options]
    * Show version
    */
   showVersion(): void {
-    console.log('somnia-agent-kit v2.0.1');
+    console.log('somnia-agent-kit v2.1.0');
   }
 
   /**

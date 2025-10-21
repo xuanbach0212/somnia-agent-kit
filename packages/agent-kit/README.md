@@ -4,31 +4,42 @@
 
 [![npm version](https://img.shields.io/npm/v/somnia-agent-kit.svg)](https://www.npmjs.com/package/somnia-agent-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
 
-**Bridge AI and Web3** - Complete SDK combining AI reasoning (LLM), blockchain execution (smart contracts), autonomous agents, and monitoring.
+Complete SDK for building AI agents on blockchain - combines AI reasoning, smart contracts, and monitoring.
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
-
 ```bash
 npm install somnia-agent-kit
-# or
-yarn add somnia-agent-kit
-# or
-pnpm add somnia-agent-kit
 ```
 
-### Basic Usage
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+// SDK auto-loads config from .env
+const kit = new SomniaAgentKit();
+await kit.initialize();
+
+// Query agent
+const agent = await kit.contracts.registry.getAgent(1);
+```
+
+> **Note**: Requires `.env` file - see [Configuration](#-configuration) or [SDK Usage](#-sdk-usage) for full options
+
+---
+
+## 📚 SDK Usage
+
+### Initialize SDK
+
+**Option 1: Full manual configuration**
 
 ```typescript
 import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
-// Initialize
 const kit = new SomniaAgentKit({
   network: SOMNIA_NETWORKS.testnet,
   contracts: {
@@ -37,129 +48,129 @@ const kit = new SomniaAgentKit({
     agentExecutor: '0x157C56dEdbAB6caD541109daabA4663Fc016026e',
     agentVault: '0x7cEe3142A9c6d15529C322035041af697B2B5129',
   },
-  privateKey: process.env.PRIVATE_KEY, // Optional: for transactions
+  privateKey: process.env.PRIVATE_KEY, // Optional - only for write operations
 });
 
 await kit.initialize();
+```
 
-// Query agents
-const agent = await kit.contracts.registry.getAgent(1);
+**Or: Auto-load from .env (recommended)**
 
-// Register agent (requires private key)
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+// SDK automatically loads network, contracts, and privateKey from .env
+const kit = new SomniaAgentKit();
+await kit.initialize();
+```
+
+> **Note**: Create a `.env` file with required variables (see [Configuration](#-configuration))
+
+### Register Agent
+
+```typescript
+// Requires private key
 const tx = await kit.contracts.registry.registerAgent(
   'My AI Agent',
-  'Autonomous agent',
+  'Agent description',
   'ipfs://metadata',
   ['trading', 'analysis']
 );
 await tx.wait();
 ```
 
----
+### Query Agents
 
-## 📦 What's Included
-
-### Core SDK
 ```typescript
-import { SomniaAgentKit } from 'somnia-agent-kit';
+// No private key needed
+
+// Get total agents
+const total = await kit.contracts.registry.getTotalAgents();
+
+// Get agent by ID
+const agent = await kit.contracts.registry.getAgent(1);
+
+// Get agent owner
+const owner = await kit.contracts.registry.getAgentOwner(1);
 ```
-Main SDK class with blockchain integration, contract wrappers, and configuration management.
 
-### Agent Runtime
+### Create Task
+
 ```typescript
-import { Agent, AgentPlanner, AgentExecutor, TriggerManager, PolicyEngine } from 'somnia-agent-kit';
+// Requires private key
+import { ethers } from 'ethers';
+
+const tx = await kit.contracts.manager.createTask(
+  agentId,
+  JSON.stringify({ action: 'analyze', data: {...} }),
+  { value: ethers.parseEther('0.001') }
+);
+await tx.wait();
 ```
-Autonomous agent lifecycle, AI planning, execution, triggers, policies, and memory management.
 
-### LLM Integration
-```typescript
-import { OpenAIAdapter, OllamaAdapter, DeepSeekAdapter, LLMPlanner, MultiStepReasoner } from 'somnia-agent-kit';
-```
-AI reasoning with OpenAI, Ollama (FREE local), DeepSeek, planning, and chain-of-thought.
-
-### Monitoring
-```typescript
-import { Logger, Metrics, Dashboard, EventRecorder, Telemetry } from 'somnia-agent-kit';
-```
-Structured logging, performance metrics, web dashboard, event tracking, and analytics.
-
----
-
-## 💡 Example: AI Trading Bot
+### Manage Vault
 
 ```typescript
-import { SomniaAgentKit, Agent, OllamaAdapter, LLMPlanner } from 'somnia-agent-kit';
-
-// Setup
-const kit = new SomniaAgentKit({...});
-const llm = new OllamaAdapter({ model: 'llama3.2' }); // FREE local AI
-const planner = new LLMPlanner(llm);
-
-// Create agent
-const agent = new Agent({
-  name: 'Trading Bot',
-  capabilities: ['trading', 'analysis'],
+// Deposit (requires private key)
+const tx = await kit.contracts.vault.deposit(agentId, {
+  value: ethers.parseEther('1.0')
 });
+await tx.wait();
 
-// AI analyzes → plans → executes
-const analysis = await llm.generate("Analyze ETH/USD market");
-const plan = await planner.plan(analysis);
-await agent.execute(plan);
+// Check balance (no private key needed)
+const balance = await kit.contracts.vault.getBalance(agentId);
+
+// Withdraw (requires private key)
+const withdrawTx = await kit.contracts.vault.withdraw(agentId, amount);
+await withdrawTx.wait();
 ```
 
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Network (required)
-SOMNIA_RPC_URL=https://dream-rpc.somnia.network
-SOMNIA_CHAIN_ID=50312
-
-# Private Key (optional - only for transactions)
-PRIVATE_KEY=0x...
-
-# Contracts (required)
-AGENT_REGISTRY_ADDRESS=0xC9f3452090EEB519467DEa4a390976D38C008347
-AGENT_MANAGER_ADDRESS=0x77F6dC5924652e32DBa0B4329De0a44a2C95691E
-AGENT_EXECUTOR_ADDRESS=0x157C56dEdbAB6caD541109daabA4663Fc016026e
-AGENT_VAULT_ADDRESS=0x7cEe3142A9c6d15529C322035041af697B2B5129
-
-# LLM (optional)
-OPENAI_API_KEY=sk-...
-```
-
-Then simply:
-```typescript
-const kit = new SomniaAgentKit(); // Auto-loads from .env
-```
-
----
-
-## 🧠 LLM Support
-
-### Ollama (FREE Local AI)
-```bash
-brew install ollama
-ollama serve
-ollama pull llama3.2
-```
+### Use with LLM
 
 ```typescript
 import { OllamaAdapter } from 'somnia-agent-kit';
-const llm = new OllamaAdapter({ baseURL: 'http://localhost:11434', model: 'llama3.2' });
+
+const llm = new OllamaAdapter({
+  baseURL: 'http://localhost:11434',
+  model: 'llama3.2',
+});
+
+const response = await llm.chat([
+  { role: 'user', content: 'Analyze this data...' }
+]);
 ```
 
-### OpenAI
+---
+
+## 🖥️ CLI Tools
+
+```bash
+# Install globally
+npm install -g somnia-agent-kit
+
+# Use CLI
+somnia-agent init
+somnia-agent agent:list
+somnia-agent network:info
+
+# Short alias
+sak agent:list
+```
+
+---
+
+## 🧠 LLM Providers
+
 ```typescript
+// Ollama (FREE local)
+import { OllamaAdapter } from 'somnia-agent-kit';
+const llm = new OllamaAdapter({ model: 'llama3.2' });
+
+// OpenAI
 import { OpenAIAdapter } from 'somnia-agent-kit';
-const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY, model: 'gpt-4' });
-```
+const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
 
-### DeepSeek
-```typescript
+// DeepSeek
 import { DeepSeekAdapter } from 'somnia-agent-kit';
 const llm = new DeepSeekAdapter({ apiKey: process.env.DEEPSEEK_API_KEY });
 ```
@@ -171,7 +182,7 @@ const llm = new DeepSeekAdapter({ apiKey: process.env.DEEPSEEK_API_KEY });
 ```typescript
 import { Logger, Metrics, Dashboard } from 'somnia-agent-kit';
 
-// Logging
+// Logger
 const logger = new Logger();
 logger.info('Agent started', { agentId: 1 });
 
@@ -181,49 +192,76 @@ metrics.recordLLMCall(duration, true);
 
 // Dashboard
 const dashboard = new Dashboard({ port: 3001 });
-await dashboard.start(); // http://localhost:3001
+await dashboard.start();
+// Open http://localhost:3001
 ```
 
 ---
 
-## 🎯 Key Features
+## 🔧 Configuration
 
-- ✅ **Complete SDK** - Blockchain, contracts, signers
-- ✅ **Agent Runtime** - Autonomous agents with lifecycle management
-- ✅ **LLM Integration** - OpenAI, Ollama (FREE), DeepSeek
-- ✅ **AI Planning** - LLMPlanner, MultiStepReasoner
-- ✅ **Monitoring** - Logger, Metrics, Dashboard
-- ✅ **TypeScript** - Full type safety
-- ✅ **Production Ready** - Battle-tested on Somnia Testnet
+Create a `.env` file in your project root:
+
+```bash
+# Network
+SOMNIA_RPC_URL=https://dream-rpc.somnia.network
+SOMNIA_CHAIN_ID=50312
+
+# Private Key (OPTIONAL - only for write operations)
+PRIVATE_KEY=0x...
+
+# Contract Addresses
+AGENT_REGISTRY_ADDRESS=0xC9f3452090EEB519467DEa4a390976D38C008347
+AGENT_MANAGER_ADDRESS=0x77F6dC5924652e32DBa0B4329De0a44a2C95691E
+AGENT_EXECUTOR_ADDRESS=0x157C56dEdbAB6caD541109daabA4663Fc016026e
+AGENT_VAULT_ADDRESS=0x7cEe3142A9c6d15529C322035041af697B2B5129
+
+# LLM API Keys (optional)
+OPENAI_API_KEY=sk-...
+DEEPSEEK_API_KEY=sk-...
+```
+
+Then use SDK without config:
+
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+// Auto-loads from .env
+const kit = new SomniaAgentKit();
+await kit.initialize();
+```
 
 ---
 
 ## 📚 Documentation
 
-- **GitHub**: https://github.com/xuanbach0212/somnia-agent-kit
-- **Examples**: https://github.com/xuanbach0212/somnia-agent-kit/tree/main/examples
-- **API Reference**: https://github.com/xuanbach0212/somnia-agent-kit/blob/main/API_REFERENCE.md
-- **Architecture**: https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/architecture.md
+- **[Quick Start](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/quickstart.md)**
+- **[SDK Usage](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/sdk-usage.md)**
+- **[Working with Agents](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/sdk-agents.md)**
+- **[Task Management](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/sdk-tasks.md)**
+- **[Vault Operations](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/sdk-vault.md)**
+- **[LLM Integration](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/sdk-llm.md)**
+- **[CLI Guide](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/docs/cli-guide.md)**
+- **[API Reference](https://github.com/xuanbach0212/somnia-agent-kit/blob/main/API_REFERENCE.md)**
+
+---
+
+## 📦 Smart Contracts (Somnia Testnet)
+
+| Contract | Address |
+|----------|---------|
+| AgentRegistry | `0xC9f3452090EEB519467DEa4a390976D38C008347` |
+| AgentManager | `0x77F6dC5924652e32DBa0B4329De0a44a2C95691E` |
+| AgentExecutor | `0x157C56dEdbAB6caD541109daabA4663Fc016026e` |
+| AgentVault | `0x7cEe3142A9c6d15529C322035041af697B2B5129` |
 
 ---
 
 ## 🔗 Links
 
-**Package**
-- npm: https://www.npmjs.com/package/somnia-agent-kit
-- GitHub: https://github.com/xuanbach0212/somnia-agent-kit
-- Issues: https://github.com/xuanbach0212/somnia-agent-kit/issues
-
-**Somnia Network**
-- Website: https://somnia.network
-- Explorer: https://explorer.somnia.network
-- Discord: https://discord.gg/somnia
-
-**Deployed Contracts (Testnet)**
-- AgentRegistry: `0xC9f3452090EEB519467DEa4a390976D38C008347`
-- AgentManager: `0x77F6dC5924652e32DBa0B4329De0a44a2C95691E`
-- AgentExecutor: `0x157C56dEdbAB6caD541109daabA4663Fc016026e`
-- AgentVault: `0x7cEe3142A9c6d15529C322035041af697B2B5129`
+- **npm**: https://www.npmjs.com/package/somnia-agent-kit
+- **GitHub**: https://github.com/xuanbach0212/somnia-agent-kit
+- **Somnia Network**: https://somnia.network
 
 ---
 
@@ -234,5 +272,3 @@ MIT License - see [LICENSE](https://github.com/xuanbach0212/somnia-agent-kit/blo
 ---
 
 **Built with ❤️ for Somnia Network**
-
-*Making AI agents on blockchain accessible to everyone* 🌟
