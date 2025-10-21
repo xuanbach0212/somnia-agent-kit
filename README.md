@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)](./COMPLETE_TESTING_SUMMARY.md)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](./contracts/test/)
 [![Somnia](https://img.shields.io/badge/Somnia-Testnet-purple)](https://explorer.somnia.network)
 
 ---
@@ -180,18 +180,17 @@ await kit.contracts.registry.updateAgent(agentId, {
 
 ## 📊 Examples
 
-| Example | Description | Status |
-|---------|-------------|--------|
-| **ai-agent-ollama** | Register agent with FREE local LLM | ✅ Working |
-| **use-deployed-agent** | Execute tasks with deployed agent | ✅ Working |
-| **monitoring-demo** | Logger & Metrics tracking | ✅ Working |
-| **dashboard-demo** | Web UI for monitoring | ✅ Working |
+5 focused examples to get you started:
 
-**Run any example:**
-```bash
-cd examples/<example-name>
-npx ts-node index.ts
-```
+| # | Example | What it does | Run |
+|---|---------|--------------|-----|
+| 1 | **Quickstart** | Initialize SDK, query agents | `npx ts-node examples/01-quickstart/index.ts` |
+| 2 | **Register Agent** | Register new agent on-chain | `npx ts-node examples/02-register-agent/index.ts` |
+| 3 | **AI Agent** | Use FREE local AI (Ollama) | `npx ts-node examples/03-ai-agent/index.ts` |
+| 4 | **Task Execution** | Create, start, complete tasks | `npx ts-node examples/04-task-execution/index.ts` |
+| 5 | **Monitoring** | Logger, Metrics, Dashboard | `npx ts-node examples/05-monitoring/index.ts` |
+
+**See**: [examples/README.md](./examples/README.md) for detailed setup
 
 ---
 
@@ -293,11 +292,10 @@ await kit.contracts.manager.completeTask(taskId, result);
 |----------|-------------|
 | **[API_REFERENCE.md](./API_REFERENCE.md)** | Complete API documentation |
 | **[DEPLOYMENT_COMPLETE.md](./DEPLOYMENT_COMPLETE.md)** | Deployed contract addresses |
-| **[COMPLETE_TESTING_SUMMARY.md](./COMPLETE_TESTING_SUMMARY.md)** | Testing results (41 tests) |
 | **[docs/](./docs/)** | Architecture, guides, SDK design |
-| **[examples/](./examples/)** | 7 working examples |
+| **[examples/](./examples/)** | 5 focused examples |
 
-**Start here**: `docs/quickstart.md` → `examples/` → Build!
+**Start here**: `examples/README.md` → Pick an example → Build!
 
 ---
 
@@ -345,7 +343,7 @@ npx ts-node index.ts
 ### For New Users
 1. Read this README
 2. Install Ollama (FREE AI)
-3. Run `examples/ai-agent-ollama`
+3. Run `examples/01-quickstart`
 4. Build your agent!
 
 ### For Developers
@@ -355,10 +353,9 @@ npx ts-node index.ts
 4. Start building!
 
 ### For Reviewers
-1. See `COMPLETE_TESTING_SUMMARY.md`
-2. Check deployed contracts
-3. Run examples
-4. Review code!
+1. Check deployed contracts
+2. Run examples
+3. Review code!
 
 ---
 
@@ -399,7 +396,7 @@ MIT License - see [LICENSE](LICENSE) file
 
 - **Discord**: Join #dev-chat for help
 - **Issues**: Open GitHub issue
-- **Docs**: Check `DOCUMENTATION_GUIDE.md`
+- **Docs**: Check `docs/` folder
 
 ---
 
@@ -410,7 +407,7 @@ MIT License - see [LICENSE](LICENSE) file
 - ✅ **4 Smart Contracts** deployed on Somnia
 - ✅ **3 LLM Providers** (including FREE Ollama)
 - ✅ **Complete Monitoring** (Logger, Metrics, Dashboard)
-- ✅ **7 Working Examples** ready to run
+- ✅ **5 Focused Examples** ready to run
 - ✅ **Production Ready** with comprehensive docs
 
 **Start building AI agents on blockchain today!** 🚀
