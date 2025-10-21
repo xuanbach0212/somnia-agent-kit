@@ -1,6 +1,6 @@
 # Table of contents
 
-* [👋 Welcome to Somnia AI](README.md)
+* [👋 Welcome to Somnia Agent Kit](README.md)
 
 ## Getting Started
 
@@ -8,75 +8,40 @@
 * [📦 Installation](installation.md)
 * [❓ FAQ](faq.md)
 
-## Core Concepts
+## SDK Usage
 
-* [🏗️ Architecture](architecture.md)
-* [🤖 LLM Architecture](llm-architecture.md)
-* [📋 Smart Contracts Overview](contracts-overview.md)
-* [🛠️ SDK Design](sdk-design.md)
+* [📚 API Reference](../API_REFERENCE.md)
+* [🔧 Basic Usage](sdk-usage.md)
+* [🤖 Working with Agents](sdk-agents.md)
+* [⚡ Task Management](sdk-tasks.md)
+* [💰 Vault Operations](sdk-vault.md)
+* [🧠 LLM Integration](sdk-llm.md)
+
+## CLI Tools
+
+* [🖥️ CLI Guide](cli-guide.md)
+
+## Examples
+
+* [💡 Examples Overview](../examples/README.md)
+* [🚀 Quickstart Example](../examples/01-quickstart/index.ts)
+* [📝 Register Agent](../examples/02-register-agent/index.ts)
+* [🤖 AI Agent with Ollama](../examples/03-ai-agent/index.ts)
+* [⚡ Task Execution](../examples/04-task-execution/index.ts)
+* [📊 Monitoring](../examples/05-monitoring/index.ts)
 
 ## Smart Contracts
 
+* [📋 Contracts Overview](contracts-overview.md)
 * [📋 AgentRegistry](contracts/agent-registry.md)
 * [⚡ AgentExecutor](contracts/agent-executor.md)
 * [💰 AgentVault](contracts/agent-vault.md)
 * [📝 AgentManager](contracts/agent-manager.md)
 
-## SDK & API
+## Reference
 
-* [📚 API Reference](../API_REFERENCE.md)
-* [🔧 SDK Usage](sdk-usage.md)
-* [🏗️ Agent Builder](agent-builder.md)
-* [🤖 LLM Providers](llm-providers.md)
-
-## Examples & Tutorials
-
-* [💡 Examples Overview](../examples/README.md)
-* [🚀 01 - Quickstart](../examples/01-quickstart/index.ts)
-* [📝 02 - Register Agent](../examples/02-register-agent/index.ts)
-* [🤖 03 - AI Agent](../examples/03-ai-agent/index.ts)
-* [⚡ 04 - Task Execution](../examples/04-task-execution/index.ts)
-* [📊 05 - Monitoring](../examples/05-monitoring/index.ts)
-
-## Example Guides (Detailed)
-
-* [🤖 Simple Agent Demo](examples/simple-agent.md)
-* [💬 On-chain Chatbot](examples/onchain-chatbot.md)
-* [📊 Monitoring Demo](examples/monitoring.md)
-* [💰 Vault Demo](examples/vault.md)
-
-## Deployment & Production
-
-* [🚀 Production Deployment](deployment-production.md)
-* [🐳 Docker Deployment](deployment-docker.md)
-* [☸️ Kubernetes Deployment](deployment-kubernetes.md)
-* [📊 Monitoring & Alerts](deployment-monitoring.md)
-
-## Troubleshooting & Support
-
-* [🔧 Troubleshooting Guide](troubleshooting.md)
-* [❓ FAQ](faq.md)
-* [🐛 Common Errors](common-errors.md)
-* [⚡ Performance Tips](performance-tips.md)
-
-## Security
-
-* [🔒 Security Best Practices](security-best-practices.md)
-* [🔑 Key Management](key-management.md)
-* [🛡️ Smart Contract Security](contract-security.md)
-
-## Advanced Topics
-
-* [🔧 Testing Guide](../COMPLETE_TESTING_SUMMARY.md)
-* [🏗️ Custom LLM Providers](custom-llm-providers.md)
-* [⚡ Performance Optimization](performance-optimization.md)
-* [🔌 Plugin Development](plugin-development.md)
-
-## Resources
-
+* [🏗️ Architecture](architecture.md)
+* [🔧 Troubleshooting](troubleshooting.md)
 * [📚 Glossary](resources/glossary.md)
 * [🔗 Useful Links](resources/links.md)
 * [📄 License](../LICENSE)
-* [🤝 Contributing](../CONTRIBUTING.md)
-* [🐛 Report Issues](https://github.com/your-repo/somnia-ai/issues)
-
