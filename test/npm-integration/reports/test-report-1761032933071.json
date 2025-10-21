@@ -1,0 +1,494 @@
+{
+  "totalTests": 72,
+  "totalPassed": 62,
+  "totalFailed": 10,
+  "totalSkipped": 0,
+  "duration": "24.65",
+  "timestamp": "2025-10-21T07:48:53.071Z",
+  "results": [
+    {
+      "name": "02-Package Structure",
+      "tests": [
+        {
+          "name": "Package.json",
+          "status": "PASS",
+          "data": {
+            "name": "somnia-agent-kit",
+            "version": "2.1.0"
+          }
+        },
+        {
+          "name": "Main Exports",
+          "status": "PASS",
+          "data": {
+            "exports": [
+              "SomniaAgentKit",
+              "SOMNIA_NETWORKS",
+              "Logger",
+              "Metrics",
+              "Dashboard",
+              "Agent"
+            ]
+          }
+        },
+        {
+          "name": "TypeScript Types",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI Binaries",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM Adapters",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitoring Exports",
+          "status": "PASS"
+        }
+      ],
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "name": "Core SDK Tests",
+      "tests": [
+        {
+          "name": "SDK: Constructor",
+          "status": "FAIL",
+          "error": "AgentRegistry contract address is required"
+        },
+        {
+          "name": "SDK: Partial config",
+          "status": "FAIL",
+          "error": "AgentRegistry contract address is required"
+        }
+      ],
+      "passed": 0,
+      "failed": 2
+    },
+    {
+      "name": "Contract Tests",
+      "tests": [
+        {
+          "name": "SDK Init",
+          "status": "FAIL",
+          "error": "AgentRegistry contract address is required"
+        }
+      ],
+      "passed": 0,
+      "failed": 1
+    },
+    {
+      "name": "LLM Tests",
+      "tests": [
+        {
+          "name": "LLM: OllamaAdapter creation",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: OpenAIAdapter creation",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: DeepSeekAdapter creation",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: LLMPlanner creation",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: LLMPlanner with adapter",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: config validation",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: multiple adapters",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM: Adapter flexibility",
+          "status": "PASS"
+        }
+      ],
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "name": "Monitoring Tests",
+      "tests": [
+        {
+          "name": "Monitor: Logger creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Logger levels",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Logger data types",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Metrics creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Metrics LLM calls",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Metrics transactions",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Metrics histogram",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Metrics export",
+          "status": "PASS",
+          "data": {
+            "counters": {
+              "llm.total": 1,
+              "llm.success": 1,
+              "tx.total": 1,
+              "tx.success": 1
+            },
+            "gauges": {},
+            "summaries": [
+              {
+                "name": "llm.total",
+                "count": 1,
+                "sum": 1,
+                "avg": 1,
+                "min": 1,
+                "max": 1,
+                "lastValue": 1,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "llm.success",
+                "count": 1,
+                "sum": 1,
+                "avg": 1,
+                "min": 1,
+                "max": 1,
+                "lastValue": 1,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "llm.reasoning_time",
+                "count": 1,
+                "sum": 100,
+                "avg": 100,
+                "min": 100,
+                "max": 100,
+                "lastValue": 100,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "tx.total",
+                "count": 1,
+                "sum": 1,
+                "avg": 1,
+                "min": 1,
+                "max": 1,
+                "lastValue": 1,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "tx.success",
+                "count": 1,
+                "sum": 1,
+                "avg": 1,
+                "min": 1,
+                "max": 1,
+                "lastValue": 1,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "tx.gas_used",
+                "count": 1,
+                "sum": 50000,
+                "avg": 50000,
+                "min": 50000,
+                "max": 50000,
+                "lastValue": 50000,
+                "lastTimestamp": 1761032908429
+              },
+              {
+                "name": "test.metric",
+                "count": 1,
+                "sum": 500,
+                "avg": 500,
+                "min": 500,
+                "max": 500,
+                "lastValue": 500,
+                "lastTimestamp": 1761032908429
+              }
+            ],
+            "histograms": {
+              "gas_used": {
+                "p50": 50000,
+                "p95": 50000,
+                "p99": 50000
+              },
+              "reasoning_time": {
+                "p50": 100,
+                "p95": 100,
+                "p99": 100
+              }
+            },
+            "tx_sent": 1,
+            "tx_success_rate": 100,
+            "avg_gas_used": 50000,
+            "llm_calls": 1,
+            "reasoning_time": 100,
+            "uptime": 0,
+            "tps": 0.016666666666666666,
+            "timestamp": 1761032908429
+          }
+        },
+        {
+          "name": "Monitor: Dashboard creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: EventRecorder creation",
+          "status": "FAIL",
+          "error": "Cannot read properties of undefined (reading 'maxEvents')"
+        },
+        {
+          "name": "Monitor: EventRecorder events",
+          "status": "FAIL",
+          "error": "Cannot read properties of undefined (reading 'maxEvents')"
+        },
+        {
+          "name": "Monitor: Telemetry creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitor: Logger + Metrics integration",
+          "status": "PASS"
+        }
+      ],
+      "passed": 11,
+      "failed": 2
+    },
+    {
+      "name": "Runtime Tests",
+      "tests": [
+        {
+          "name": "Runtime: Agent creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Runtime: Agent config",
+          "status": "PASS"
+        },
+        {
+          "name": "Runtime: Planner creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Runtime: Executor creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Runtime: Planner + Executor integration",
+          "status": "PASS"
+        },
+        {
+          "name": "Runtime: Multiple agents",
+          "status": "PASS"
+        }
+      ],
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "name": "01-Quickstart",
+      "tests": [
+        {
+          "name": "SDK Import",
+          "status": "PASS"
+        },
+        {
+          "name": "SDK Initialization",
+          "status": "FAIL",
+          "error": "AgentRegistry contract address is required"
+        }
+      ],
+      "passed": 1,
+      "failed": 1
+    },
+    {
+      "name": "03-Monitoring",
+      "tests": [
+        {
+          "name": "Logger Functionality",
+          "status": "PASS"
+        },
+        {
+          "name": "Metrics Recording",
+          "status": "FAIL",
+          "error": "Metrics summary incomplete"
+        },
+        {
+          "name": "Dashboard Creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Metrics Export Format",
+          "status": "PASS"
+        }
+      ],
+      "passed": 3,
+      "failed": 1
+    },
+    {
+      "name": "CLI Commands",
+      "tests": [
+        {
+          "name": "CLI: version",
+          "status": "PASS",
+          "output": "[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }\nsomnia-agent-kit v2.1.0"
+        },
+        {
+          "name": "CLI: help",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help agent:list",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: network:info",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: network:contracts",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:list",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:info",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: sak alias",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: error handling",
+          "status": "PASS"
+        }
+      ],
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "name": "Complete CLI Tests",
+      "tests": [
+        {
+          "name": "CLI: init --network testnet",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: init --network mainnet",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: init --network devnet",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: init --rpc-url",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:list --limit",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:list --format json",
+          "status": "FAIL",
+          "error": "Unexpected token 'd', \"[dotenv@17.\"... is not valid JSON"
+        },
+        {
+          "name": "CLI: agent:info --format json",
+          "status": "FAIL",
+          "error": "Unexpected token 'd', \"[dotenv@17.\"... is not valid JSON"
+        },
+        {
+          "name": "CLI: agent:info invalid ID",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:list --active",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: task:status error handling",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: task:create error handling",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: wallet:balance <address>",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help init",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help agent:register",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help agent:list",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help task:create",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help task:status",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help wallet:balance",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help wallet:info",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: multiple flags",
+          "status": "FAIL",
+          "error": "Unexpected token 'd', \"[dotenv@17.\"... is not valid JSON"
+        },
+        {
+          "name": "CLI: invalid network",
+          "status": "PASS"
+        }
+      ],
+      "passed": 18,
+      "failed": 3
+    }
+  ]
+}

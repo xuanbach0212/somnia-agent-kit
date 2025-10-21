@@ -1,7 +1,10 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    index: 'src/index.ts',
+    'cli/bin': 'src/cli/bin.ts',
+  },
   format: ['cjs', 'esm'],
   dts: true,
   splitting: false,
@@ -10,4 +13,5 @@ export default defineConfig({
   treeshake: true,
   minify: false,
   external: ['ethers'],
+  shims: true, // Add Node.js shims for CLI
 });

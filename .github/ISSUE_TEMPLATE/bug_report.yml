@@ -15,9 +15,8 @@ body:
         - Smart Contracts
         - Documentation
         - Examples
+        - CLI
         - Other
-    validations:
-      required: true
 
   - type: textarea
     id: description

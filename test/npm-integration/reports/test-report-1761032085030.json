@@ -1,0 +1,139 @@
+{
+  "totalTests": 21,
+  "totalPassed": 19,
+  "totalFailed": 2,
+  "totalSkipped": 0,
+  "duration": "7.89",
+  "timestamp": "2025-10-21T07:34:45.030Z",
+  "results": [
+    {
+      "name": "02-Package Structure",
+      "tests": [
+        {
+          "name": "Package.json",
+          "status": "PASS",
+          "data": {
+            "name": "somnia-agent-kit",
+            "version": "2.1.0"
+          }
+        },
+        {
+          "name": "Main Exports",
+          "status": "PASS",
+          "data": {
+            "exports": [
+              "SomniaAgentKit",
+              "SOMNIA_NETWORKS",
+              "Logger",
+              "Metrics",
+              "Dashboard",
+              "Agent"
+            ]
+          }
+        },
+        {
+          "name": "TypeScript Types",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI Binaries",
+          "status": "PASS"
+        },
+        {
+          "name": "LLM Adapters",
+          "status": "PASS"
+        },
+        {
+          "name": "Monitoring Exports",
+          "status": "PASS"
+        }
+      ],
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "name": "01-Quickstart",
+      "tests": [
+        {
+          "name": "SDK Import",
+          "status": "PASS"
+        },
+        {
+          "name": "SDK Initialization",
+          "status": "FAIL",
+          "error": "AgentRegistry contract address is required"
+        }
+      ],
+      "passed": 1,
+      "failed": 1
+    },
+    {
+      "name": "03-Monitoring",
+      "tests": [
+        {
+          "name": "Logger Functionality",
+          "status": "PASS"
+        },
+        {
+          "name": "Metrics Recording",
+          "status": "FAIL",
+          "error": "Metrics summary incomplete"
+        },
+        {
+          "name": "Dashboard Creation",
+          "status": "PASS"
+        },
+        {
+          "name": "Metrics Export Format",
+          "status": "PASS"
+        }
+      ],
+      "passed": 3,
+      "failed": 1
+    },
+    {
+      "name": "CLI Commands",
+      "tests": [
+        {
+          "name": "CLI: version",
+          "status": "PASS",
+          "output": "[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }\nsomnia-agent-kit v2.1.0"
+        },
+        {
+          "name": "CLI: help",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: help agent:list",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: network:info",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: network:contracts",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:list",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: agent:info",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: sak alias",
+          "status": "PASS"
+        },
+        {
+          "name": "CLI: error handling",
+          "status": "PASS"
+        }
+      ],
+      "passed": 9,
+      "failed": 0
+    }
+  ]
+}
