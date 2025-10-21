@@ -1,447 +1,147 @@
-# ✅ GitBook Deployment Checklist
+# GitBook Setup Checklist 📋
 
-Checklist để deploy GitBook cho dự án Somnia AI.
+## ✅ Documentation Status
 
-## 📋 Pre-Deployment
+- [x] All docs updated with correct API
+- [x] File naming standardized (`kebab-case.md`)
+- [x] All examples verified
+- [x] SUMMARY.md navigation complete
+- [x] Contract addresses correct
+- [x] .gitbook.yaml configured
 
-### ✅ Files Đã Sẵn Sàng
+## 🚀 GitBook Setup Steps
 
-- [x] `docs/README.md` - Trang chủ
-- [x] `docs/SUMMARY.md` - Navigation menu
-- [x] `docs/.gitbook.yaml` - Config file
-- [x] `docs/quickstart.md` - Quick start guide
-- [x] `docs/installation.md` - Installation guide
-- [x] `docs/faq.md` - FAQ
-- [x] `docs/troubleshooting.md` - Troubleshooting
-- [x] `docs/contracts/` - Smart contracts docs
-- [x] `docs/examples/` - Examples & tutorials
-- [x] `docs/deployment/` - Deployment guides
-- [x] `docs/resources/` - Resources & links
+### 1. Create GitBook Account (2 minutes)
+- [ ] Go to https://www.gitbook.com
+- [ ] Click "Sign up with GitHub"
+- [ ] Authorize GitBook
 
-### ✅ Content Quality Check
-
-- [ ] Tất cả links hoạt động
-- [ ] Code examples đã test
-- [ ] Không có typos
-- [ ] Images hiển thị đúng
-- [ ] Formatting consistent
-- [ ] Navigation logic
-
-## 🚀 GitBook Setup
-
-### Step 1: Tạo Tài Khoản
-
-- [ ] Truy cập https://www.gitbook.com
-- [ ] Sign up với email
-- [ ] Xác nhận email
-- [ ] Complete profile
-
-### Step 2: Connect GitHub
-
+### 2. Import Repository (3 minutes)
 - [ ] Click "New Space"
-- [ ] Chọn "Import from GitHub"
-- [ ] Authorize GitBook app
-- [ ] Grant repository access
-- [ ] Select `somnia-ai` repository
-- [ ] Choose branch (`dev` hoặc `main`)
+- [ ] Choose "Import from GitHub"
+- [ ] Select repository: `xuanbach0212/somnia-agent-kit`
+- [ ] Select branch: `dev` (or `main`)
 - [ ] Click "Import"
-
-### Step 3: Verify Import
-
-- [ ] GitBook đã import thành công
-- [ ] Menu navigation hiển thị đúng (từ SUMMARY.md)
-- [ ] Trang chủ hiển thị (README.md)
-- [ ] All pages accessible
-- [ ] Images loading
-- [ ] Code blocks formatted
-
-## 🎨 Customization
-
-### Theme & Branding
-
-- [ ] Upload logo
-  - Settings → Customize → Logo
-  - Upload `logo.png` (recommended: 200x200px)
-  
-- [ ] Chọn theme
-  - Settings → Customize → Theme
-  - Light/Dark/Auto
-  
-- [ ] Chọn màu chủ đạo
-  - Settings → Customize → Colors
-  - Primary color
-  - Accent color
-  
-- [ ] Chọn font
-  - Settings → Customize → Typography
-  - Heading font
-  - Body font
-
-### Domain Setup
-
-**Option A: Subdomain miễn phí**
-- [ ] URL: `your-space.gitbook.io`
-- [ ] Test URL hoạt động
-
-**Option B: Custom domain (Pro plan)**
-- [ ] Mua domain (ví dụ: `docs.somnia-ai.com`)
-- [ ] Cấu hình DNS:
-  ```
-  CNAME docs → hosting.gitbook.io
-  ```
-- [ ] Verify trong GitBook settings
-- [ ] Test custom domain
-
-## 🔧 Configuration
-
-### Git Sync Settings
-
-- [ ] Enable auto-sync
-  - Settings → Git Sync → Enable
-  
-- [ ] Configure sync mode
-  - [ ] Live (auto-publish on push) - Recommended
-  - [ ] Manual (require approval)
-  
-- [ ] Test sync
-  - [ ] Make small change in GitHub
-  - [ ] Push to branch
-  - [ ] Verify GitBook updates
-
-### Search Configuration
-
-- [ ] Enable search
-  - Settings → Search → Enable
-  
-- [ ] Test search
-  - [ ] Search for keywords
-  - [ ] Verify results accurate
-
-### Integrations
-
-**Google Analytics** (Optional)
-- [ ] Create GA4 property
-- [ ] Get Measurement ID
-- [ ] Add to GitBook
-  - Settings → Integrations → Google Analytics
-  - Enter Measurement ID
-  
-**Slack** (Optional)
-- [ ] Connect Slack workspace
-- [ ] Configure notifications
-  - New comments
-  - Page updates
-
-## 📊 Content Review
-
-### Navigation Check
-
-- [ ] All sections accessible
-- [ ] Hierarchy makes sense
-- [ ] No broken links
-- [ ] Breadcrumbs working
-
-### Page-by-Page Review
-
-**Getting Started**
-- [ ] README.md loads
-- [ ] quickstart.md complete
-- [ ] installation.md clear
-- [ ] faq.md helpful
-
-**Core Concepts**
-- [ ] architecture.md clear
-- [ ] LLM_ARCHITECTURE.md detailed
-- [ ] contracts-overview.md complete
-- [ ] sdk-design.md informative
-
-**Smart Contracts**
-- [ ] agent-registry.md detailed
-- [ ] agent-vault.md comprehensive
-
-**Examples**
-- [ ] simple-agent.md works
-- [ ] onchain-chatbot.md complete
-- [ ] monitoring.md detailed
-
-**Deployment**
-- [ ] production.md comprehensive
-
-**Resources**
-- [ ] glossary.md complete
-- [ ] links.md updated
-
-### Code Examples Check
-
-- [ ] All code blocks have language specified
-- [ ] Syntax highlighting works
-- [ ] Code is copy-pasteable
-- [ ] Examples are tested
-- [ ] No placeholder values (or clearly marked)
-
-### Images & Media
-
-- [ ] All images load
-- [ ] Images have alt text
-- [ ] Diagrams are clear
-- [ ] File sizes optimized (<1MB)
-
-## 🔒 Security & Privacy
-
-### Access Control
-
-- [ ] Set space visibility
-  - [ ] Public (recommended for docs)
-  - [ ] Private (requires login)
-  
-- [ ] Configure member access
-  - Add team members
-  - Set roles (Admin/Editor/Reader)
-
-### Content Security
-
-- [ ] No sensitive data in docs
-- [ ] No API keys exposed
-- [ ] No private keys shown
-- [ ] Example addresses are fake/testnet
-
-## 🧪 Testing
-
-### Functionality Tests
-
-- [ ] **Search works**
-  - Search for "agent"
-  - Search for "deployment"
-  - Search for specific terms
-  
-- [ ] **Navigation works**
-  - Click through all sections
-  - Breadcrumbs work
-  - Back button works
-  
-- [ ] **Links work**
-  - Internal links
-  - External links
-  - Anchor links
-  
-- [ ] **Mobile responsive**
-  - Test on phone
-  - Test on tablet
-  - Menu accessible
-  
-- [ ] **Code blocks**
-  - Copy button works
-  - Syntax highlighting correct
-  - Line numbers (if enabled)
-
-### Browser Testing
-
-- [ ] Chrome/Edge
-- [ ] Firefox
-- [ ] Safari
-- [ ] Mobile browsers
-
-### Performance
-
-- [ ] Page load speed (<3s)
-- [ ] Search is fast (<1s)
-- [ ] Images load quickly
-- [ ] No console errors
-
-## 📢 Launch
-
-### Pre-Launch
-
-- [ ] Final content review
-- [ ] All checklists complete
-- [ ] Team review done
-- [ ] Typos fixed
-
-### Launch Day
-
-- [ ] Set space to Public
-- [ ] Get final URL
-- [ ] Test URL works
-- [ ] Take screenshots
-
-### Announcements
-
-**Internal**
-- [ ] Email team
-  - Subject: "📖 New Somnia AI Documentation Live!"
-  - Include URL
-  - Highlight key sections
-  
-**External**
-- [ ] Discord announcement
-  ```
-  📖 **Documentation is Live!**
-  
-  We're excited to announce our comprehensive documentation is now available:
-  https://your-space.gitbook.io
-  
-  Features:
-  ✅ Quick Start Guide
-  ✅ Complete API Reference
-  ✅ Real-world Examples
-  ✅ Production Deployment Guide
-  
-  Check it out and let us know what you think! 🚀
-  ```
-  
-- [ ] Twitter/X post
-  ```
-  📚 Just launched comprehensive docs for Somnia AI!
-  
-  🚀 Quick Start in 5 minutes
-  💡 Real-world examples
-  🔧 Production guides
-  📊 Monitoring & more
-  
-  Check it out: https://your-space.gitbook.io
-  
-  #SomniaAI #Documentation #AI #Blockchain
-  ```
-  
-- [ ] Reddit post (r/SomniaAI)
-- [ ] Blog post
-- [ ] Newsletter
-
-### Social Media Assets
-
-- [ ] Create announcement graphic
-- [ ] Screenshot of homepage
-- [ ] Highlight key features
-- [ ] Share on all platforms
-
-## 📊 Post-Launch
-
-### Monitoring (First Week)
-
-- [ ] Check analytics daily
-  - Page views
-  - Popular pages
-  - Search queries
-  - Bounce rate
-  
-- [ ] Monitor feedback
-  - Discord comments
-  - GitHub issues
-  - Direct messages
-  - Twitter mentions
-
-### Gather Feedback
-
-- [ ] Create feedback form
-- [ ] Ask in Discord
-- [ ] Email survey to users
-- [ ] Review analytics
-
-### Quick Fixes
-
-- [ ] Fix reported typos
-- [ ] Update broken links
-- [ ] Clarify confusing sections
-- [ ] Add missing examples
-
-## 🔄 Maintenance
-
-### Weekly Tasks
-
-- [ ] Check for broken links
-- [ ] Review analytics
-- [ ] Respond to feedback
-- [ ] Update outdated content
-
-### Monthly Tasks
-
-- [ ] Content audit
-- [ ] Update examples
-- [ ] Add new features
-- [ ] Improve SEO
-
-### Quarterly Tasks
-
-- [ ] Major content review
-- [ ] Restructure if needed
-- [ ] Add new sections
-- [ ] User survey
-
-## 📈 Growth
-
-### Content Expansion
-
-- [ ] Add video tutorials
-- [ ] Create interactive examples
-- [ ] Add more use cases
-- [ ] Translate to other languages
-
-### Community
-
-- [ ] Encourage contributions
-- [ ] Feature community examples
-- [ ] Host documentation sprints
-- [ ] Reward contributors
+- [ ] Wait for import to complete
+
+### 3. Verify Import (1 minute)
+- [ ] Check homepage loads (README.md)
+- [ ] Check navigation menu (SUMMARY.md)
+- [ ] Click a few links to verify
+- [ ] Check examples section
+
+### 4. Enable Auto-Sync (1 minute)
+- [ ] Go to Settings → Git Sync
+- [ ] Enable "Automatically sync"
+- [ ] Choose "Live" mode
+- [ ] Save settings
+
+### 5. Verify Webhook (1 minute)
+- [ ] Go to GitHub → Repository Settings → Webhooks
+- [ ] Verify GitBook webhook exists
+- [ ] Check status is "Active" (green checkmark)
+
+### 6. Test Auto-Sync (2 minutes)
+- [ ] Make a small change to any doc file
+- [ ] Commit and push to GitHub
+- [ ] Wait 10-30 seconds
+- [ ] Refresh GitBook to see update
+
+### 7. Configure Domain (Optional, 5 minutes)
+- [ ] Go to GitBook Settings → Domain
+- [ ] Add custom domain (e.g., `docs.somnia-ai.com`)
+- [ ] Update DNS records
+- [ ] Verify domain
+
+## 📝 Quick Test
+
+Run this to verify everything works:
+
+```bash
+# 1. Check all files exist
+ls -la docs/README.md docs/SUMMARY.md docs/.gitbook.yaml
+
+# 2. Check examples
+ls -la examples/*/index.ts
+
+# 3. Verify no broken links in SUMMARY.md
+grep -o '\[.*\](.*)' docs/SUMMARY.md | grep -v '^#'
+
+# 4. Push to GitHub
+git status
+git add .
+git commit -m "docs: GitBook ready for deployment"
+git push origin dev
+```
+
+## 🎯 Expected Result
+
+After setup, you should have:
+
+1. **GitBook URL**: `https://your-space-name.gitbook.io`
+2. **Navigation**: Complete menu with all sections
+3. **Homepage**: Somnia Agent Kit overview
+4. **Examples**: 5 working code examples + 4 detailed guides
+5. **Auto-Sync**: Updates automatically on every push
+
+## 🔗 Important Links
+
+- **GitBook Dashboard**: https://app.gitbook.com
+- **Repository**: https://github.com/xuanbach0212/somnia-agent-kit
+- **Documentation Root**: `/docs/`
+- **Examples**: `/examples/`
+
+## 💡 Tips
+
+1. **Test Locally First**
+   - Read through docs to verify accuracy
+   - Check all links work
+   - Run examples to ensure they work
+
+2. **Monitor Sync**
+   - GitBook Activity Log shows all syncs
+   - GitHub Webhooks shows delivery status
+   - Usually syncs in 10-30 seconds
+
+3. **Share Documentation**
+   - GitBook URL is public by default
+   - Can make private in settings
+   - Can add custom domain
+
+## 🆘 Troubleshooting
+
+### GitBook not syncing?
+1. Check webhook in GitHub settings
+2. Verify branch is correct
+3. Check GitBook Activity Log for errors
+4. Try manual sync in GitBook settings
+
+### Links not working?
+1. Verify file exists in `docs/` folder
+2. Check path in SUMMARY.md
+3. Ensure `.gitbook.yaml` root is correct
+
+### Examples not showing?
+1. Links in SUMMARY.md point to `../examples/`
+2. GitBook can link to files outside `docs/`
+3. Users can view code directly on GitHub
 
 ## ✅ Final Checklist
 
-Before marking as complete:
-
-- [ ] All sections above completed
-- [ ] Documentation is live
-- [ ] URL is public
-- [ ] Team has access
-- [ ] Announcements sent
-- [ ] Feedback mechanism in place
-- [ ] Monitoring setup
-- [ ] Maintenance plan created
-
-## 🎉 Success Metrics
-
-Track these after launch:
-
-**Week 1:**
-- [ ] 100+ page views
-- [ ] 10+ unique visitors
-- [ ] 5+ positive feedback
-
-**Month 1:**
-- [ ] 1,000+ page views
-- [ ] 100+ unique visitors
-- [ ] 10+ GitHub stars
-- [ ] 5+ community contributions
-
-**Quarter 1:**
-- [ ] 10,000+ page views
-- [ ] 1,000+ unique visitors
-- [ ] 50+ GitHub stars
-- [ ] 20+ community contributions
+Before going live:
+- [ ] All docs reviewed and accurate
+- [ ] All examples tested and working
+- [ ] GitBook imported successfully
+- [ ] Auto-sync enabled and working
+- [ ] Navigation menu complete
+- [ ] Homepage looks good
+- [ ] All links working
+- [ ] Domain configured (if using custom)
+- [ ] Team members invited (if needed)
+- [ ] Documentation shared with users
 
 ---
 
-## 📞 Need Help?
-
-Stuck on any step? Get help:
-
-- 💬 Discord: [#documentation](https://discord.gg/somnia-ai)
-- 📧 Email: docs@somnia.network
-- 🐛 GitHub: [Open issue](https://github.com/your-repo/somnia-ai/issues)
-
----
-
-## 🎊 Congratulations!
-
-Once all items are checked, your documentation is:
-- ✅ Live and accessible
-- ✅ Professional quality
-- ✅ Easy to maintain
-- ✅ Ready to help users
-
-**Well done!** 🚀📚
-
----
-
-**Checklist Version**: 1.0
-**Last Updated**: October 20, 2025
-**Maintained by**: Somnia AI Team
-
+**Status**: Ready to deploy! 🚀  
+**Time to Complete**: ~15 minutes  
+**Difficulty**: Easy ⭐

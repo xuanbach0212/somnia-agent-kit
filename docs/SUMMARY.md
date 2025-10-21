@@ -32,11 +32,18 @@
 ## Examples & Tutorials
 
 * [💡 Examples Overview](../examples/README.md)
+* [🚀 01 - Quickstart](../examples/01-quickstart/index.ts)
+* [📝 02 - Register Agent](../examples/02-register-agent/index.ts)
+* [🤖 03 - AI Agent](../examples/03-ai-agent/index.ts)
+* [⚡ 04 - Task Execution](../examples/04-task-execution/index.ts)
+* [📊 05 - Monitoring](../examples/05-monitoring/index.ts)
+
+## Example Guides (Detailed)
+
 * [🤖 Simple Agent Demo](examples/simple-agent.md)
 * [💬 On-chain Chatbot](examples/onchain-chatbot.md)
 * [📊 Monitoring Demo](examples/monitoring.md)
 * [💰 Vault Demo](examples/vault.md)
-* [🎮 More Examples](../examples/)
 
 ## Deployment & Production
 

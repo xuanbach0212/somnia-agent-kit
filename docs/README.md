@@ -60,7 +60,7 @@ console.log('Agent:', agent);
 - **[Quick Start](quickstart.md)**: Get up and running in 5 minutes
 - **[Architecture](architecture.md)**: Understand the system design
 - **[API Reference](../API_REFERENCE.md)**: Complete API documentation
-- **[Examples](../examples/README.md)**: Real-world use cases
+- **[Examples](../examples/README.md)**: 5 working examples (quickstart, register, AI, tasks, monitoring)
 
 ## 🛠️ Tech Stack
 

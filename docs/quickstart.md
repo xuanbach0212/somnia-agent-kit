@@ -266,6 +266,15 @@ Now that you have a working setup, explore more:
 - **[LLM Architecture](./LLM_ARCHITECTURE.md)** - Learn about AI integration
 
 ### 💡 Try Examples
+
+**Working Code Examples:**
+- **[01-quickstart](../examples/01-quickstart/)** - SDK initialization
+- **[02-register-agent](../examples/02-register-agent/)** - Register agent on-chain
+- **[03-ai-agent](../examples/03-ai-agent/)** - FREE local AI with Ollama
+- **[04-task-execution](../examples/04-task-execution/)** - Execute tasks
+- **[05-monitoring](../examples/05-monitoring/)** - Logging & metrics
+
+**Detailed Guides:**
 - **[Simple Agent Demo](./examples/simple-agent.md)** - Basic agent usage
 - **[On-chain Chatbot](./examples/onchain-chatbot.md)** - Build a chatbot
 - **[Monitoring Demo](./examples/monitoring.md)** - Track performance
