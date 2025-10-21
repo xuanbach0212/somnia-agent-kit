@@ -16,16 +16,12 @@ body:
         - Missing example
         - Outdated content
         - Other
-    validations:
-      required: true
 
   - type: input
     id: location
     attributes:
       label: 📍 Location
       placeholder: e.g., README.md line 123, API_REFERENCE.md section "Agent Runtime"
-    validations:
-      required: true
 
   - type: textarea
     id: issue

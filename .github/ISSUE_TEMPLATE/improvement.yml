@@ -18,9 +18,8 @@ body:
         - Performance
         - Developer Experience
         - Error Messages
+        - CLI
         - Other
-    validations:
-      required: true
 
   - type: dropdown
     id: type
@@ -42,8 +41,6 @@ body:
       label: 📌 Current
       description: How does it work now?
       placeholder: Currently, when I...
-    validations:
-      required: true
 
   - type: textarea
     id: proposed

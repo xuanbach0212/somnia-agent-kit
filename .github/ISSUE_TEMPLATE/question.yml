@@ -16,10 +16,9 @@ body:
         - LLM Integration
         - Smart Contracts
         - Monitoring
+        - CLI
         - Best Practices
         - Other
-    validations:
-      required: true
 
   - type: textarea
     id: question
