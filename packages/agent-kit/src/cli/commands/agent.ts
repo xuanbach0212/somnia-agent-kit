@@ -124,7 +124,10 @@ export async function agentRegisterCommand(options: AgentRegisterOptions): Promi
   );
 
   if (event) {
-    const parsed = kit.contracts.registry.interface.parseLog(event);
+    const parsed = (kit.contracts.registry.interface as any).parseLog({
+      topics: event.topics as string[],
+      data: event.data
+    });
     const agentId = parsed?.args.agentId;
 
     console.log('🎉 Agent registered successfully!\n');

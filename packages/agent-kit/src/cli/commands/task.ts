@@ -117,7 +117,10 @@ export async function taskCreateCommand(options: TaskCreateOptions): Promise<voi
   );
 
   if (event) {
-    const parsed = kit.contracts.manager.interface.parseLog(event);
+    const parsed = (kit.contracts.manager.interface as any).parseLog({
+      topics: event.topics as string[],
+      data: event.data
+    });
     const taskId = parsed?.args.taskId;
 
     console.log('🎉 Task created successfully!\n');
