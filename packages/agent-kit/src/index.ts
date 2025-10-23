@@ -4,10 +4,9 @@
  */
 
 import { ethers } from 'ethers';
-import { AgentKitConfig, validateConfig, loadConfig, SOMNIA_NETWORKS } from './core/config';
-import { sleep, retry, isValidAddress, shortAddress } from './utils';
-import { SomniaContracts } from './core/contracts';
 import { ChainClient } from './core/chainClient';
+import { AgentKitConfig, loadConfig } from './core/config';
+import { SomniaContracts } from './core/contracts';
 import { SignerManager } from './core/signerManager';
 
 /**
@@ -137,87 +136,104 @@ export class SomniaAgentKit {
 }
 
 // Re-export types and utilities from config layer
-export type {
-  AgentKitConfig,
-  NetworkConfig,
-  ContractAddresses,
-  LLMProviderConfig,
-  SDKConfig,
-  RuntimeConfig,
-  CompleteSolutionConfig,
-} from './config';
 export {
-  SOMNIA_NETWORKS,
-  SOMNIA_NETWORKS as NETWORK_CONFIGS, // Alias for backward compatibility
-  DEFAULT_NETWORK,
-  getNetwork,
-  validateConfig,
-  validateAgentConfig,
-  validateSDKConfig,
-  validateRuntimeConfig,
-  DEFAULT_CONFIG,
-  DEFAULT_SDK_CONFIG,
-  DEFAULT_RUNTIME_CONFIG,
-  DEFAULT_AGENT_CONFIG,
-  loadFromEnv,
-  loadAgentConfigFromEnv,
-  loadSDKConfigFromEnv,
-  loadRuntimeConfigFromEnv,
-  loadConfig,
-  mergeConfig,
-  createConfigFromEnv,
   // Global config instance (for quick start)
   config,
+  createConfigFromEnv,
+  DEFAULT_AGENT_CONFIG,
+  DEFAULT_CONFIG, // Alias for backward compatibility
+  DEFAULT_NETWORK,
+  DEFAULT_RUNTIME_CONFIG,
+  DEFAULT_SDK_CONFIG,
   getConfig,
-  setConfig,
+  getNetwork,
+  loadAgentConfigFromEnv,
+  loadConfig,
+  loadFromEnv,
+  loadRuntimeConfigFromEnv,
+  loadSDKConfigFromEnv,
+  mergeConfig,
+  SOMNIA_NETWORKS as NETWORK_CONFIGS,
   resetConfig,
+  setConfig,
+  SOMNIA_NETWORKS,
+  validateAgentConfig,
+  validateConfig,
+  validateRuntimeConfig,
+  validateSDKConfig,
+} from './config';
+export type {
+  AgentKitConfig,
+  CompleteSolutionConfig,
+  ContractAddresses,
+  LLMProviderConfig,
+  NetworkConfig,
+  RuntimeConfig,
+  SDKConfig,
 } from './config';
 // Version tracking
 export {
-  SDK_VERSION,
-  SDK_NAME,
   BUILD_DATE,
-  getVersionString,
   getVersionInfo,
+  getVersionString,
+  SDK_NAME,
+  SDK_VERSION,
 } from './version';
 
 // Utility functions (from utils/ module)
 export {
-  // Async utilities
-  sleep,
-  retry,
-  delay,
-  timeout,
-  // Address utilities
-  isValidAddress,
-  shortAddress,
-  // Hex and data conversion
-  toHex,
-  fromHex,
   bytesToHex,
-  hexToBytes,
-  toUtf8Bytes,
-  toUtf8String,
-  keccak256,
-  // Ether and token utilities
-  formatEther,
-  parseEther,
-  formatUnits,
-  parseUnits,
+  createLogger,
+  delay,
   // Event emitter
   EventEmitter,
+  // Ether and token utilities
+  formatEther,
+  formatUnits,
+  fromHex,
+  hexToBytes,
+  // Address utilities
+  isValidAddress,
+  keccak256,
   // Logger shortcuts
   Logger,
   LogLevel,
-  createLogger,
+  parseEther,
+  parseUnits,
+  retry,
+  shortAddress,
+  // Async utilities
+  sleep,
+  timeout,
+  // Hex and data conversion
+  toHex,
+  toUtf8Bytes,
+  toUtf8String,
 } from './utils';
-export type { EventListener, LoggerConfig, LogEntry } from './utils';
+export type { EventListener, LogEntry, LoggerConfig } from './utils';
 
 // Core blockchain layer
+export { ChainClient } from './core/chainClient';
 export { SomniaContracts } from './core/contracts';
 export type { ContractInstances } from './core/contracts';
-export { ChainClient } from './core/chainClient';
+export * from './core/multicall';
+export * from './core/rpcProvider';
 export { SignerManager } from './core/signerManager';
+
+// Token management
+// export * from './tokens';
+
+// Contract deployment
+// export * from './deployment';
+
+// Wallet connectors
+// export * from './wallets';
+
+// Storage (IPFS)
+// export * from './storage';
+
+// Real-time events
+// export * from './events';
 
 // Runtime modules
 export * from './runtime';
