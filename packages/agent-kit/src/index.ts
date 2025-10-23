@@ -219,6 +219,12 @@ export type { ContractInstances } from './core/contracts';
 export { ChainClient } from './core/chainClient';
 export { SignerManager } from './core/signerManager';
 
+// Token management
+export * from './tokens';
+
+// Contract deployment
+export * from './deployment';
+
 // Runtime modules
 export * from './runtime';
 
