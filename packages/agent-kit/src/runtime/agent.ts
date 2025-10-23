@@ -128,9 +128,10 @@ export class Agent extends EventEmitter<AgentEvents> {
     const receipt = await tx.wait();
 
     // Extract agentId from event
+    const iface = this.registryContract!.interface as ethers.Interface;
     const event = receipt?.logs.find((log: any) => {
       try {
-        const parsed = this.registryContract!.interface.parseLog({
+        const parsed = iface.parseLog({
           topics: log.topics as string[],
           data: log.data
         });
@@ -141,7 +142,7 @@ export class Agent extends EventEmitter<AgentEvents> {
     });
 
     if (event) {
-      const parsed = this.registryContract.interface.parseLog({
+      const parsed = iface.parseLog({
         topics: event.topics as string[],
         data: event.data
       });
