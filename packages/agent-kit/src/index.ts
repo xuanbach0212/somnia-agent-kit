@@ -219,6 +219,9 @@ export type { ContractInstances } from './core/contracts';
 export { ChainClient } from './core/chainClient';
 export { SignerManager } from './core/signerManager';
 
+// Real-time events
+export * from './events';
+
 // Runtime modules
 export * from './runtime';
 
