@@ -221,19 +221,10 @@ export * from './core/rpcProvider';
 export { SignerManager } from './core/signerManager';
 
 // Token management
-// export * from './tokens';
+export * from './tokens';
 
 // Contract deployment
-// export * from './deployment';
-
-// Wallet connectors
-// export * from './wallets';
-
-// Storage (IPFS)
-// export * from './storage';
-
-// Real-time events
-// export * from './events';
+export * from './deployment';
 
 // Runtime modules
 export * from './runtime';
