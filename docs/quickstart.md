@@ -66,7 +66,7 @@ import 'dotenv/config';
 async function main() {
   console.log('🔧 Initializing Somnia Agent Kit...');
   
-  // Initialize SDK with testnet
+  // Option 1: Initialize with manual config
   const kit = new SomniaAgentKit({
     network: SOMNIA_NETWORKS.testnet,
     contracts: {
@@ -77,6 +77,9 @@ async function main() {
     },
     privateKey: process.env.PRIVATE_KEY,
   });
+
+  // Or: Auto-load from .env (recommended)
+  // const kit = new SomniaAgentKit();
 
   await kit.initialize();
   console.log('✅ SDK initialized successfully!');
@@ -263,7 +266,7 @@ Now that you have a working setup, explore more:
 ### 📚 Learn Core Concepts
 - **[Architecture](./architecture.md)** - Understand how everything works
 - **[Smart Contracts](./contracts-overview.md)** - Deep dive into contracts
-- **[LLM Architecture](./LLM_ARCHITECTURE.md)** - Learn about AI integration
+- **[SDK Usage](./sdk-usage.md)** - Basic SDK operations
 
 ### 💡 Try Examples
 
@@ -274,15 +277,16 @@ Now that you have a working setup, explore more:
 - **[04-task-execution](../examples/04-task-execution/)** - Execute tasks
 - **[05-monitoring](../examples/05-monitoring/)** - Logging & metrics
 
-**Detailed Guides:**
-- **[Simple Agent Demo](./examples/simple-agent.md)** - Basic agent usage
-- **[On-chain Chatbot](./examples/onchain-chatbot.md)** - Build a chatbot
-- **[Monitoring Demo](./examples/monitoring.md)** - Track performance
-
 ### 🛠️ Advanced Topics
-- **[Agent Runtime](./sdk/agent-runtime.md)** - Autonomous agents
-- **[LLM Integration](./sdk/llm-providers.md)** - Multiple LLM providers
-- **[Production Deployment](./deployment/production.md)** - Deploy to production
+- **[Autonomous Runtime](./sdk-runtime.md)** - Build self-running agents
+- **[Token Management](./sdk-tokens.md)** - ERC20, ERC721, native tokens
+- **[Multicall Batching](./sdk-multicall.md)** - Optimize gas costs
+- **[Monitoring](./sdk-monitoring.md)** - Logging and metrics
+- **[Storage & IPFS](./sdk-storage.md)** - Upload NFT metadata
+- **[Real-time Events](./sdk-events.md)** - WebSocket subscriptions
+- **[Wallet Connectors](./sdk-wallets.md)** - MetaMask integration
+- **[Contract Deployment](./sdk-deployment.md)** - Deploy and verify
+- **[RPC Load Balancer](./sdk-rpc-balancer.md)** - High availability
 
 ## 🆘 Troubleshooting
 
