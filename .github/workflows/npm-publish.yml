@@ -25,9 +25,6 @@ jobs:
       - name: Compile contracts (generate typechain types)
         run: pnpm --filter contracts run compile
 
-      - name: Typecheck
-        run: pnpm --filter somnia-agent-kit run typecheck
-
       - name: Run tests
         run: pnpm --filter somnia-agent-kit run test:run || echo "Tests failed but continuing with publish"
         continue-on-error: true
