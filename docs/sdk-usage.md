@@ -10,6 +10,8 @@ npm install somnia-agent-kit
 
 ## Initialize SDK
 
+### Option 1: With Manual Config
+
 ```typescript
 import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
@@ -23,6 +25,17 @@ const kit = new SomniaAgentKit({
   },
   privateKey: process.env.PRIVATE_KEY, // Optional for read operations
 });
+
+await kit.initialize();
+```
+
+### Option 2: Auto-load from .env (Recommended)
+
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+// Automatically loads config from environment variables
+const kit = new SomniaAgentKit();
 
 await kit.initialize();
 ```
@@ -230,11 +243,26 @@ try {
 
 ## Next Steps
 
+### Core Features
 - **[Working with Agents](sdk-agents.md)** - Register and manage agents
 - **[Task Management](sdk-tasks.md)** - Create and execute tasks
 - **[Vault Operations](sdk-vault.md)** - Manage agent funds
 - **[LLM Integration](sdk-llm.md)** - Use AI with your agents
+
+### Advanced Features
+- **[Token Management](sdk-tokens.md)** - ERC20, ERC721, native tokens
+- **[Multicall Batching](sdk-multicall.md)** - Optimize gas costs
+- **[Monitoring](sdk-monitoring.md)** - Logging and metrics
+- **[Autonomous Runtime](sdk-runtime.md)** - Build self-running agents
+- **[Storage & IPFS](sdk-storage.md)** - Upload and retrieve data
+- **[Real-time Events](sdk-events.md)** - WebSocket subscriptions
+- **[Wallet Connectors](sdk-wallets.md)** - MetaMask integration
+- **[Contract Deployment](sdk-deployment.md)** - Deploy and verify
+- **[RPC Load Balancer](sdk-rpc-balancer.md)** - High availability
+
+### Reference
 - **[API Reference](../API_REFERENCE.md)** - Complete API documentation
+- **[CLI Guide](cli-guide.md)** - Command-line interface
 
 ## See Also
 

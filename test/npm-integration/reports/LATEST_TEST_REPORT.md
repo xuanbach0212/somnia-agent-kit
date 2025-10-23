@@ -1,7 +1,7 @@
 # Somnia Agent Kit - NPM Package Test Report
 
-**Generated**: 10/21/2025, 4:48:53 PM
-**Duration**: 24.65s
+**Generated**: 10/21/2025, 5:21:47 PM
+**Duration**: 25.83s
 **Status**: ❌ FAIL
 
 ## Summary

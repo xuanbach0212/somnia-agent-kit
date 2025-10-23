@@ -30,6 +30,18 @@ Simple, focused examples to get you started with Somnia Agent Kit.
 **What it does**: Use Logger, Metrics, and Dashboard  
 **Run**: `npx ts-node 05-monitoring/index.ts`
 
+### 6. MultiCall Batch Operations 🆕
+**File**: `06-multicall-batch/index.ts`  
+**What it does**: Batch multiple contract calls into 1 RPC request (80-90% faster!)  
+**Features**: Balance checks, token metadata, block aggregation  
+**Run**: `npx ts-node 06-multicall-batch/index.ts`
+
+### 7. Token Management 🆕
+**File**: `07-token-management/index.ts`  
+**What it does**: Manage ERC20, ERC721, and native tokens  
+**Features**: Balances, transfers, approvals, NFT operations  
+**Run**: `npx ts-node 07-token-management/index.ts`
+
 ---
 
 ## 🚀 Quick Start
@@ -70,6 +82,10 @@ npx ts-node examples/02-register-agent/index.ts
 npx ts-node examples/03-ai-agent/index.ts
 npx ts-node examples/04-task-execution/index.ts
 npx ts-node examples/05-monitoring/index.ts
+
+# New: Try advanced features
+npx ts-node examples/06-multicall-batch/index.ts
+npx ts-node examples/07-token-management/index.ts
 ```
 
 ---
@@ -81,6 +97,8 @@ npx ts-node examples/05-monitoring/index.ts
 - **AI Agent**: Requires Ollama installed
 - **Task Execution**: Requires private key + existing agent
 - **Monitoring**: No blockchain needed
+- **MultiCall Batch** 🆕: Requires valid ERC20 token address
+- **Token Management** 🆕: Works with any token/NFT on Somnia testnet
 
 ---
 
