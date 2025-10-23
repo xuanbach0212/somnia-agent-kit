@@ -226,6 +226,12 @@ export * from './tokens';
 // Contract deployment
 export * from './deployment';
 
+// Wallet connectors
+export * from './wallets';
+
+// Storage (IPFS)
+export * from './storage';
+
 // Runtime modules
 export * from './runtime';
 
