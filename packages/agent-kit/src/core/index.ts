@@ -5,5 +5,7 @@
 
 export * from './chainClient';
 export * from './config';
-export * from './contracts';
+export { SomniaContracts, type ContractInstances } from './contracts';
+export * from './multicall';
+export * from './rpcProvider';
 export * from './signerManager';

@@ -72,6 +72,13 @@ export class ChainClient {
   }
 
   /**
+   * Get network configuration
+   */
+  getNetworkConfig() {
+    return this.config.network;
+  }
+
+  /**
    * Get current block number (with optional caching)
    */
   async getBlockNumber(useCache: boolean = true): Promise<number> {
@@ -144,10 +151,7 @@ export class ChainClient {
     confirmations: number = 1
   ): Promise<ethers.TransactionReceipt> {
     this.ensureConnected();
-    const receipt = await this.provider.waitForTransaction(
-      txHash,
-      confirmations
-    );
+    const receipt = await this.provider.waitForTransaction(txHash, confirmations);
     if (!receipt) {
       throw new Error(`Transaction ${txHash} not found`);
     }
@@ -157,9 +161,7 @@ export class ChainClient {
   /**
    * Get transaction receipt
    */
-  async getTransactionReceipt(
-    txHash: string
-  ): Promise<ethers.TransactionReceipt | null> {
+  async getTransactionReceipt(txHash: string): Promise<ethers.TransactionReceipt | null> {
     this.ensureConnected();
     return await this.provider.getTransactionReceipt(txHash);
   }
@@ -167,9 +169,7 @@ export class ChainClient {
   /**
    * Get transaction details
    */
-  async getTransaction(
-    txHash: string
-  ): Promise<ethers.TransactionResponse | null> {
+  async getTransaction(txHash: string): Promise<ethers.TransactionResponse | null> {
     this.ensureConnected();
     return await this.provider.getTransaction(txHash);
   }

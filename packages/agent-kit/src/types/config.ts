@@ -21,6 +21,18 @@ export interface NetworkConfig {
 
   /** Network name */
   name: string;
+
+  /** MultiCall contract address (optional) */
+  multicall?: Address;
+
+  /** EntryPoint contract address for Account Abstraction (optional) */
+  entryPoint?: Address;
+
+  /** Block explorer URL (optional) */
+  explorer?: string;
+
+  /** Native token symbol (optional) */
+  token?: string;
 }
 
 // =============================================================================
