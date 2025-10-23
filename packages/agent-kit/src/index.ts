@@ -232,6 +232,9 @@ export * from './wallets';
 // Storage (IPFS)
 export * from './storage';
 
+// Real-time events
+export * from './events';
+
 // Runtime modules
 export * from './runtime';
 
