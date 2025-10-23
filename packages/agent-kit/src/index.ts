@@ -219,6 +219,12 @@ export type { ContractInstances } from './core/contracts';
 export { ChainClient } from './core/chainClient';
 export { SignerManager } from './core/signerManager';
 
+// Wallet connectors
+export * from './wallets';
+
+// Storage (IPFS)
+export * from './storage';
+
 // Runtime modules
 export * from './runtime';
 
