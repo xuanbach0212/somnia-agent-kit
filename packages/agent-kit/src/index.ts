@@ -15,6 +15,15 @@ import {
   type ContractVerifierConfig,
 } from './deployment';
 import { WebSocketClient, type WebSocketConfig } from './events';
+import { DeepSeekAdapter, OllamaAdapter, OpenAIAdapter } from './llm/adapters';
+import {
+  Logger,
+  LogLevel,
+  Metrics,
+  type LoggerConfig,
+  type MetricsConfig,
+} from './monitor';
+import { Agent } from './runtime';
 import { IPFSManager, type IPFSManagerConfig } from './storage';
 import { ERC20Manager, ERC721Manager, NativeTokenManager } from './tokens';
 import { MetaMaskConnector } from './wallets';
@@ -38,6 +47,12 @@ export class SomniaAgentKit {
   private _contractDeployer: ContractDeployer | null = null;
   private _contractVerifier: ContractVerifier | null = null;
   private _metaMaskConnector: MetaMaskConnector | null = null;
+
+  // LLM, Monitoring, Runtime instances
+  private _llm: OpenAIAdapter | OllamaAdapter | DeepSeekAdapter | null = null;
+  private _logger: Logger | null = null;
+  private _metrics: Metrics | null = null;
+  private _agent: Agent | null = null;
 
   /**
    * Create a new SomniaAgentKit instance
@@ -304,6 +319,167 @@ export class SomniaAgentKit {
       this._metaMaskConnector = new MetaMaskConnector();
     }
     return this._metaMaskConnector;
+  }
+
+  /**
+   * Get LLM adapter based on configuration
+   * @returns LLM adapter instance (OpenAI, Ollama, or DeepSeek)
+   * @example
+   * ```typescript
+   * const llm = kit.getLLM();
+   * const response = await llm.query('What is blockchain?');
+   * ```
+   */
+  getLLM(): OpenAIAdapter | OllamaAdapter | DeepSeekAdapter {
+    if (!this._llm) {
+      const llmConfig = this.config.llmProvider;
+
+      if (!llmConfig || !llmConfig.provider) {
+        throw new Error('LLM provider not configured. Set llmProvider in config.');
+      }
+
+      switch (llmConfig.provider) {
+        case 'openai':
+          this._llm = new OpenAIAdapter({
+            apiKey: llmConfig.apiKey || '',
+            baseURL: llmConfig.baseUrl,
+            defaultModel: llmConfig.model || 'gpt-4',
+            ...llmConfig.options,
+          });
+          break;
+        case 'ollama':
+          this._llm = new OllamaAdapter({
+            baseURL: llmConfig.baseUrl || 'http://localhost:11434',
+            defaultModel: llmConfig.model || 'llama3',
+            ...llmConfig.options,
+          });
+          break;
+        case 'anthropic':
+        case 'custom':
+          // DeepSeek can be used as a fallback for custom providers
+          this._llm = new DeepSeekAdapter({
+            apiKey: llmConfig.apiKey || '',
+            baseURL: llmConfig.baseUrl,
+            defaultModel: llmConfig.model || 'deepseek-chat',
+            ...llmConfig.options,
+          });
+          break;
+        default:
+          throw new Error(`Unsupported LLM provider: ${llmConfig.provider}`);
+      }
+    }
+    return this._llm;
+  }
+
+  /**
+   * Get logger instance
+   * @param config - Optional logger configuration
+   * @returns Logger instance
+   * @example
+   * ```typescript
+   * const logger = kit.getLogger();
+   * logger.info('Agent started');
+   * logger.error('Task failed', { error });
+   * ```
+   */
+  getLogger(config?: LoggerConfig): Logger {
+    if (!this._logger) {
+      // Map string log level to LogLevel enum
+      const logLevel = this.mapLogLevel(this.config.logLevel);
+      this._logger = new Logger({
+        level: logLevel,
+        ...config,
+      });
+    }
+    return this._logger;
+  }
+
+  /**
+   * Map string log level to LogLevel enum
+   * @private
+   */
+  private mapLogLevel(level?: string): LogLevel {
+    switch (level) {
+      case 'debug':
+        return LogLevel.Debug;
+      case 'info':
+        return LogLevel.Info;
+      case 'warn':
+        return LogLevel.Warn;
+      case 'error':
+        return LogLevel.Error;
+      default:
+        return LogLevel.Info;
+    }
+  }
+
+  /**
+   * Get metrics collector
+   * @param config - Optional metrics configuration
+   * @returns Metrics instance
+   * @example
+   * ```typescript
+   * const metrics = kit.getMetrics();
+   * await metrics.record('execution', 1);
+   * const summary = await metrics.getSummary();
+   * ```
+   */
+  getMetrics(config?: MetricsConfig): Metrics {
+    if (!this._metrics) {
+      this._metrics = new Metrics({
+        ...config,
+      });
+    }
+    return this._metrics;
+  }
+
+  /**
+   * Get or create an autonomous agent
+   * @param name - Agent name (optional, uses default if not provided)
+   * @returns Agent instance
+   * @example
+   * ```typescript
+   * const agent = kit.getAgent('MyAgent');
+   * await agent.start();
+   * ```
+   */
+  getAgent(name?: string): Agent {
+    if (!this._agent) {
+      // Agent constructor expects AgentConfig with specific fields
+      const owner = this.getSignerAddress();
+
+      this._agent = new Agent(
+        {
+          name: name || 'DefaultAgent',
+          description: 'Autonomous agent created via SDK',
+          owner,
+        } as any,
+        {
+          logger: this.getLogger(),
+        }
+      );
+    }
+    return this._agent;
+  }
+
+  /**
+   * Get signer address safely
+   * @private
+   */
+  private getSignerAddress(): string {
+    const signer = this.getSigner();
+    if (!signer) {
+      return ethers.ZeroAddress;
+    }
+
+    // Check if signer has address property (Wallet type)
+    if ('address' in signer && typeof signer.address === 'string') {
+      return signer.address;
+    }
+
+    // For generic Signer, we can't get address synchronously
+    // Return zero address as fallback
+    return ethers.ZeroAddress;
   }
 }
 
