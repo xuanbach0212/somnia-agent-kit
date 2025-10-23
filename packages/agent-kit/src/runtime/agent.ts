@@ -130,7 +130,10 @@ export class Agent extends EventEmitter<AgentEvents> {
     // Extract agentId from event
     const event = receipt?.logs.find((log: any) => {
       try {
-        const parsed = this.registryContract!.interface.parseLog(log);
+        const parsed = this.registryContract!.interface.parseLog({
+          topics: log.topics as string[],
+          data: log.data
+        });
         return parsed?.name === 'AgentRegistered';
       } catch {
         return false;
@@ -138,7 +141,10 @@ export class Agent extends EventEmitter<AgentEvents> {
     });
 
     if (event) {
-      const parsed = this.registryContract.interface.parseLog(event);
+      const parsed = this.registryContract.interface.parseLog({
+        topics: event.topics as string[],
+        data: event.data
+      });
       this.agentId = parsed?.args[0]; // agentId (uint256)
       this.agentAddress = parsed?.args[1]; // owner address
     }
