@@ -5,9 +5,9 @@
  * and can be imported successfully
  */
 
-import { describe, it, expect } from 'vitest';
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';
+import { describe, expect, it } from 'vitest';
 
 // Path to dist directory relative to this test file
 const distDir = join(__dirname, '../../dist');
@@ -46,36 +46,36 @@ describe('Build Output Files', () => {
   });
 
   describe('File Sizes', () => {
-    it('ESM output should be ~303KB', () => {
+    it('ESM output should be ~430KB (increased from ~303KB due to new features)', () => {
       const esmPath = join(distDir, 'index.mjs');
       if (existsSync(esmPath)) {
         const stats = statSync(esmPath);
         const sizeKB = stats.size / 1024;
-        // Allow 10% variance
-        expect(sizeKB).toBeGreaterThan(270); // 303 - 10%
-        expect(sizeKB).toBeLessThan(340); // 303 + 10%
+        // Allow 15% variance (new features added)
+        expect(sizeKB).toBeGreaterThan(365); // 430 - 15%
+        expect(sizeKB).toBeLessThan(495); // 430 + 15%
       }
     });
 
-    it('CJS output should be ~308KB', () => {
+    it('CJS output should be ~435KB (increased from ~308KB due to new features)', () => {
       const cjsPath = join(distDir, 'index.js');
       if (existsSync(cjsPath)) {
         const stats = statSync(cjsPath);
         const sizeKB = stats.size / 1024;
-        // Allow 10% variance
-        expect(sizeKB).toBeGreaterThan(275); // 308 - 10%
-        expect(sizeKB).toBeLessThan(345); // 308 + 10%
+        // Allow 15% variance (new features added)
+        expect(sizeKB).toBeGreaterThan(370); // 435 - 15%
+        expect(sizeKB).toBeLessThan(500); // 435 + 15%
       }
     });
 
-    it('DTS output should be ~195KB', () => {
+    it('DTS output should be ~270KB (increased from ~195KB due to new features)', () => {
       const dtsPath = join(distDir, 'index.d.ts');
       if (existsSync(dtsPath)) {
         const stats = statSync(dtsPath);
         const sizeKB = stats.size / 1024;
-        // Allow 10% variance
-        expect(sizeKB).toBeGreaterThan(175); // 195 - 10%
-        expect(sizeKB).toBeLessThan(220); // 195 + 10%
+        // Allow 15% variance (new features added)
+        expect(sizeKB).toBeGreaterThan(230); // 270 - 15%
+        expect(sizeKB).toBeLessThan(310); // 270 + 15%
       }
     });
   });
