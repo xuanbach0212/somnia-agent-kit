@@ -51,6 +51,10 @@ const receipt = await tx.wait();
 console.log('Task created!');
 ```
 
+{% hint style="info" %}
+**Note:** The `createTask` function takes 2 parameters: `agentId` and `taskData`. Payment is sent via `{ value }` option, not as a third parameter.
+{% endhint %}
+
 ## Get Task ID from Event
 
 ```typescript
@@ -98,6 +102,10 @@ const task = await kit.contracts.manager.getTask(taskId);
 console.log('Status:', statusMap[Number(task.status)]);
 ```
 
+{% hint style="info" %}
+**Note:** Task status: Pending (0), Active (1), Completed (2), Failed (3).
+{% endhint %}
+
 ## Execute Task (Agent Owner)
 
 ### Start Task
@@ -105,7 +113,7 @@ console.log('Status:', statusMap[Number(task.status)]);
 ```typescript
 const tx = await kit.contracts.manager.startTask(taskId);
 await tx.wait();
-console.log('Task started!');
+console.log('Task started and in progress!');
 ```
 
 ### Complete Task
@@ -126,39 +134,42 @@ await tx.wait();
 console.log('Task completed!');
 ```
 
-### Fail Task
+### Cancel Task
 
 ```typescript
-const errorMessage = 'Failed to fetch market data';
-
-const tx = await kit.contracts.manager.failTask(taskId, errorMessage);
+const tx = await kit.contracts.manager.cancelTask(taskId);
 await tx.wait();
-console.log('Task marked as failed');
+console.log('Task cancelled');
 ```
+
+{% hint style="info" %}
+**Note:** Use `startTask()` to start a task (changes status to InProgress), `completeTask()` to finish it, `failTask()` to mark as failed, and `cancelTask()` to cancel it.
+{% endhint %}
 
 ## Listen to Events
 
 ### Task Created
 
 ```typescript
-kit.contracts.manager.on('TaskCreated', (taskId, agentId, requester) => {
+kit.contracts.manager.on('TaskCreated', (taskId, agentId, requester, payment) => {
   console.log(`New task ${taskId.toString()} for agent ${agentId.toString()}`);
   console.log(`Requested by: ${requester}`);
+  console.log(`Payment: ${ethers.formatEther(payment)} STT`);
 });
 ```
 
 ### Task Started
 
 ```typescript
-kit.contracts.manager.on('TaskStarted', (taskId) => {
-  console.log(`Task ${taskId.toString()} started`);
+kit.contracts.manager.on('TaskStarted', (taskId, timestamp) => {
+  console.log(`Task ${taskId.toString()} started at ${new Date(Number(timestamp) * 1000)}`);
 });
 ```
 
 ### Task Completed
 
 ```typescript
-kit.contracts.manager.on('TaskCompleted', (taskId, result) => {
+kit.contracts.manager.on('TaskCompleted', (taskId, result, timestamp) => {
   console.log(`Task ${taskId.toString()} completed`);
   console.log('Result:', result);
 });
@@ -167,10 +178,22 @@ kit.contracts.manager.on('TaskCompleted', (taskId, result) => {
 ### Task Failed
 
 ```typescript
-kit.contracts.manager.on('TaskFailed', (taskId, reason) => {
-  console.log(`Task ${taskId.toString()} failed: ${reason}`);
+kit.contracts.manager.on('TaskFailed', (taskId, timestamp) => {
+  console.log(`Task ${taskId.toString()} failed at ${new Date(Number(timestamp) * 1000)}`);
 });
 ```
+
+### Task Cancelled
+
+```typescript
+kit.contracts.manager.on('TaskCancelled', (taskId, timestamp) => {
+  console.log(`Task ${taskId.toString()} cancelled at ${new Date(Number(timestamp) * 1000)}`);
+});
+```
+
+{% hint style="info" %}
+**Note:** Events are `TaskCreated`, `TaskStarted`, `TaskCompleted`, `TaskFailed`, and `TaskCancelled`.
+{% endhint %}
 
 ## Complete Example
 
@@ -297,17 +320,23 @@ if (task.status === 2n) {
 }
 ```
 
-### 3. Set Appropriate Rewards
+### 3. Set Appropriate Payments
 
 ```typescript
 // Small task
-{ value: ethers.parseEther('0.001') }
+await kit.contracts.manager.createTask(agentId, taskData, {
+  value: ethers.parseEther('0.001')
+});
 
 // Medium task
-{ value: ethers.parseEther('0.01') }
+await kit.contracts.manager.createTask(agentId, taskData, {
+  value: ethers.parseEther('0.01')
+});
 
 // Large task
-{ value: ethers.parseEther('0.1') }
+await kit.contracts.manager.createTask(agentId, taskData, {
+  value: ethers.parseEther('0.1')
+});
 ```
 
 ### 4. Monitor Task Progress
@@ -323,7 +352,7 @@ async function waitForCompletion(taskId: bigint, maxWait = 60000) {
     if (task.status === 2n) {
       return JSON.parse(task.result);
     } else if (task.status === 3n) {
-      throw new Error(`Task failed: ${task.result}`);
+      throw new Error('Task was cancelled');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1000));

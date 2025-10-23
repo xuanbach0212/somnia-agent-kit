@@ -50,7 +50,8 @@ npx ts-node index.ts
 
 ### Native Token Operations
 ```typescript
-const nativeManager = new NativeTokenManager(chainClient);
+// Get Native Token Manager (recommended)
+const nativeManager = kit.getNativeTokenManager();
 
 // Get balance
 const balance = await nativeManager.getBalance();
@@ -64,7 +65,8 @@ await nativeManager.transfer(to, amount);
 
 ### ERC20 Operations
 ```typescript
-const erc20Manager = new ERC20Manager(chainClient);
+// Get ERC20 Manager (recommended)
+const erc20Manager = kit.getERC20Manager();
 
 // Get token info
 const info = await erc20Manager.getTokenInfo(tokenAddress);
@@ -84,7 +86,8 @@ await erc20Manager.ensureApproval(tokenAddress, spender, amount);
 
 ### ERC721 Operations
 ```typescript
-const nftManager = new ERC721Manager(chainClient);
+// Get ERC721 Manager (recommended)
+const nftManager = kit.getERC721Manager();
 
 // Get collection info
 const info = await nftManager.getCollectionInfo(nftAddress);

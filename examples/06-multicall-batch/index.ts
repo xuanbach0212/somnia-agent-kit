@@ -36,7 +36,6 @@ async function main() {
   });
 
   await kit.initialize();
-  const chainClient = kit.getChainClient();
 
   // Example token address (you can replace with any ERC20 token on Somnia testnet)
   const tokenAddress = '0x1234567890123456789012345678901234567890'; // Replace with real token
@@ -44,8 +43,9 @@ async function main() {
   console.log('📊 Example 1: Batch Balance Checks');
   console.log('=====================================\n');
 
-  // Create MultiCall instance
-  const multicall = new MultiCall(chainClient);
+  // Get MultiCall instance (recommended)
+  const multicall = kit.getMultiCall();
+  const chainClient = kit.getChainClient();
 
   // Example: Check balances for multiple addresses
   const addresses = [

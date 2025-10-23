@@ -10,6 +10,28 @@ The SDK provides utilities for uploading and retrieving data from IPFS, perfect 
 
 ### Initialize IPFS Manager
 
+### Option 1: Via SomniaAgentKit (Recommended)
+
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+const kit = new SomniaAgentKit({ /* config */ });
+await kit.initialize();
+
+// Get IPFS manager with default config
+const ipfs = kit.getIPFSManager();
+
+// Or with custom config
+const ipfs = kit.getIPFSManager({
+  gateway: 'https://gateway.pinata.cloud/ipfs/',
+  apiEndpoint: 'https://api.pinata.cloud',
+  apiKey: process.env.PINATA_API_KEY,
+  apiSecret: process.env.PINATA_API_SECRET,
+});
+```
+
+### Option 2: Standalone
+
 ```typescript
 import { IPFSManager } from 'somnia-agent-kit';
 
@@ -244,8 +266,8 @@ async function nftCollectionWithIPFS() {
     apiSecret: process.env.PINATA_API_SECRET
   });
 
-  // Initialize ERC721 manager
-  const erc721 = new ERC721Manager(kit.getChainClient());
+  // Get ERC721 manager
+  const erc721 = kit.getERC721Manager();
 
   // Upload NFT images first (assume already uploaded)
   const imageHashes = [

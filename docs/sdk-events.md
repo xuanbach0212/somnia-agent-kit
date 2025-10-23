@@ -10,6 +10,28 @@ The SDK provides WebSocket utilities for real-time event streaming, allowing you
 
 ### Initialize WebSocket Client
 
+### Option 1: Via SomniaAgentKit (Recommended)
+
+```typescript
+import { SomniaAgentKit } from 'somnia-agent-kit';
+
+const kit = new SomniaAgentKit({ /* config */ });
+await kit.initialize();
+
+// Get WebSocket client with default config
+const ws = kit.getWebSocketClient();
+
+// Or with custom config
+const ws = kit.getWebSocketClient({
+  wsUrl: 'wss://dream-rpc.somnia.network',
+  autoReconnect: true,
+  reconnectDelay: 5000,
+  maxReconnectAttempts: 10
+});
+```
+
+### Option 2: Standalone
+
 ```typescript
 import { WebSocketClient } from 'somnia-agent-kit';
 

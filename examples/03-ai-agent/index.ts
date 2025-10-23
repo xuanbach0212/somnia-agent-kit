@@ -59,8 +59,8 @@ async function main() {
   const tx = await kit.contracts.registry.registerAgent(
     'AI Trading Bot',
     descResponse.content.trim(),
-    'ipfs://QmAI123',
-    ['trading', 'ai-analysis']
+    'QmAI123', // IPFS hash
+    ['trading', 'ai-analysis'] // capabilities
   );
 
   console.log('⏳ Registering agent...');

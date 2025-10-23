@@ -54,7 +54,7 @@ const calls = [
   },
   {
     target: vaultAddress,
-    callData: vault.interface.encodeFunctionData('getBalance', [1])
+    callData: vault.interface.encodeFunctionData('getNativeBalance', [agentAddress])
   }
 ];
 
@@ -73,7 +73,7 @@ const agent = registry.interface.decodeFunctionResult(
 )[0];
 
 const balance = vault.interface.decodeFunctionResult(
-  'getBalance',
+  'getNativeBalance',
   results[2]
 )[0];
 
@@ -177,7 +177,7 @@ async function fetchDashboardData() {
     },
     {
       target: await vault.getAddress(),
-      callData: vault.interface.encodeFunctionData('getBalance', [1])
+      callData: vault.interface.encodeFunctionData('getNativeBalance', [agent1Address])
     },
     // Agent 2 data
     {
@@ -186,7 +186,7 @@ async function fetchDashboardData() {
     },
     {
       target: await vault.getAddress(),
-      callData: vault.interface.encodeFunctionData('getBalance', [2])
+      callData: vault.interface.encodeFunctionData('getNativeBalance', [agent2Address])
     },
   ];
 
@@ -214,7 +214,7 @@ async function fetchDashboardData() {
   )[0];
 
   const balance1 = vault.interface.decodeFunctionResult(
-    'getBalance',
+    'getNativeBalance',
     results[3]
   )[0];
 
@@ -224,7 +224,7 @@ async function fetchDashboardData() {
   )[0];
 
   const balance2 = vault.interface.decodeFunctionResult(
-    'getBalance',
+    'getNativeBalance',
     results[5]
   )[0];
 
@@ -267,8 +267,8 @@ async function trackPortfolio() {
 
   await kit.initialize();
 
-  const multicall = new MultiCall(kit.getChainClient());
-  const erc20 = new ERC20Manager(kit.getChainClient());
+  const multicall = kit.getMultiCall();
+  const erc20 = kit.getERC20Manager();
 
   // Token addresses to track
   const tokens = [
@@ -340,8 +340,8 @@ trackPortfolio().catch(console.error);
 const totalAgents = await registry.getTotalAgents();  // Call 1
 const agent1 = await registry.getAgent(1);            // Call 2
 const agent2 = await registry.getAgent(2);            // Call 3
-const balance1 = await vault.getBalance(1);           // Call 4
-const balance2 = await vault.getBalance(2);           // Call 5
+const balance1 = await vault.getNativeBalance(agent1.owner);  // Call 4
+const balance2 = await vault.getNativeBalance(agent2.owner);  // Call 5
 
 // Total time: ~5 x 200ms = 1000ms
 ```

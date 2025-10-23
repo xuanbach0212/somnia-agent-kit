@@ -208,7 +208,9 @@ console.log('Task status:', task.status);
 
 ```typescript
 // Get balance
-const balance = await kit.contracts.vault.getBalance(1);
+// Get agent address first
+const agent = await kit.contracts.registry.getAgent(1);
+const balance = await kit.contracts.vault.getNativeBalance(agent.owner);
 console.log('Vault balance:', ethers.formatEther(balance));
 ```
 
