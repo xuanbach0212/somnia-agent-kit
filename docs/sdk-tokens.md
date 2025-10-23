@@ -11,7 +11,7 @@ The SDK provides utilities for interacting with ERC20 tokens and ERC721 NFTs, in
 ### Initialize ERC20 Manager
 
 ```typescript
-import { SomniaAgentKit, ERC20Manager } from 'somnia-agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
 // Initialize SDK
 const kit = new SomniaAgentKit({
@@ -27,8 +27,8 @@ const kit = new SomniaAgentKit({
 
 await kit.initialize();
 
-// Create ERC20 manager
-const erc20 = new ERC20Manager(kit.getChainClient());
+// Get ERC20 manager (recommended)
+const erc20 = kit.getERC20Manager();
 ```
 
 ### Get Token Information
@@ -125,10 +125,8 @@ console.log('✅ Tokens transferred from allowance!');
 ### Initialize ERC721 Manager
 
 ```typescript
-import { ERC721Manager } from 'somnia-agent-kit';
-
-// Create ERC721 manager
-const erc721 = new ERC721Manager(kit.getChainClient());
+// Get ERC721 manager (already initialized above)
+const nft = kit.getERC721Manager();
 ```
 
 ### Get Collection Information
@@ -306,8 +304,9 @@ async function nftGallery() {
 
   await kit.initialize();
   
-  // Initialize ERC721 manager
-  const erc721 = new ERC721Manager(kit.getChainClient());
+  // Get managers
+  const erc20 = kit.getERC20Manager();
+  const nft = kit.getERC721Manager();
   
   const nftAddress = '0x...'; // Your NFT collection
   const signer = kit.getSigner();

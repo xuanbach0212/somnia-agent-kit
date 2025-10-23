@@ -24,13 +24,26 @@ npm install somnia-agent-kit
 ### Initialize MetaMask
 
 ```typescript
-import { MetaMaskConnector } from 'somnia-agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
-// Create MetaMask connector
-const metamask = new MetaMaskConnector();
+// Initialize SDK
+const kit = new SomniaAgentKit({
+  network: SOMNIA_NETWORKS.testnet,
+  contracts: {
+    agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+    agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+    agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+    agentVault: process.env.AGENT_VAULT_ADDRESS!,
+  },
+});
+
+await kit.initialize();
+
+// Get MetaMask connector (recommended)
+const metamask = kit.getMetaMaskConnector();
 
 // Check if MetaMask is installed
-if (!metamask.isAvailable()) {
+if (!await metamask.isAvailable()) {
   console.log('❌ MetaMask not installed');
   console.log('Install from: https://metamask.io');
   return;
@@ -161,11 +174,24 @@ import {
 import { ethers } from 'ethers';
 
 async function connectAndInteract() {
-  // Initialize MetaMask connector
-  const metamask = new MetaMaskConnector();
+  // Initialize SDK
+  const kit = new SomniaAgentKit({
+    network: SOMNIA_NETWORKS.testnet,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+      agentVault: process.env.AGENT_VAULT_ADDRESS!,
+    },
+  });
+
+  await kit.initialize();
+
+  // Get MetaMask connector
+  const metamask = kit.getMetaMaskConnector();
 
   // Check if MetaMask is available
-  if (!metamask.isAvailable()) {
+  if (!await metamask.isAvailable()) {
     console.error('❌ MetaMask not installed!');
     console.log('Install from: https://metamask.io');
     return;
@@ -221,20 +247,6 @@ async function connectAndInteract() {
     }
   }
 
-  // Initialize SDK with MetaMask provider
-  const kit = new SomniaAgentKit({
-    network: SOMNIA_NETWORKS.testnet,
-    contracts: {
-      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
-      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
-      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
-      agentVault: process.env.AGENT_VAULT_ADDRESS!,
-    },
-    // Use MetaMask's provider instead of private key
-    provider: metamask.getProvider(),
-  });
-
-  await kit.initialize();
 
   console.log('\n📋 Fetching agents...');
   const totalAgents = await kit.contracts.registry.getTotalAgents();
@@ -292,7 +304,16 @@ import { useState, useEffect } from 'react';
 import { MetaMaskConnector } from 'somnia-agent-kit';
 
 export function useMetaMask() {
-  const [metamask] = useState(() => new MetaMaskConnector());
+  const [kit] = useState(() => new SomniaAgentKit({
+    network: SOMNIA_NETWORKS.testnet,
+    contracts: {
+      agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+      agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+      agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+      agentVault: process.env.AGENT_VAULT_ADDRESS!,
+    },
+  }));
+  const [metamask] = useState(() => kit.getMetaMaskConnector());
   const [account, setAccount] = useState<string | null>(null);
   const [balance, setBalance] = useState<string>('0');
   const [isConnected, setIsConnected] = useState(false);

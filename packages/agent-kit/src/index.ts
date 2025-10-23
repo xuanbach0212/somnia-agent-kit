@@ -7,7 +7,17 @@ import { ethers } from 'ethers';
 import { ChainClient } from './core/chainClient';
 import { AgentKitConfig, loadConfig } from './core/config';
 import { SomniaContracts } from './core/contracts';
+import { MultiCall } from './core/multicall';
 import { SignerManager } from './core/signerManager';
+import {
+  ContractDeployer,
+  ContractVerifier,
+  type ContractVerifierConfig,
+} from './deployment';
+import { WebSocketClient, type WebSocketConfig } from './events';
+import { IPFSManager, type IPFSManagerConfig } from './storage';
+import { ERC20Manager, ERC721Manager, NativeTokenManager } from './tokens';
+import { MetaMaskConnector } from './wallets';
 
 /**
  * Main SDK class for Somnia Agent Kit
@@ -17,6 +27,17 @@ export class SomniaAgentKit {
   private initialized: boolean = false;
   private chainClient: ChainClient;
   private _contracts: SomniaContracts | null = null;
+
+  // Cached module instances
+  private _multiCall: MultiCall | null = null;
+  private _erc20Manager: ERC20Manager | null = null;
+  private _erc721Manager: ERC721Manager | null = null;
+  private _nativeTokenManager: NativeTokenManager | null = null;
+  private _ipfsManager: IPFSManager | null = null;
+  private _webSocketClient: WebSocketClient | null = null;
+  private _contractDeployer: ContractDeployer | null = null;
+  private _contractVerifier: ContractVerifier | null = null;
+  private _metaMaskConnector: MetaMaskConnector | null = null;
 
   /**
    * Create a new SomniaAgentKit instance
@@ -132,6 +153,157 @@ export class SomniaAgentKit {
       rpcUrl: this.config.network.rpcUrl,
       chainId: this.config.network.chainId,
     };
+  }
+
+  /**
+   * Get MultiCall instance for batch RPC operations
+   * @returns MultiCall instance
+   * @example
+   * ```typescript
+   * const multicall = kit.getMultiCall();
+   * const calls = [...]; // Array of calls
+   * const results = await multicall.aggregate(calls);
+   * ```
+   */
+  getMultiCall(): MultiCall {
+    if (!this._multiCall) {
+      this._multiCall = new MultiCall(this.chainClient);
+    }
+    return this._multiCall;
+  }
+
+  /**
+   * Get ERC20 token manager
+   * @returns ERC20Manager instance
+   * @example
+   * ```typescript
+   * const erc20 = kit.getERC20Manager();
+   * const balance = await erc20.balanceOf(tokenAddress, account);
+   * ```
+   */
+  getERC20Manager(): ERC20Manager {
+    if (!this._erc20Manager) {
+      this._erc20Manager = new ERC20Manager(this.chainClient);
+    }
+    return this._erc20Manager;
+  }
+
+  /**
+   * Get ERC721 NFT manager
+   * @returns ERC721Manager instance
+   * @example
+   * ```typescript
+   * const nft = kit.getERC721Manager();
+   * const owner = await nft.ownerOf(collectionAddress, tokenId);
+   * ```
+   */
+  getERC721Manager(): ERC721Manager {
+    if (!this._erc721Manager) {
+      this._erc721Manager = new ERC721Manager(this.chainClient);
+    }
+    return this._erc721Manager;
+  }
+
+  /**
+   * Get native token manager (STT/SOMI)
+   * @returns NativeTokenManager instance
+   * @example
+   * ```typescript
+   * const native = kit.getNativeTokenManager();
+   * const balance = await native.getBalance();
+   * ```
+   */
+  getNativeTokenManager(): NativeTokenManager {
+    if (!this._nativeTokenManager) {
+      this._nativeTokenManager = new NativeTokenManager(this.chainClient);
+    }
+    return this._nativeTokenManager;
+  }
+
+  /**
+   * Get IPFS storage manager
+   * @param config - Optional IPFS configuration
+   * @returns IPFSManager instance
+   * @example
+   * ```typescript
+   * const ipfs = kit.getIPFSManager();
+   * const metadata = await ipfs.fetchNFTMetadata('ipfs://...');
+   * ```
+   */
+  getIPFSManager(config?: IPFSManagerConfig): IPFSManager {
+    if (!this._ipfsManager) {
+      this._ipfsManager = new IPFSManager(config);
+    }
+    return this._ipfsManager;
+  }
+
+  /**
+   * Get WebSocket client for real-time events
+   * @param config - Optional WebSocket configuration
+   * @returns WebSocketClient instance
+   * @example
+   * ```typescript
+   * const ws = kit.getWebSocketClient();
+   * await ws.connect();
+   * await ws.subscribeToBlocks((block) => console.log(block));
+   * ```
+   */
+  getWebSocketClient(config?: WebSocketConfig): WebSocketClient {
+    if (!this._webSocketClient) {
+      this._webSocketClient = new WebSocketClient(this.chainClient, config);
+    }
+    return this._webSocketClient;
+  }
+
+  /**
+   * Get contract deployer
+   * @returns ContractDeployer instance
+   * @example
+   * ```typescript
+   * const deployer = kit.getContractDeployer();
+   * const result = await deployer.deployContract({ abi, bytecode, constructorArgs });
+   * ```
+   */
+  getContractDeployer(): ContractDeployer {
+    if (!this._contractDeployer) {
+      this._contractDeployer = new ContractDeployer(this.chainClient);
+    }
+    return this._contractDeployer;
+  }
+
+  /**
+   * Get contract verifier for Somnia Explorer
+   * @param config - Optional verifier configuration
+   * @returns ContractVerifier instance
+   * @example
+   * ```typescript
+   * const verifier = kit.getContractVerifier();
+   * const result = await verifier.verifyContract({ address, sourceCode, ... });
+   * ```
+   */
+  getContractVerifier(config?: ContractVerifierConfig): ContractVerifier {
+    if (!this._contractVerifier) {
+      this._contractVerifier = new ContractVerifier(this.chainClient, config);
+    }
+    return this._contractVerifier;
+  }
+
+  /**
+   * Get MetaMask connector (browser only)
+   * @returns MetaMaskConnector instance
+   * @example
+   * ```typescript
+   * const metamask = kit.getMetaMaskConnector();
+   * if (await metamask.isInstalled()) {
+   *   const account = await metamask.connect();
+   * }
+   * ```
+   */
+  getMetaMaskConnector(): MetaMaskConnector {
+    if (!this._metaMaskConnector) {
+      this._metaMaskConnector = new MetaMaskConnector();
+    }
+    return this._metaMaskConnector;
   }
 }
 
