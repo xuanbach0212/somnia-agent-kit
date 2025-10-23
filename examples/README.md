@@ -42,6 +42,12 @@ Simple, focused examples to get you started with Somnia Agent Kit.
 **Features**: Balances, transfers, approvals, NFT operations  
 **Run**: `npx ts-node 07-token-management/index.ts`
 
+### 8. Convenience API Demo 🆕
+**File**: `08-convenience-api/index.ts`  
+**What it does**: Demonstrate new convenient getter methods for all SDK modules  
+**Features**: Easy access to all managers (tokens, multicall, IPFS, WebSocket, deployment, wallets)  
+**Run**: `npx ts-node 08-convenience-api/index.ts`
+
 ---
 
 ## 🚀 Quick Start
@@ -86,6 +92,7 @@ npx ts-node examples/05-monitoring/index.ts
 # New: Try advanced features
 npx ts-node examples/06-multicall-batch/index.ts
 npx ts-node examples/07-token-management/index.ts
+npx ts-node examples/08-convenience-api/index.ts
 ```
 
 ---
@@ -99,6 +106,7 @@ npx ts-node examples/07-token-management/index.ts
 - **Monitoring**: No blockchain needed
 - **MultiCall Batch** 🆕: Requires valid ERC20 token address
 - **Token Management** 🆕: Works with any token/NFT on Somnia testnet
+- **Convenience API** 🆕: No special requirements, demonstrates all module access
 
 ---
 

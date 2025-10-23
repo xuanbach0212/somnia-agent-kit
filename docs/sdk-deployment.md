@@ -158,10 +158,24 @@ if (exists) {
 ### Initialize Verifier
 
 ```typescript
-import { ContractVerifier } from 'somnia-agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
-// Initialize verifier with explorer API
-const verifier = new ContractVerifier(kit.getChainClient(), {
+// Initialize SDK
+const kit = new SomniaAgentKit({
+  network: SOMNIA_NETWORKS.testnet,
+  contracts: {
+    agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+    agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+    agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+    agentVault: process.env.AGENT_VAULT_ADDRESS!,
+  },
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+await kit.initialize();
+
+// Get contract verifier (recommended)
+const verifier = kit.getContractVerifier({
   apiKey: process.env.EXPLORER_API_KEY, // Get from Somnia Explorer
   apiUrl: 'https://explorer.somnia.network/api',
 });
@@ -278,7 +292,7 @@ async function deployAndVerify() {
   console.log('🚀 Starting deployment...\n');
 
   // Step 1: Estimate gas
-  const deployer = new ContractDeployer(kit.getChainClient());
+  const deployer = kit.getContractDeployer();
 
   const gasEstimate = await deployer.estimateDeploymentCost({
     abi: MyContract_ABI,
@@ -317,7 +331,7 @@ async function deployAndVerify() {
   // Step 5: Verify on explorer
   console.log('\n🔍 Verifying contract on explorer...');
 
-  const verifier = new ContractVerifier(kit.getChainClient(), {
+  const verifier = kit.getContractVerifier({
     apiKey: process.env.EXPLORER_API_KEY,
     apiUrl: 'https://explorer.somnia.network/api',
   });
@@ -370,7 +384,7 @@ deployAndVerify().catch(console.error);
 
 ```typescript
 async function deployMultiple() {
-  const deployer = new ContractDeployer(kit.getChainClient());
+  const deployer = kit.getContractDeployer();
 
   const contracts = [
     {

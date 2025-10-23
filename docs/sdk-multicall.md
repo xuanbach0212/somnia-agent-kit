@@ -16,10 +16,23 @@ Multicall allows you to batch multiple contract read operations into a single RP
 ## Initialize Multicall
 
 ```typescript
-import { MultiCall } from 'somnia-agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit';
 
-// Create multicall instance
-const multicall = new MultiCall(kit.getChainClient());
+// Initialize SDK
+const kit = new SomniaAgentKit({
+  network: SOMNIA_NETWORKS.testnet,
+  contracts: {
+    agentRegistry: process.env.AGENT_REGISTRY_ADDRESS!,
+    agentManager: process.env.AGENT_MANAGER_ADDRESS!,
+    agentExecutor: process.env.AGENT_EXECUTOR_ADDRESS!,
+    agentVault: process.env.AGENT_VAULT_ADDRESS!,
+  },
+});
+
+await kit.initialize();
+
+// Get multicall instance (recommended)
+const multicall = kit.getMultiCall();
 ```
 
 ## Basic Usage
@@ -137,8 +150,8 @@ async function fetchDashboardData() {
 
   await kit.initialize();
 
-  // Initialize multicall
-  const multicall = new MultiCall(kit.getChainClient());
+  // Get multicall instance
+  const multicall = kit.getMultiCall();
 
   const registry = kit.contracts.registry;
   const vault = kit.contracts.vault;

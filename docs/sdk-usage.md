@@ -115,6 +115,73 @@ if (signer) {
 }
 ```
 
+## SDK Convenience Methods
+
+The SDK provides convenient getter methods for accessing all managers and utilities:
+
+### Token Management
+
+```typescript
+// ERC20 tokens
+const erc20 = kit.getERC20Manager();
+const balance = await erc20.balanceOf(tokenAddress, account);
+
+// ERC721 NFTs
+const nft = kit.getERC721Manager();
+const owner = await nft.ownerOf(collectionAddress, tokenId);
+
+// Native tokens (STT)
+const native = kit.getNativeTokenManager();
+const balance = await native.getBalance();
+```
+
+### Batch Operations
+
+```typescript
+// Multicall for batching RPC calls
+const multicall = kit.getMultiCall();
+const results = await multicall.aggregate(calls);
+```
+
+### Storage & IPFS
+
+```typescript
+// IPFS manager
+const ipfs = kit.getIPFSManager();
+const metadata = await ipfs.fetchNFTMetadata('ipfs://...');
+```
+
+### Real-time Events
+
+```typescript
+// WebSocket client
+const ws = kit.getWebSocketClient();
+await ws.connect();
+await ws.subscribeToBlocks((block) => console.log(block));
+```
+
+### Contract Deployment
+
+```typescript
+// Contract deployer
+const deployer = kit.getContractDeployer();
+const result = await deployer.deployContract({ abi, bytecode, constructorArgs });
+
+// Contract verifier
+const verifier = kit.getContractVerifier();
+await verifier.verifyContract({ address, sourceCode, contractName });
+```
+
+### Wallet Integration
+
+```typescript
+// MetaMask connector (browser only)
+const metamask = kit.getMetaMaskConnector();
+if (await metamask.isAvailable()) {
+  const accounts = await metamask.connect();
+}
+```
+
 ## Access Contracts
 
 ### AgentRegistry
