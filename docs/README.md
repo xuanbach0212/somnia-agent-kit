@@ -63,10 +63,20 @@ console.log('Agent:', agent);
 - **[FAQ](faq.md)** - Common questions
 
 ### SDK Usage
+- **[Basic Usage](sdk-usage.md)** - SDK initialization and configuration
 - **[Working with Agents](sdk-agents.md)** - Register and manage agents
 - **[Task Management](sdk-tasks.md)** - Create and execute tasks
 - **[Vault Operations](sdk-vault.md)** - Manage agent funds
 - **[LLM Integration](sdk-llm.md)** - Use AI with your agents
+- **[Token Management](sdk-tokens.md)** - ERC20, ERC721, and native tokens
+- **[Multicall Batching](sdk-multicall.md)** - Optimize gas with batched calls
+- **[Monitoring](sdk-monitoring.md)** - Logging, metrics, and dashboard
+- **[Autonomous Runtime](sdk-runtime.md)** - Build self-running agents
+- **[Storage & IPFS](sdk-storage.md)** - Upload and retrieve data
+- **[Real-time Events](sdk-events.md)** - WebSocket subscriptions
+- **[Wallet Connectors](sdk-wallets.md)** - MetaMask and wallet integration
+- **[Contract Deployment](sdk-deployment.md)** - Deploy and verify contracts
+- **[RPC Load Balancer](sdk-rpc-balancer.md)** - High availability setup
 - **[API Reference](../API_REFERENCE.md)** - Complete API docs
 
 ### CLI Tools

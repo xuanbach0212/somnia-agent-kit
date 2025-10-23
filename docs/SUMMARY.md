@@ -16,6 +16,15 @@
 * [⚡ Task Management](sdk-tasks.md)
 * [💰 Vault Operations](sdk-vault.md)
 * [🧠 LLM Integration](sdk-llm.md)
+* [🪙 Token Management](sdk-tokens.md)
+* [⚡ Multicall Batching](sdk-multicall.md)
+* [📊 Monitoring & Observability](sdk-monitoring.md)
+* [🤖 Autonomous Agent Runtime](sdk-runtime.md)
+* [💾 Storage & IPFS](sdk-storage.md)
+* [📡 Real-time Events](sdk-events.md)
+* [👛 Wallet Connectors](sdk-wallets.md)
+* [🚀 Contract Deployment](sdk-deployment.md)
+* [⚖️ RPC Load Balancer](sdk-rpc-balancer.md)
 
 ## CLI Tools
 
@@ -29,6 +38,8 @@
 * [🤖 AI Agent with Ollama](../examples/03-ai-agent/index.ts)
 * [⚡ Task Execution](../examples/04-task-execution/index.ts)
 * [📊 Monitoring](../examples/05-monitoring/index.ts)
+* [⚡ Multicall Batch](../examples/06-multicall-batch/index.ts)
+* [🪙 Token Management](../examples/07-token-management/index.ts)
 
 ## Smart Contracts
 
