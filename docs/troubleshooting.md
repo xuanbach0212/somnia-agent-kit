@@ -252,7 +252,7 @@ Error: insufficient funds for intrinsic transaction cost
 1. **Check balance:**
 ```typescript
 const balance = await kit.signer.getBalance();
-console.log('Balance:', ethers.utils.formatEther(balance), 'STM');
+console.log('Balance:', ethers.formatEther(balance), 'STM');
 ```
 
 2. **Get testnet tokens:**
@@ -269,12 +269,12 @@ https://faucet.somnia.network
 try {
   const gasEstimate = await contract.estimateGas.functionName(...args);
   const gasPrice = await provider.getGasPrice();
-  const cost = gasEstimate.mul(gasPrice);
+  const cost = gasEstimate * gasPrice;
   
-  console.log('Estimated cost:', ethers.utils.formatEther(cost), 'STM');
+  console.log('Estimated cost:', ethers.formatEther(cost), 'STM');
   
   const balance = await signer.getBalance();
-  if (balance.lt(cost)) {
+  if (balance < cost) {
     throw new Error('Insufficient balance for transaction');
   }
   
@@ -453,7 +453,7 @@ if (!receipt) {
 // Replace transaction with higher gas price
 const newTx = await signer.sendTransaction({
   ...tx,
-  gasPrice: tx.gasPrice.mul(120).div(100), // +20% gas price
+  gasPrice: (tx.gasPrice * 120n) / 100n, // +20% gas price
   nonce: tx.nonce, // Same nonce to replace
 });
 ```
@@ -765,13 +765,17 @@ Error: Daily withdrawal limit exceeded
 
 1. **Check available amount:**
 ```typescript
-const available = await vault.getAvailableDailyAmount(agentId);
-console.log('Available today:', ethers.utils.formatEther(available));
+// Get agent address first
+const agent = await kit.contracts.registry.getAgent(agentId);
+const agentAddress = agent.owner;
+
+const available = await vault.getAvailableDailyAmount(agentAddress);
+console.log('Available today:', ethers.formatEther(available));
 ```
 
 2. **Wait for reset:**
 ```typescript
-const vaultInfo = await vault.getVault(agentId);
+const vaultInfo = await vault.getVault(agentAddress);
 const lastReset = vaultInfo.lastResetTime.toNumber() * 1000;
 const nextReset = lastReset + 86400000; // +24 hours
 const timeUntilReset = nextReset - Date.now();
@@ -783,9 +787,9 @@ if (timeUntilReset > 0) {
 
 3. **Increase limit:**
 ```typescript
-const newLimit = ethers.utils.parseEther('2.0'); // Increase to 2 STM/day
+const newLimit = ethers.parseEther('2.0'); // Increase to 2 STM/day
 
-const tx = await vault.updateDailyLimit(agentId, newLimit);
+const tx = await vault.updateDailyLimit(agentAddress, newLimit);
 await tx.wait();
 
 console.log('Daily limit increased');

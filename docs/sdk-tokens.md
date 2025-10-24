@@ -249,8 +249,8 @@ async function tokenTransferBot() {
   await kit.initialize();
   console.log('✅ SDK initialized');
 
-  // Initialize ERC20 manager
-  const erc20 = new ERC20Manager(kit.getChainClient());
+  // Get ERC20 manager
+  const erc20 = kit.getERC20Manager();
   
   const tokenAddress = '0x...'; // Your token address
   const recipientAddress = '0x...';

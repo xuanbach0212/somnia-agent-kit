@@ -143,7 +143,7 @@ async function main() {
     'AI Trading Bot',
     descResponse.content.trim(),
     'ipfs://QmExample',
-    ['trading', 'ai-analysis']
+    ['trading', 'ai-analysis'] // capabilities
   );
 
   await tx.wait();

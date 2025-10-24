@@ -9,56 +9,60 @@ AgentVault provides:
 - ✅ **Daily Spending Limits** - Prevent excessive spending
 - ✅ **Multi-Token Support** - Native tokens + ERC20
 - ✅ **Withdrawal Controls** - Owner-controlled withdrawals
-- ✅ **Emergency Functions** - Pause and recovery options
+- ✅ **Token Whitelist** - Control which tokens can be deposited
 
 ## 📊 Contract Architecture
 
 ```solidity
-contract AgentVault {
+contract AgentVault is Ownable, ReentrancyGuard {
     struct Vault {
-        uint256 agentId;
-        address owner;
         uint256 nativeBalance;
+        mapping(address => uint256) tokenBalances;
+        address[] allowedTokens;
         uint256 dailyLimit;
         uint256 dailySpent;
         uint256 lastResetTime;
         bool isActive;
-        mapping(address => uint256) tokenBalances;
-        mapping(address => bool) allowedTokens;
     }
     
-    mapping(uint256 => Vault) public vaults;
-    mapping(uint256 => bool) public vaultExists;
+    mapping(address => Vault) private vaults;
+    mapping(address => bool) public registeredAgents;
+    
+    uint256 public constant MIN_DAILY_LIMIT = 0.01 ether;
+    uint256 public constant MAX_DAILY_LIMIT = 100 ether;
 }
 ```
+
+{% hint style="warning" %}
+**Critical:** AgentVault uses **agent addresses** (not agent IDs) for all operations. The vault is mapped by the agent's address, not by a numeric ID.
+{% endhint %}
 
 ## 🔧 Core Functions
 
 ### 1. Create Vault
 
-Create a new vault for an agent.
+Create a new vault for an agent (contract owner only).
 
 ```solidity
 function createVault(
-    uint256 agentId,
+    address agent,
     uint256 dailyLimit
-) external returns (bool)
+) external onlyOwner
 ```
 
 **Parameters:**
-- `agentId` - ID of the agent
-- `dailyLimit` - Daily spending limit in wei
+- `agent` - Address of the agent (owner address)
+- `dailyLimit` - Daily spending limit in wei (must be between 0.01 and 100 ether)
 
 **Requirements:**
-- Caller must own the agent
+- Caller must be contract owner
 - Vault must not already exist
-- Daily limit must be > 0
+- Daily limit must be within MIN_DAILY_LIMIT and MAX_DAILY_LIMIT
 
 **Events:**
 ```solidity
 event VaultCreated(
-    uint256 indexed agentId,
-    address indexed owner,
+    address indexed agent,
     uint256 dailyLimit
 );
 ```
@@ -68,41 +72,44 @@ event VaultCreated(
 ```typescript
 import { ethers } from 'ethers';
 
-const agentId = 1;
-const dailyLimit = ethers.utils.parseEther('1.0'); // 1 token per day
+// Get agent address from registry first
+const agentId = 1n;
+const agent = await kit.contracts.registry.getAgent(agentId);
+const agentAddress = agent.owner; // Use agent owner address
 
-const tx = await kit.contracts.AgentVault.createVault(
-  agentId,
+const dailyLimit = ethers.parseEther('1.0'); // 1 STT per day
+
+const tx = await kit.contracts.vault.createVault(
+  agentAddress,
   dailyLimit
 );
 
 await tx.wait();
-console.log('✅ Vault created with daily limit:', 
-  ethers.utils.formatEther(dailyLimit));
+console.log('✅ Vault created with daily limit:', ethers.formatEther(dailyLimit), 'STT');
 ```
 
 ### 2. Deposit Native Tokens
 
-Deposit native blockchain tokens (e.g., STM) into the vault.
+Deposit native blockchain tokens (STT) into the vault.
 
 ```solidity
-function depositNative(uint256 agentId) 
+function depositNative(address agent) 
     external 
-    payable
+    payable 
+    nonReentrant
 ```
 
 **Parameters:**
-- `agentId` - ID of the agent
+- `agent` - Address of the agent
 
 **Requirements:**
 - Vault must exist
-- Vault must be active
 - msg.value must be > 0
 
 **Events:**
 ```solidity
-event NativeDeposited(
-    uint256 indexed agentId,
+event NativeDeposit(
+    address indexed agent,
     address indexed depositor,
     uint256 amount
 );
@@ -111,51 +118,55 @@ event NativeDeposited(
 **Example:**
 
 ```typescript
-const agentId = 1;
-const amount = ethers.utils.parseEther('0.5'); // 0.5 tokens
+const agentAddress = '0x...'; // Agent owner address
+const amount = ethers.parseEther('0.5'); // 0.5 STT
 
-const tx = await kit.contracts.AgentVault.depositNative(
-  agentId,
-  { value: amount }
-);
+const tx = await kit.contracts.vault.depositNative(agentAddress, {
+  value: amount,
+});
 
 await tx.wait();
-console.log('✅ Deposited:', ethers.utils.formatEther(amount));
+console.log('✅ Deposited:', ethers.formatEther(amount), 'STT');
 ```
 
 ### 3. Withdraw Native Tokens
 
-Withdraw native tokens from the vault (owner only).
+Withdraw native tokens from the vault (agent or contract owner only).
 
 ```solidity
 function withdrawNative(
-    uint256 agentId,
+    address agent,
+    address payable recipient,
     uint256 amount
-) external
+) external nonReentrant
 ```
 
 **Parameters:**
-- `agentId` - ID of the agent
+- `agent` - Address of the agent
+- `recipient` - Address to receive the funds
 - `amount` - Amount to withdraw in wei
 
 **Requirements:**
-- Caller must be vault owner
-- Amount must not exceed daily limit
+- Caller must be agent or contract owner
+- Vault must be active
 - Sufficient balance
+- Amount must not exceed daily limit
 
 **Example:**
 
 ```typescript
-const agentId = 1;
-const amount = ethers.utils.parseEther('0.1');
+const agentAddress = '0x...';
+const recipientAddress = '0x...'; // Where to send funds
+const amount = ethers.parseEther('0.1');
 
-const tx = await kit.contracts.AgentVault.withdrawNative(
-  agentId,
+const tx = await kit.contracts.vault.withdrawNative(
+  agentAddress,
+  recipientAddress,
   amount
 );
 
 await tx.wait();
-console.log('✅ Withdrawn:', ethers.utils.formatEther(amount));
+console.log('✅ Withdrawn:', ethers.formatEther(amount), 'STT');
 ```
 
 ### 4. Deposit ERC20 Tokens
@@ -164,36 +175,40 @@ Deposit ERC20 tokens into the vault.
 
 ```solidity
 function depositToken(
-    uint256 agentId,
+    address agent,
     address token,
     uint256 amount
-) external
+) external nonReentrant
 ```
 
 **Requirements:**
-- Token must be allowed
+- Token must be allowed for this vault
 - Caller must have approved the vault
 - Amount must be > 0
 
 **Example:**
 
 ```typescript
+const agentAddress = '0x...';
+const tokenAddress = '0x...'; // ERC20 token address
+const amount = ethers.parseUnits('100', 18); // 100 tokens
+
 // 1. Approve the vault to spend your tokens
 const tokenContract = new ethers.Contract(
   tokenAddress,
   ['function approve(address spender, uint256 amount) returns (bool)'],
-  kit.signer
+  kit.getSigner()
 );
 
 const approvalTx = await tokenContract.approve(
-  kit.contracts.AgentVault.address,
+  await kit.contracts.vault.getAddress(),
   amount
 );
 await approvalTx.wait();
 
 // 2. Deposit tokens
-const depositTx = await kit.contracts.AgentVault.depositToken(
-  agentId,
+const depositTx = await kit.contracts.vault.depositToken(
+  agentAddress,
   tokenAddress,
   amount
 );
@@ -208,42 +223,56 @@ Withdraw ERC20 tokens from the vault.
 
 ```solidity
 function withdrawToken(
-    uint256 agentId,
+    address agent,
     address token,
+    address recipient,
     uint256 amount
-) external
+) external nonReentrant
 ```
+
+**Requirements:**
+- Caller must be agent or contract owner
+- Vault must be active
+- Sufficient token balance
 
 **Example:**
 
 ```typescript
-const tx = await kit.contracts.AgentVault.withdrawToken(
-  agentId,
+const agentAddress = '0x...';
+const tokenAddress = '0x...';
+const recipientAddress = '0x...';
+const amount = ethers.parseUnits('50', 18);
+
+const tx = await kit.contracts.vault.withdrawToken(
+  agentAddress,
   tokenAddress,
+  recipientAddress,
   amount
 );
 
 await tx.wait();
+console.log('✅ Withdrawn 50 tokens');
 ```
 
 ### 6. Allow Token
 
-Enable an ERC20 token for the vault (owner only).
+Enable an ERC20 token for the vault (contract owner only).
 
 ```solidity
 function allowToken(
-    uint256 agentId,
+    address agent,
     address token
-) external
+) external onlyOwner
 ```
 
 **Example:**
 
 ```typescript
+const agentAddress = '0x...';
 const usdcAddress = '0x...'; // USDC token address
 
-const tx = await kit.contracts.AgentVault.allowToken(
-  agentId,
+const tx = await kit.contracts.vault.allowToken(
+  agentAddress,
   usdcAddress
 );
 
@@ -251,24 +280,47 @@ await tx.wait();
 console.log('✅ USDC enabled for vault');
 ```
 
-### 7. Update Daily Limit
+### 7. Disallow Token
 
-Update the daily spending limit (owner only).
+Disable an ERC20 token for the vault (contract owner only).
 
 ```solidity
-function updateDailyLimit(
-    uint256 agentId,
-    uint256 newLimit
-) external
+function disallowToken(
+    address agent,
+    address token
+) external onlyOwner
 ```
 
 **Example:**
 
 ```typescript
-const newLimit = ethers.utils.parseEther('2.0'); // Increase to 2 tokens/day
+const tx = await kit.contracts.vault.disallowToken(
+  agentAddress,
+  tokenAddress
+);
 
-const tx = await kit.contracts.AgentVault.updateDailyLimit(
-  agentId,
+await tx.wait();
+console.log('✅ Token disallowed');
+```
+
+### 8. Update Daily Limit
+
+Update the daily spending limit (contract owner only).
+
+```solidity
+function updateDailyLimit(
+    address agent,
+    uint256 newLimit
+) external onlyOwner
+```
+
+**Example:**
+
+```typescript
+const newLimit = ethers.parseEther('2.0'); // Increase to 2 STT/day
+
+const tx = await kit.contracts.vault.updateDailyLimit(
+  agentAddress,
   newLimit
 );
 
@@ -276,62 +328,35 @@ await tx.wait();
 console.log('✅ Daily limit updated');
 ```
 
+### 9. Activate/Deactivate Vault
+
+Control vault status (contract owner only).
+
+```solidity
+function activateVault(address agent) external onlyOwner
+function deactivateVault(address agent) external onlyOwner
+```
+
+**Example:**
+
+```typescript
+// Deactivate vault
+const tx1 = await kit.contracts.vault.deactivateVault(agentAddress);
+await tx1.wait();
+console.log('✅ Vault deactivated');
+
+// Reactivate vault
+const tx2 = await kit.contracts.vault.activateVault(agentAddress);
+await tx2.wait();
+console.log('✅ Vault activated');
+```
+
 ## 🔍 Query Functions
 
-### Get Vault Info
+### Get Native Balance
 
 ```solidity
-function getVault(uint256 agentId) 
-    external 
-    view 
-    returns (
-        address owner,
-        uint256 nativeBalance,
-        uint256 dailyLimit,
-        uint256 dailySpent,
-        uint256 lastResetTime,
-        bool isActive
-    )
-```
-
-**Example:**
-
-```typescript
-const vault = await kit.contracts.AgentVault.getVault(agentId);
-
-console.log('Vault Info:', {
-  owner: vault.owner,
-  balance: ethers.utils.formatEther(vault.nativeBalance),
-  dailyLimit: ethers.utils.formatEther(vault.dailyLimit),
-  dailySpent: ethers.utils.formatEther(vault.dailySpent),
-  isActive: vault.isActive,
-});
-```
-
-### Get Token Balance
-
-```solidity
-function getTokenBalance(
-    uint256 agentId,
-    address token
-) external view returns (uint256)
-```
-
-**Example:**
-
-```typescript
-const balance = await kit.contracts.AgentVault.getTokenBalance(
-  agentId,
-  usdcAddress
-);
-
-console.log('USDC Balance:', ethers.utils.formatUnits(balance, 6));
-```
-
-### Get Available Daily Amount
-
-```solidity
-function getAvailableDailyAmount(uint256 agentId) 
+function getNativeBalance(address agent) 
     external 
     view 
     returns (uint256)
@@ -340,18 +365,87 @@ function getAvailableDailyAmount(uint256 agentId)
 **Example:**
 
 ```typescript
-const available = await kit.contracts.AgentVault.getAvailableDailyAmount(agentId);
-
-console.log('Available today:', ethers.utils.formatEther(available));
+const balance = await kit.contracts.vault.getNativeBalance(agentAddress);
+console.log('Native balance:', ethers.formatEther(balance), 'STT');
 ```
 
-### Check if Token is Allowed
+### Get Token Balance
 
 ```solidity
-function isTokenAllowed(
-    uint256 agentId,
+function getTokenBalance(
+    address agent,
     address token
-) external view returns (bool)
+) external view returns (uint256)
+```
+
+**Example:**
+
+```typescript
+const balance = await kit.contracts.vault.getTokenBalance(
+  agentAddress,
+  tokenAddress
+);
+
+console.log('Token balance:', ethers.formatUnits(balance, 18));
+```
+
+### Get Daily Limit Info
+
+```solidity
+function getDailyLimitInfo(address agent) 
+    external 
+    view 
+    returns (
+        uint256 limit,
+        uint256 spent,
+        uint256 remaining,
+        uint256 resetTime
+    )
+```
+
+**Example:**
+
+```typescript
+const limitInfo = await kit.contracts.vault.getDailyLimitInfo(agentAddress);
+
+console.log({
+  limit: ethers.formatEther(limitInfo.limit),
+  spent: ethers.formatEther(limitInfo.spent),
+  remaining: ethers.formatEther(limitInfo.remaining),
+  resetTime: new Date(Number(limitInfo.resetTime) * 1000),
+});
+```
+
+### Get Allowed Tokens
+
+```solidity
+function getAllowedTokens(address agent) 
+    external 
+    view 
+    returns (address[] memory)
+```
+
+**Example:**
+
+```typescript
+const allowedTokens = await kit.contracts.vault.getAllowedTokens(agentAddress);
+console.log('Allowed tokens:', allowedTokens);
+```
+
+### Check if Vault is Active
+
+```solidity
+function isVaultActive(address agent) 
+    external 
+    view 
+    returns (bool)
+```
+
+**Example:**
+
+```typescript
+const isActive = await kit.contracts.vault.isVaultActive(agentAddress);
+console.log('Vault active:', isActive);
 ```
 
 ## 📡 Events
@@ -360,48 +454,58 @@ function isTokenAllowed(
 
 ```solidity
 event VaultCreated(
-    uint256 indexed agentId,
-    address indexed owner,
+    address indexed agent,
     uint256 dailyLimit
 );
 ```
 
-### NativeDeposited
+### NativeDeposit
 
 ```solidity
-event NativeDeposited(
-    uint256 indexed agentId,
+event NativeDeposit(
+    address indexed agent,
     address indexed depositor,
     uint256 amount
 );
 ```
 
-### NativeWithdrawn
+**Listen for deposits:**
+
+```typescript
+kit.contracts.vault.on('NativeDeposit', (agent, depositor, amount) => {
+  console.log(`💰 Native Deposit`);
+  console.log(`Agent: ${agent}`);
+  console.log(`From: ${depositor}`);
+  console.log(`Amount: ${ethers.formatEther(amount)} STT`);
+});
+```
+
+### NativeWithdraw
 
 ```solidity
-event NativeWithdrawn(
-    uint256 indexed agentId,
+event NativeWithdraw(
+    address indexed agent,
     address indexed recipient,
     uint256 amount
 );
 ```
 
-### TokenDeposited
+### TokenDeposit
 
 ```solidity
-event TokenDeposited(
-    uint256 indexed agentId,
+event TokenDeposit(
+    address indexed agent,
     address indexed token,
     address indexed depositor,
     uint256 amount
 );
 ```
 
-### TokenWithdrawn
+### TokenWithdraw
 
 ```solidity
-event TokenWithdrawn(
-    uint256 indexed agentId,
+event TokenWithdraw(
+    address indexed agent,
     address indexed token,
     address indexed recipient,
     uint256 amount
@@ -412,10 +516,31 @@ event TokenWithdrawn(
 
 ```solidity
 event DailyLimitUpdated(
-    uint256 indexed agentId,
+    address indexed agent,
     uint256 oldLimit,
     uint256 newLimit
 );
+```
+
+### TokenAllowed / TokenDisallowed
+
+```solidity
+event TokenAllowed(
+    address indexed agent,
+    address indexed token
+);
+
+event TokenDisallowed(
+    address indexed agent,
+    address indexed token
+);
+```
+
+### VaultActivated / VaultDeactivated
+
+```solidity
+event VaultActivated(address indexed agent);
+event VaultDeactivated(address indexed agent);
 ```
 
 ## 💡 Usage Patterns
@@ -423,19 +548,23 @@ event DailyLimitUpdated(
 ### Pattern 1: Basic Vault Setup
 
 ```typescript
-async function setupAgentVault(agentId: number) {
-  // 1. Create vault
-  const dailyLimit = ethers.utils.parseEther('1.0');
-  const createTx = await kit.contracts.AgentVault.createVault(
-    agentId,
+async function setupAgentVault(agentId: bigint) {
+  // 1. Get agent address from registry
+  const agent = await kit.contracts.registry.getAgent(agentId);
+  const agentAddress = agent.owner;
+  
+  // 2. Create vault
+  const dailyLimit = ethers.parseEther('1.0');
+  const createTx = await kit.contracts.vault.createVault(
+    agentAddress,
     dailyLimit
   );
   await createTx.wait();
   
-  // 2. Deposit initial funds
-  const initialDeposit = ethers.utils.parseEther('5.0');
-  const depositTx = await kit.contracts.AgentVault.depositNative(
-    agentId,
+  // 3. Deposit initial funds
+  const initialDeposit = ethers.parseEther('5.0');
+  const depositTx = await kit.contracts.vault.depositNative(
+    agentAddress,
     { value: initialDeposit }
   );
   await depositTx.wait();
@@ -447,11 +576,11 @@ async function setupAgentVault(agentId: number) {
 ### Pattern 2: Multi-Token Vault
 
 ```typescript
-async function setupMultiTokenVault(agentId: number) {
+async function setupMultiTokenVault(agentAddress: string) {
   // 1. Create vault
-  await kit.contracts.AgentVault.createVault(
-    agentId,
-    ethers.utils.parseEther('1.0')
+  await kit.contracts.vault.createVault(
+    agentAddress,
+    ethers.parseEther('1.0')
   );
   
   // 2. Allow multiple tokens
@@ -462,8 +591,8 @@ async function setupMultiTokenVault(agentId: number) {
   ];
   
   for (const token of tokens) {
-    const tx = await kit.contracts.AgentVault.allowToken(
-      agentId,
+    const tx = await kit.contracts.vault.allowToken(
+      agentAddress,
       token.address
     );
     await tx.wait();
@@ -475,18 +604,18 @@ async function setupMultiTokenVault(agentId: number) {
 ### Pattern 3: Automated Refill
 
 ```typescript
-async function autoRefillVault(agentId: number, minBalance: string) {
-  const minBalanceWei = ethers.utils.parseEther(minBalance);
+async function autoRefillVault(agentAddress: string, minBalance: string) {
+  const minBalanceWei = ethers.parseEther(minBalance);
   
   // Check balance periodically
   setInterval(async () => {
-    const vault = await kit.contracts.AgentVault.getVault(agentId);
+    const balance = await kit.contracts.vault.getNativeBalance(agentAddress);
     
-    if (vault.nativeBalance.lt(minBalanceWei)) {
-      const refillAmount = ethers.utils.parseEther('1.0');
+    if (balance < minBalanceWei) {
+      const refillAmount = ethers.parseEther('1.0');
       
-      const tx = await kit.contracts.AgentVault.depositNative(
-        agentId,
+      const tx = await kit.contracts.vault.depositNative(
+        agentAddress,
         { value: refillAmount }
       );
       
@@ -500,15 +629,11 @@ async function autoRefillVault(agentId: number, minBalance: string) {
 ### Pattern 4: Daily Limit Management
 
 ```typescript
-async function manageDailyLimit(agentId: number) {
+async function manageDailyLimit(agentAddress: string) {
   // Get current usage
-  const vault = await kit.contracts.AgentVault.getVault(agentId);
-  const available = await kit.contracts.AgentVault.getAvailableDailyAmount(agentId);
+  const limitInfo = await kit.contracts.vault.getDailyLimitInfo(agentAddress);
   
-  const usagePercent = vault.dailySpent
-    .mul(100)
-    .div(vault.dailyLimit)
-    .toNumber();
+  const usagePercent = Number(limitInfo.spent * 100n / limitInfo.limit);
   
   console.log(`Daily usage: ${usagePercent}%`);
   
@@ -519,10 +644,10 @@ async function manageDailyLimit(agentId: number) {
   
   // Auto-adjust limit based on usage patterns
   if (usagePercent > 90) {
-    const newLimit = vault.dailyLimit.mul(150).div(100); // +50%
+    const newLimit = limitInfo.limit * 150n / 100n; // +50%
     
-    const tx = await kit.contracts.AgentVault.updateDailyLimit(
-      agentId,
+    const tx = await kit.contracts.vault.updateDailyLimit(
+      agentAddress,
       newLimit
     );
     
@@ -537,23 +662,15 @@ async function manageDailyLimit(agentId: number) {
 ### 1. Daily Spending Limits
 
 Prevents agents from spending all funds at once:
+- Daily limit resets every 24 hours
+- Tracks spending per day
+- Prevents withdrawal if limit exceeded
 
-```typescript
-// Daily limit resets every 24 hours
-// Tracks spending per day
-// Prevents withdrawal if limit exceeded
-```
+### 2. Access Control
 
-### 2. Owner-Only Withdrawals
-
-Only the agent owner can withdraw funds:
-
-```solidity
-modifier onlyVaultOwner(uint256 agentId) {
-    require(msg.sender == vaults[agentId].owner, "Not vault owner");
-    _;
-}
-```
+- **Contract Owner**: Can create vaults, update limits, allow/disallow tokens, activate/deactivate vaults
+- **Agent Address**: Can withdraw from their own vault
+- **Anyone**: Can deposit to any vault
 
 ### 3. Token Whitelist
 
@@ -561,101 +678,40 @@ Only approved tokens can be deposited:
 
 ```typescript
 // Owner must explicitly allow each token
-await vault.allowToken(agentId, tokenAddress);
+await vault.allowToken(agentAddress, tokenAddress);
 ```
 
-### 4. Emergency Pause
+### 4. Reentrancy Protection
 
-Vault can be deactivated in emergencies:
-
-```typescript
-const tx = await kit.contracts.AgentVault.deactivateVault(agentId);
-await tx.wait();
-```
-
-## 🧪 Testing
-
-### Test Daily Limit Reset
-
-```typescript
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { time } from '@nomicfoundation/hardhat-network-helpers';
-
-describe('AgentVault Daily Limit', () => {
-  it('should reset daily spending after 24 hours', async () => {
-    // Setup
-    const vault = await deployVault();
-    const agentId = 1;
-    const dailyLimit = ethers.utils.parseEther('1.0');
-    
-    await vault.createVault(agentId, dailyLimit);
-    await vault.depositNative(agentId, { 
-      value: ethers.utils.parseEther('10.0') 
-    });
-    
-    // Spend up to limit
-    await vault.withdrawNative(agentId, dailyLimit);
-    
-    // Try to spend more (should fail)
-    await expect(
-      vault.withdrawNative(agentId, ethers.utils.parseEther('0.1'))
-    ).to.be.revertedWith('Daily limit exceeded');
-    
-    // Fast forward 24 hours
-    await time.increase(86400);
-    
-    // Should work now
-    await expect(
-      vault.withdrawNative(agentId, ethers.utils.parseEther('0.1'))
-    ).to.not.be.reverted;
-  });
-});
-```
-
-## 💰 Gas Optimization Tips
-
-### 1. Batch Deposits
-
-```typescript
-// ❌ Multiple transactions
-await vault.depositNative(agentId1, { value: amount1 });
-await vault.depositNative(agentId2, { value: amount2 });
-
-// ✅ Use multicall if available
-await vault.multicall([
-  vault.interface.encodeFunctionData('depositNative', [agentId1]),
-  vault.interface.encodeFunctionData('depositNative', [agentId2]),
-], { value: amount1.add(amount2) });
-```
-
-### 2. Check Balance Before Deposit
-
-```typescript
-// Avoid unnecessary transactions
-const vault = await kit.contracts.AgentVault.getVault(agentId);
-const targetBalance = ethers.utils.parseEther('10.0');
-
-if (vault.nativeBalance.lt(targetBalance)) {
-  const needed = targetBalance.sub(vault.nativeBalance);
-  await kit.contracts.AgentVault.depositNative(agentId, { value: needed });
-}
-```
+All state-changing functions use `nonReentrant` modifier to prevent reentrancy attacks.
 
 ## 📚 Related Documentation
 
 - **[AgentRegistry Contract](./agent-registry.md)** - Register agents
-- **[AgentExecutor Contract](./agent-executor.md)** - Execute tasks
+- **[AgentManager Contract](./agent-manager.md)** - Manage tasks
+- **[Vault Operations Guide](../sdk-vault.md)** - SDK usage
 - **[Smart Contracts Overview](../contracts-overview.md)** - All contracts
+
+## 🔗 Contract Addresses
+
+### Somnia Testnet
+```
+AgentVault: 0x7cEe3142A9c6d15529C322035041af697B2B5129
+```
+
+### Somnia Mainnet
+```
+AgentVault: Coming soon
+```
 
 ## ⚠️ Important Notes
 
-1. **Daily Limit Resets** - Automatically resets every 24 hours from last reset
-2. **Gas Costs** - Keep enough native tokens for gas fees
-3. **Token Approvals** - Remember to approve vault before depositing ERC20
-4. **Emergency Access** - Owner can always withdraw, regardless of daily limit
+1. **Agent Addresses** - Vault uses agent addresses (not IDs). Always get the agent's owner address from the registry first.
+2. **Daily Limit Resets** - Automatically resets every 24 hours from last reset
+3. **Gas Costs** - Keep enough native tokens for gas fees
+4. **Token Approvals** - Remember to approve vault before depositing ERC20
+5. **Owner vs Agent** - Contract owner manages vault settings, agent address can withdraw
 
 ---
 
 **Next:** Learn about [AgentExecutor](./agent-executor.md) for task execution.
-

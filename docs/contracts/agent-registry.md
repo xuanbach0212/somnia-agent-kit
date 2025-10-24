@@ -9,27 +9,27 @@ The AgentRegistry contract provides:
 - ✅ **Agent Discovery** - Find and query registered agents
 - ✅ **Ownership Management** - Control agent ownership and transfers
 - ✅ **Metadata Storage** - Store agent information via IPFS
-- ✅ **Capability Tracking** - Define what agents can do
+- ✅ **Status Management** - Activate/deactivate agents
 
 ## 📊 Contract Architecture
 
 ```solidity
 contract AgentRegistry {
     struct Agent {
-        uint256 id;              // Unique agent identifier
-        string name;             // Human-readable name
+        string name;             // Agent name
         string description;      // Agent description
+        string ipfsMetadata;     // IPFS hash for metadata
         address owner;           // Agent owner address
-        string metadataURI;      // IPFS URI for metadata
-        string[] capabilities;   // List of capabilities
         bool isActive;           // Active status
-        uint256 createdAt;       // Creation timestamp
-        uint256 updatedAt;       // Last update timestamp
+        uint256 registeredAt;    // Registration timestamp
+        uint256 lastUpdated;     // Last update timestamp
+        string[] capabilities;   // Agent capabilities
+        uint256 executionCount;  // Execution counter
     }
     
     mapping(uint256 => Agent) public agents;
     mapping(address => uint256[]) public ownerAgents;
-    uint256 public agentCount;
+    uint256 public agentCounter;
 }
 ```
 
@@ -41,21 +41,21 @@ Register a new AI agent on the blockchain.
 
 ```solidity
 function registerAgent(
-    string memory name,
-    string memory description,
-    string memory metadataURI,
-    string[] memory capabilities
-) external returns (uint256 agentId)
+    string memory _name,
+    string memory _description,
+    string memory _ipfsMetadata,
+    string[] memory _capabilities
+) external returns (uint256)
 ```
 
 **Parameters:**
-- `name` - Agent name (max 100 characters)
-- `description` - Agent description (max 500 characters)
-- `metadataURI` - IPFS URI containing full metadata
-- `capabilities` - Array of capability strings
+- `_name` - Agent name
+- `_description` - Agent description
+- `_ipfsMetadata` - IPFS hash containing full metadata
+- `_capabilities` - Array of agent capabilities
 
 **Returns:**
-- `agentId` - Unique ID of the registered agent
+- `uint256` - Unique ID of the registered agent
 
 **Events Emitted:**
 ```solidity
@@ -89,18 +89,25 @@ await kit.initialize();
 const tx = await kit.contracts.registry.registerAgent(
   'Trading Bot',
   'AI-powered trading assistant',
-  'ipfs://QmExample', // Metadata URI
-  ['trading', 'analysis', 'risk-management']
+  'QmExample123', // IPFS hash
+  ['trading', 'analysis', 'risk-management'] // capabilities
 );
 
 const receipt = await tx.wait();
 console.log('Agent registered:', receipt.hash);
 
-// Get agent ID
-const myAddress = await kit.getSigner()?.getAddress();
-const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
-const agentId = myAgents[myAgents.length - 1];
-console.log('Agent ID:', agentId.toString());
+// Get agent ID from event
+const event = receipt.logs.find(
+  (log: any) =>
+    log.topics[0] ===
+    kit.contracts.registry.interface.getEvent('AgentRegistered').topicHash
+);
+
+if (event) {
+  const parsed = kit.contracts.registry.interface.parseLog(event);
+  const agentId = parsed?.args.agentId;
+  console.log('Agent ID:', agentId.toString());
+}
 ```
 
 ### 2. Get Agent Info
@@ -108,17 +115,17 @@ console.log('Agent ID:', agentId.toString());
 Retrieve complete information about an agent.
 
 ```solidity
-function getAgent(uint256 agentId) 
+function getAgent(uint256 _agentId) 
     external 
     view 
     returns (Agent memory)
 ```
 
 **Parameters:**
-- `agentId` - ID of the agent to query
+- `_agentId` - ID of the agent to query
 
 **Returns:**
-- `Agent` - Complete agent struct
+- Tuple containing agent details
 
 **Example:**
 
@@ -127,11 +134,13 @@ const agentId = 1n;
 const agent = await kit.contracts.registry.getAgent(agentId);
 
 console.log('Agent Info:', {
-  id: agent.id.toString(),
   name: agent.name,
+  description: agent.description,
   owner: agent.owner,
-  capabilities: agent.capabilities,
+  ipfsMetadata: agent.ipfsMetadata,
   isActive: agent.isActive,
+  capabilities: agent.capabilities,
+  registeredAt: new Date(Number(agent.registeredAt) * 1000),
 });
 ```
 
@@ -141,16 +150,21 @@ Update agent information (owner only).
 
 ```solidity
 function updateAgent(
-    uint256 agentId,
-    string memory description,
-    string memory metadataURI,
-    string[] memory capabilities
+    uint256 _agentId,
+    string memory _name,
+    string memory _description,
+    string memory _ipfsMetadata,
+    string[] memory _capabilities
 ) external
 ```
 
 **Requirements:**
 - Caller must be agent owner
-- Agent must be active
+
+**Events Emitted:**
+```solidity
+event AgentUpdated(uint256 indexed agentId);
+```
 
 **Example:**
 
@@ -159,65 +173,78 @@ const agentId = 1n;
 
 const tx = await kit.contracts.registry.updateAgent(
   agentId,
-  'Updated description',
-  'ipfs://QmNewMetadata',
-  ['new-capability', 'another-capability']
+  'Updated Trading Bot',
+  'Enhanced AI trading assistant',
+  'QmNewHash456'
 );
 
 await tx.wait();
 console.log('Agent updated');
 ```
 
-### 4. Deactivate Agent
+### 4. Set Agent Status
 
-Deactivate an agent (owner only).
+Activate or deactivate an agent (owner only).
 
 ```solidity
-function deactivateAgent(uint256 agentId) external
+function setAgentStatus(
+    uint256 _agentId,
+    bool _isActive
+) external
 ```
 
 **Requirements:**
 - Caller must be agent owner
-- Agent must be active
 
-**Example:**
-
-```typescript
-const tx = await kit.contracts.registry.deactivateAgent(agentId);
-await tx.wait();
-console.log('Agent deactivated');
-```
-
-### 5. Reactivate Agent
-
-Reactivate a previously deactivated agent.
-
+**Events Emitted:**
 ```solidity
-function reactivateAgent(uint256 agentId) external
+event AgentStatusChanged(
+    uint256 indexed agentId,
+    bool isActive
+);
 ```
 
 **Example:**
 
 ```typescript
-const tx = await kit.contracts.registry.reactivateAgent(agentId);
-await tx.wait();
+// Deactivate agent
+const tx1 = await kit.contracts.registry.setAgentStatus(agentId, false);
+await tx1.wait();
+console.log('Agent deactivated');
+
+// Reactivate agent
+const tx2 = await kit.contracts.registry.setAgentStatus(agentId, true);
+await tx2.wait();
 console.log('Agent reactivated');
 ```
 
-### 6. Transfer Ownership
+{% hint style="info" %}
+**Note:** Use `setAgentStatus(agentId, isActive)` instead of separate `deactivateAgent()` and `reactivateAgent()` methods.
+{% endhint %}
+
+### 5. Transfer Ownership
 
 Transfer agent ownership to another address.
 
 ```solidity
 function transferAgentOwnership(
-    uint256 agentId,
-    address newOwner
+    uint256 _agentId,
+    address _newOwner
 ) external
 ```
 
 **Requirements:**
 - Caller must be current owner
 - New owner cannot be zero address
+
+**Events Emitted:**
+```solidity
+event AgentOwnershipTransferred(
+    uint256 indexed agentId,
+    address indexed previousOwner,
+    address indexed newOwner
+);
+```
 
 **Example:**
 
@@ -235,10 +262,23 @@ console.log('Ownership transferred to:', newOwner);
 
 ## 🔍 Query Functions
 
+### Get Total Agents
+
+```solidity
+function getTotalAgents() external view returns (uint256)
+```
+
+**Example:**
+
+```typescript
+const total = await kit.contracts.registry.getTotalAgents();
+console.log('Total agents:', total.toString());
+```
+
 ### Get Agents by Owner
 
 ```solidity
-function getAgentsByOwner(address owner) 
+function getAgentsByOwner(address _owner) 
     external 
     view 
     returns (uint256[] memory)
@@ -253,62 +293,26 @@ const myAgents = await kit.contracts.registry.getAgentsByOwner(myAddress!);
 console.log('My agents:', myAgents.map(id => id.toString()));
 ```
 
-### Get All Agents
+### Iterate Through All Agents
 
-```solidity
-function getAllAgents() 
-    external 
-    view 
-    returns (Agent[] memory)
-```
+{% hint style="warning" %}
+**Note:** The contract does not have `getAllAgents()` or `getActiveAgents()` methods. You need to iterate through agent IDs from 1 to `getTotalAgents()`.
+{% endhint %}
 
 **Example:**
 
 ```typescript
-const agentCount = await kit.contracts.registry.agentCount();
-console.log('Total agents:', agentCount.toString());
+const totalAgents = await kit.contracts.registry.getTotalAgents();
 
-// Get individual agents
-for (let i = 1n; i <= agentCount; i++) {
-  const agent = await kit.contracts.registry.getAgent(i);
-  console.log(`${agent.name} (ID: ${agent.id}) - ${agent.description}`);
-}
-```
-
-### Get Active Agents
-
-```solidity
-function getActiveAgents() 
-    external 
-    view 
-    returns (Agent[] memory)
-```
-
-### Search Agents by Capability
-
-```solidity
-function getAgentsByCapability(string memory capability) 
-    external 
-    view 
-    returns (uint256[] memory)
-```
-
-**Example:**
-
-```typescript
-// Note: This function may not be available in current contract version
-// Alternative: Query all agents and filter by capability
-const agentCount = await kit.contracts.registry.agentCount();
-const tradingAgents = [];
-
-for (let i = 1n; i <= agentCount; i++) {
-  const agent = await kit.contracts.registry.getAgent(i);
-  if (agent.capabilities.includes('trading')) {
-    tradingAgents.push(agent);
+for (let i = 1n; i <= totalAgents; i++) {
+  try {
+    const agent = await kit.contracts.registry.getAgent(i);
+    console.log(`Agent #${i}: ${agent.name}`);
+  } catch (error) {
+    // Agent might not exist or be deleted
+    console.log(`Agent #${i} not found`);
   }
 }
-
-console.log('Trading agents:', tradingAgents);
 ```
 
 ## 📡 Events
@@ -328,38 +332,45 @@ event AgentRegistered(
 ```typescript
 kit.contracts.registry.on('AgentRegistered', (agentId, owner, name) => {
   console.log(`New agent registered: ${name} (ID: ${agentId.toString()})`);
+  console.log(`Owner: ${owner}`);
 });
 ```
 
 ### AgentUpdated
 
 ```solidity
-event AgentUpdated(
+event AgentUpdated(uint256 indexed agentId);
+```
+
+**Example:**
+
+```typescript
+kit.contracts.registry.on('AgentUpdated', (agentId) => {
+  console.log(`Agent ${agentId.toString()} was updated`);
+});
+```
+
+### AgentStatusChanged
+
+```solidity
+event AgentStatusChanged(
     uint256 indexed agentId,
-    string metadataURI
+    bool isActive
 );
 ```
 
-### AgentDeactivated
+**Example:**
 
-```solidity
-event AgentDeactivated(
-    uint256 indexed agentId
-);
+```typescript
+kit.contracts.registry.on('AgentStatusChanged', (agentId, isActive) => {
+  console.log(`Agent ${agentId.toString()} is now ${isActive ? 'active' : 'inactive'}`);
+});
 ```
 
-### AgentReactivated
+### AgentOwnershipTransferred
 
 ```solidity
-event AgentReactivated(
-    uint256 indexed agentId
-);
-```
-
-### OwnershipTransferred
-
-```solidity
-event OwnershipTransferred(
+event AgentOwnershipTransferred(
     uint256 indexed agentId,
     address indexed previousOwner,
     address indexed newOwner
@@ -372,8 +383,7 @@ event OwnershipTransferred(
 
 These functions can only be called by the agent owner:
 - `updateAgent()`
-- `deactivateAgent()`
-- `reactivateAgent()`
+- `setAgentStatus()`
 - `transferAgentOwnership()`
 
 ### Public Functions
@@ -414,19 +424,8 @@ Store comprehensive metadata in IPFS:
 }
 ```
 
-### 2. Capability Naming
 
-Use consistent, lowercase capability names:
-
-```typescript
-// ✅ Good
-capabilities: ['trading', 'analysis', 'risk-management']
-
-// ❌ Bad
-capabilities: ['Trading', 'ANALYSIS', 'Risk Management']
-```
-
-### 3. Error Handling
+### 2. Error Handling
 
 Always handle potential errors:
 
@@ -435,7 +434,7 @@ try {
   const tx = await kit.contracts.registry.registerAgent(
     name,
     description,
-    metadataURI,
+    ipfsMetadata,
     capabilities
   );
   
@@ -453,55 +452,24 @@ try {
 }
 ```
 
-### 4. Gas Optimization
-
-Batch operations when possible:
+### 3. Verify Ownership
 
 ```typescript
-// Instead of multiple single registrations
-for (const agent of agents) {
-  await registerAgent(agent); // ❌ Expensive
+const agent = await kit.contracts.registry.getAgent(agentId);
+const signer = kit.getSigner();
+const myAddress = await signer.getAddress();
+
+if (agent.owner.toLowerCase() === myAddress.toLowerCase()) {
+  // You own this agent
+  await kit.contracts.registry.updateAgent(...);
 }
-
-// Use batch registration (if available)
-await registerAgentBatch(agents); // ✅ Cheaper
-```
-
-## 🧪 Testing
-
-### Unit Test Example
-
-```typescript
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-
-describe('AgentRegistry', () => {
-  it('should register a new agent', async () => {
-    const [owner] = await ethers.getSigners();
-    const AgentRegistry = await ethers.getContractFactory('AgentRegistry');
-    const registry = await AgentRegistry.deploy();
-    
-    const tx = await registry.registerAgent(
-      'Test Agent',
-      'A test agent',
-      'ipfs://QmTest',
-      ['test']
-    );
-    
-    const receipt = await tx.wait();
-    const event = receipt.events?.find(e => e.event === 'AgentRegistered');
-    
-    expect(event).to.not.be.undefined;
-    expect(event?.args?.name).to.equal('Test Agent');
-  });
-});
 ```
 
 ## 📚 Related Documentation
 
-- **[AgentExecutor Contract](./agent-executor.md)** - Execute agent tasks
-- **[AgentVault Contract](./agent-vault.md)** - Manage agent funds
 - **[AgentManager Contract](./agent-manager.md)** - Task management
+- **[AgentVault Contract](./agent-vault.md)** - Manage agent funds
+- **[AgentExecutor Contract](./agent-executor.md)** - Execute agent tasks
 - **[Smart Contracts Overview](../contracts-overview.md)** - All contracts
 
 ## 🔗 Contract Addresses
@@ -520,10 +488,9 @@ AgentRegistry: Coming soon
 
 1. **Metadata Validation** - Always validate metadata before uploading to IPFS
 2. **Owner Verification** - Verify ownership before sensitive operations
-3. **Gas Limits** - Be aware of gas costs for large capability arrays
-4. **IPFS Availability** - Ensure IPFS content is pinned and accessible
+3. **IPFS Availability** - Ensure IPFS content is pinned and accessible
+4. **Gas Costs** - Be aware of gas costs for operations
 
 ---
 
-**Next:** Learn about [AgentExecutor](./agent-executor.md) for executing agent tasks.
-
+**Next:** Learn about [AgentManager](./agent-manager.md) for managing agent tasks.

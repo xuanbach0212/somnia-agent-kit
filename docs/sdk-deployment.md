@@ -37,10 +37,13 @@ await kit.initialize();
 ### Basic Deployment
 
 ```typescript
-import { ContractDeployer } from 'somnia-agent-kit';
+import { SomniaAgentKit } from 'somnia-agent-kit';
 
-// Initialize deployer
-const deployer = new ContractDeployer(kit.getChainClient());
+const kit = new SomniaAgentKit({ /* config */ });
+await kit.initialize();
+
+// Get deployer (recommended)
+const deployer = kit.getContractDeployer();
 
 // Deploy contract
 const result = await deployer.deployContract({
