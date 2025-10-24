@@ -13,7 +13,6 @@
 import { ethers } from 'ethers';
 import {
   ERC20Manager,
-  ERC721Manager,
   NativeTokenManager,
   SOMNIA_NETWORKS,
   SomniaAgentKit,
@@ -33,7 +32,6 @@ async function main() {
   });
 
   await kit.initialize();
-  const chainClient = kit.getChainClient();
 
   // =============================================================================
   // Part 1: Native Token (STT) Operations
@@ -42,7 +40,9 @@ async function main() {
   console.log('💎 Part 1: Native Token (STT) Operations');
   console.log('===========================================\n');
 
-  const nativeManager = new NativeTokenManager(chainClient);
+  // Get Native Token Manager (recommended)
+  const nativeManager = kit.getNativeTokenManager();
+  const chainClient = kit.getChainClient();
 
   try {
     // Get network token info
@@ -110,7 +110,8 @@ async function main() {
   console.log('\n🪙 Part 2: ERC20 Token Operations');
   console.log('=====================================\n');
 
-  const erc20Manager = new ERC20Manager(chainClient);
+  // Get ERC20 Manager (recommended)
+  const erc20Manager = kit.getERC20Manager();
 
   // Example ERC20 token address (replace with real token)
   const tokenAddress = '0x1234567890123456789012345678901234567890';
@@ -166,7 +167,8 @@ async function main() {
   console.log('\n🖼️  Part 3: ERC721 NFT Operations');
   console.log('===================================\n');
 
-  const nftManager = new ERC721Manager(chainClient);
+  // Get ERC721 Manager (recommended)
+  const nftManager = kit.getERC721Manager();
 
   // Example NFT collection address (replace with real collection)
   const nftAddress = '0x9876543210987654321098765432109876543210';

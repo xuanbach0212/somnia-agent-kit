@@ -1,6 +1,6 @@
 {
   "name": "somnia-agent-kit",
-  "version": "3.0.10",
+  "version": "3.0.11",
   "description": "A comprehensive SDK and toolkit for building, deploying, and managing AI agents on Somnia Network",
   "private": true,
   "packageManager": "pnpm@8.15.0",

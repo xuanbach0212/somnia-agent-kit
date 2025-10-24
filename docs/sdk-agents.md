@@ -34,7 +34,7 @@ Register a new AI agent on-chain:
 const tx = await kit.contracts.registry.registerAgent(
   'Trading Bot',                              // name
   'AI-powered trading assistant',             // description
-  'ipfs://QmExample123',                      // metadata URI
+  'ipfs://QmExample123',                      // ipfsMetadata
   ['trading', 'analysis', 'risk-management']  // capabilities
 );
 
@@ -55,6 +55,10 @@ if (event) {
 }
 ```
 
+{% hint style="info" %}
+**Note:** The `registerAgent` function takes 4 parameters: `name`, `description`, `ipfsMetadata`, and `capabilities` array.
+{% endhint %}
+
 ## Query Agents
 
 ### Get Total Agents
@@ -74,16 +78,10 @@ console.log({
   description: agent.description,
   owner: agent.owner,
   isActive: agent.isActive,
-  metadata: agent.ipfsMetadata,
+  ipfsMetadata: agent.ipfsMetadata,
+  capabilities: agent.capabilities,
+  registeredAt: new Date(Number(agent.registeredAt) * 1000),
 });
-```
-
-### Get Agent Capabilities
-
-```typescript
-const capabilities = await kit.contracts.registry.getAgentCapabilities(1);
-console.log('Capabilities:', capabilities);
-// Output: ['trading', 'analysis', 'risk-management']
 ```
 
 ### Get Agents by Owner
@@ -99,20 +97,22 @@ console.log('My agents:', agentIds.map(id => id.toString()));
 ### Get All Agents
 
 ```typescript
-const allAgents = await kit.contracts.registry.getAllAgents();
+const totalAgents = await kit.contracts.registry.getTotalAgents();
 
-for (const agentId of allAgents) {
-  const agent = await kit.contracts.registry.getAgent(agentId);
-  console.log(`Agent #${agentId}: ${agent.name}`);
+for (let i = 1n; i <= totalAgents; i++) {
+  try {
+    const agent = await kit.contracts.registry.getAgent(i);
+    console.log(`Agent #${i}: ${agent.name}`);
+  } catch (error) {
+    // Agent might not exist
+    console.log(`Agent #${i} not found`);
+  }
 }
 ```
 
-### Get Active Agents
-
-```typescript
-const activeAgents = await kit.contracts.registry.getActiveAgents();
-console.log('Active agents:', activeAgents.length);
-```
+{% hint style="warning" %}
+**Note:** The contract does not have `getAllAgents()` or `getActiveAgents()` methods. You need to iterate through agent IDs from 1 to `getTotalAgents()`.
+{% endhint %}
 
 ## Update Agent
 
@@ -123,7 +123,8 @@ const tx = await kit.contracts.registry.updateAgent(
   1,                                    // agentId
   'Updated Trading Bot',                // new name
   'Enhanced AI trading assistant',      // new description
-  'ipfs://QmNewMetadata456'             // new metadata
+  'ipfs://QmNewMetadata456',            // new ipfsMetadata
+  ['trading', 'analysis', 'defi']       // new capabilities
 );
 
 await tx.wait();
@@ -132,21 +133,23 @@ console.log('Agent updated!');
 
 ## Manage Agent Status
 
-### Deactivate Agent
+### Set Agent Status
 
 ```typescript
-const tx = await kit.contracts.registry.deactivateAgent(1);
-await tx.wait();
+// Deactivate agent
+const tx1 = await kit.contracts.registry.setAgentStatus(1, false);
+await tx1.wait();
 console.log('Agent deactivated');
-```
 
-### Reactivate Agent
-
-```typescript
-const tx = await kit.contracts.registry.reactivateAgent(1);
-await tx.wait();
+// Reactivate agent
+const tx2 = await kit.contracts.registry.setAgentStatus(1, true);
+await tx2.wait();
 console.log('Agent reactivated');
 ```
+
+{% hint style="info" %}
+**Note:** Use `setAgentStatus(agentId, isActive)` instead of separate `deactivateAgent()` and `reactivateAgent()` methods.
+{% endhint %}
 
 ## Transfer Ownership
 
@@ -237,11 +240,10 @@ async function main() {
       name: agent.name,
       owner: agent.owner,
       isActive: agent.isActive,
+      ipfsMetadata: agent.ipfsMetadata,
+      capabilities: agent.capabilities,
+      registeredAt: new Date(Number(agent.registeredAt) * 1000),
     });
-
-    // Get capabilities
-    const capabilities = await kit.contracts.registry.getAgentCapabilities(agentId);
-    console.log('Capabilities:', capabilities);
   }
 }
 

@@ -168,8 +168,12 @@ Think of it as a bank account for your AI agent.
 - Owner can adjust limits anytime
 
 ```typescript
+// Get agent address first
+const agent = await kit.contracts.registry.getAgent(agentId);
+const agentAddress = agent.owner;
+
 // Create vault with 1 STM daily limit
-await vault.createVault(agentId, ethers.utils.parseEther('1.0'));
+await vault.createVault(agentAddress, ethers.parseEther('1.0'));
 
 // Agent can spend up to 1 STM per day
 // After 24 hours, limit resets
@@ -180,11 +184,15 @@ await vault.createVault(agentId, ethers.utils.parseEther('1.0'));
 **A:** Yes! Enable ERC20 tokens:
 
 ```typescript
+// Get agent address
+const agent = await kit.contracts.registry.getAgent(agentId);
+const agentAddress = agent.owner;
+
 // Allow USDC
-await vault.allowToken(agentId, usdcAddress);
+await vault.allowToken(agentAddress, usdcAddress);
 
 // Deposit USDC
-await vault.depositToken(agentId, usdcAddress, amount);
+await vault.depositToken(agentAddress, usdcAddress, amount);
 ```
 
 ### Q: What if my agent runs out of funds?

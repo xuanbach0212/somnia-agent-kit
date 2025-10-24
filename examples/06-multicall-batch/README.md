@@ -45,7 +45,8 @@ npx ts-node index.ts
 
 ### Example 1: Batch Balance Checks
 ```typescript
-const multicall = new MultiCall(chainClient);
+// Get MultiCall instance (recommended)
+const multicall = kit.getMultiCall();
 
 // Create batch calls
 const calls = addresses.map((address) => ({

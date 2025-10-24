@@ -31,8 +31,8 @@ async function main() {
   const tx = await kit.contracts.registry.registerAgent(
     'Trading Bot',
     'AI-powered trading assistant',
-    'ipfs://QmExample123', // Metadata URI
-    ['trading', 'analysis', 'portfolio-management']
+    'QmExample123', // IPFS hash
+    ['trading', 'analysis', 'portfolio-management'] // capabilities
   );
 
   console.log('⏳ Transaction sent:', tx.hash);
@@ -66,11 +66,8 @@ async function main() {
     console.log('  Description:', agent.description);
     console.log('  Owner:', agent.owner);
     console.log('  Active:', agent.isActive);
-    console.log('  Metadata:', agent.ipfsMetadata);
-
-    // Get capabilities
-    const capabilities = await kit.contracts.registry.getAgentCapabilities(agentId);
-    console.log('  Capabilities:', capabilities);
+    console.log('  IPFS Metadata:', agent.ipfsMetadata);
+    console.log('  Registered At:', new Date(Number(agent.registeredAt) * 1000));
   }
 
   console.log('\n✨ Done!');

@@ -66,8 +66,8 @@ await kit.initialize();
 await kit.contracts.registry.registerAgent(
   'My AI Agent',
   'Trading bot for DeFi',
-  'ipfs://QmX...',
-  ['trading', 'analysis']
+  'QmX...', // IPFS hash
+  ['trading', 'defi'] // capabilities
 );
 
 // Query agents
@@ -91,14 +91,14 @@ await kit.initialize();
 await kit.contracts.registry.registerAgent(
   'My AI Agent',
   'Trading bot for DeFi',
-  'ipfs://QmX...',
-  ['trading', 'analysis']
+  'QmX...', // IPFS hash
+  ['trading', 'defi'] // capabilities
 );
 
 // Query agents
 const agent = await kit.contracts.registry.getAgent(1);
 const total = await kit.contracts.registry.getTotalAgents();
-const owner = await kit.contracts.registry.getAgentOwner(1);
+console.log(agent.name, agent.owner, agent.isActive);
 ```
 
 ### Vault & Fund Management
@@ -106,17 +106,25 @@ const owner = await kit.contracts.registry.getAgentOwner(1);
 ```typescript
 import { parseEther, formatEther } from 'somnia-agent-kit';
 
-// Deposit funds to agent vault
-await kit.contracts.vault.deposit(agentId, {
+// Get agent address
+const agent = await kit.contracts.registry.getAgent(agentId);
+const agentAddress = agent.owner;
+
+// Deposit native tokens to vault
+await kit.contracts.vault.depositNative(agentAddress, {
   value: parseEther('1.0')
 });
 
 // Check balance
-const balance = await kit.contracts.vault.getBalance(agentId);
-console.log(`Balance: ${formatEther(balance)} ETH`);
+const balance = await kit.contracts.vault.getNativeBalance(agentAddress);
+console.log(`Balance: ${formatEther(balance)} STT`);
 
 // Withdraw funds
-await kit.contracts.vault.withdraw(agentId, parseEther('0.5'));
+await kit.contracts.vault.withdrawNative(
+  agentAddress,
+  recipientAddress,
+  parseEther('0.5')
+);
 ```
 
 ### Task Management
@@ -223,7 +231,7 @@ const results = await multicall.aggregate([
   },
   {
     target: vaultAddress,
-    callData: vault.interface.encodeFunctionData('getBalance', [1])
+    callData: vault.interface.encodeFunctionData('getNativeBalance', [agentAddress])
   },
   {
     target: registryAddress,

@@ -42,11 +42,9 @@ async function main() {
     },
   });
 
-  const tx = await kit.contracts.manager.createTask(
-    agentId,
-    taskData,
-    { value: ethers.parseEther('0.001') } // Pay 0.001 STT
-  );
+  const tx = await kit.contracts.manager.createTask(agentId, taskData, {
+    value: ethers.parseEther('0.001'), // Pay 0.001 STT
+  });
 
   console.log('⏳ Transaction sent:', tx.hash);
   const receipt = await tx.wait();
@@ -69,12 +67,6 @@ async function main() {
     const taskId = parsed?.args.taskId;
 
     console.log('\n🆔 Task ID:', taskId.toString());
-
-    // Start task
-    console.log('\n▶️  Starting task...');
-    const startTx = await kit.contracts.manager.startTask(taskId);
-    await startTx.wait();
-    console.log('✅ Task started!');
 
     // Simulate task execution
     console.log('\n⏳ Executing task...');
