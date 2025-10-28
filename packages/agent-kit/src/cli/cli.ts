@@ -3,15 +3,51 @@
  * Provides commands for agent management with better naming
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   agentInfoCommand,
   agentListCommand,
   agentRegisterCommand,
 } from './commands/agent.js';
+import {
+  checkVerificationCommand,
+  deployContractCommand,
+  deployCreate2Command,
+  verifyContractCommand,
+} from './commands/deploy.js';
 import { initCommand } from './commands/init.js';
+import {
+  ipfsGetCommand,
+  ipfsMetadataCommand,
+  ipfsUploadCommand,
+} from './commands/ipfs.js';
+import {
+  multicallAggregateCommand,
+  multicallBatchCommand,
+} from './commands/multicall.js';
 import { networkContractsCommand, networkInfoCommand } from './commands/network.js';
 import { taskCreateCommand, taskStatusCommand } from './commands/task.js';
+import {
+  nftMetadataCommand,
+  nftOwnerCommand,
+  nftTransferCommand,
+  tokenApproveCommand,
+  tokenBalanceCommand,
+  tokenInfoCommand,
+  tokenTransferCommand,
+} from './commands/token.js';
 import { walletBalanceCommand, walletInfoCommand } from './commands/wallet.js';
+
+// Read version from package.json
+let packageVersion = '3.0.11'; // fallback
+try {
+  const pkgPath = join(__dirname, '../../package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  packageVersion = pkg.version;
+} catch (error) {
+  // Use fallback version if package.json not found
+}
 
 export interface CLICommand {
   name: string;
@@ -87,14 +123,26 @@ export class CLI {
       process.exit(1);
     }
 
+    // Check if user wants help for this specific command
+    const commandArgs = args.slice(1);
+    if (
+      commandArgs.includes('--help') ||
+      commandArgs.includes('-h') ||
+      commandArgs.includes('help')
+    ) {
+      this.showCommandHelp(commandName);
+      return;
+    }
+
     try {
-      const parsedArgs = this.parseArgs(args.slice(1), command.options);
+      const parsedArgs = this.parseArgs(commandArgs, command.options);
       await command.action(parsedArgs);
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       if (process.env.DEBUG) {
         console.error((error as Error).stack);
       }
+      console.log(`\n💡 Run "sak help ${commandName}" for usage information\n`);
       process.exit(1);
     }
   }
@@ -171,7 +219,7 @@ export class CLI {
   showHelp(): void {
     console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║              Somnia Agent Kit CLI v2.1.0                      ║
+║              Somnia Agent Kit CLI v${packageVersion.padEnd(22)}║
 ║     Command-line interface for AI agents on Somnia            ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -181,28 +229,54 @@ Usage: somnia-agent <command> [options]
 📋 COMMANDS:
 
   Initialization:
-    init                     Initialize configuration
+    init                         Initialize configuration
 
   Agent Management:
-    agent:register          Register a new agent on-chain
-    agent:list              List all agents
-    agent:info <id>         Get agent information
+    agent:register              Register a new agent on-chain
+    agent:list                  List all agents
+    agent:info <id>             Get agent information
 
   Task Management:
-    task:create <agent-id>  Create a new task
-    task:status <task-id>   Get task status
+    task:create <agent-id>      Create a new task
+    task:status <task-id>       Get task status
+
+  Token Management:
+    token:balance <address>     Check token balance
+    token:transfer <to> <amt>   Transfer tokens
+    token:info <address>        Get token information
+    token:approve <spender>     Approve token spending
+
+  NFT Management:
+    nft:owner <tokenId>         Get NFT owner
+    nft:transfer <to> <id>      Transfer NFT
+    nft:metadata <tokenId>      Get NFT metadata
+
+  Contract Deployment:
+    deploy:contract <file>      Deploy smart contract
+    deploy:create2 <file>       Deploy with CREATE2
+    deploy:verify <address>     Verify contract
+    deploy:check <address>      Check verification status
+
+  Multicall:
+    multicall:batch <calls>     Execute batch calls
+    multicall:aggregate <calls> Aggregate multiple calls
+
+  IPFS:
+    ipfs:upload <file>          Upload file to IPFS
+    ipfs:get <hash>             Download from IPFS
+    ipfs:metadata <file>        Upload NFT metadata
 
   Wallet:
-    wallet:balance          Show wallet balance
-    wallet:info             Show wallet information
+    wallet:balance              Show wallet balance
+    wallet:info                 Show wallet information
 
   Network:
-    network:info            Show network information
-    network:contracts       Show contract addresses
+    network:info                Show network information
+    network:contracts           Show contract addresses
 
   Utility:
-    help [command]          Show help for a command
-    version                 Show version
+    help [command]              Show help for a command
+    version                     Show version
 
 💡 EXAMPLES:
 
@@ -277,7 +351,7 @@ Usage: somnia-agent <command> [options]
    * Show version
    */
   showVersion(): void {
-    console.log('somnia-agent-kit v2.1.0');
+    console.log(`somnia-agent-kit v${packageVersion}`);
   }
 
   /**
@@ -471,6 +545,268 @@ Usage: somnia-agent <command> [options]
       usage: 'somnia-agent network:contracts\n       sak network:contracts',
       options: [],
       action: networkContractsCommand,
+    });
+
+    // Token commands
+    this.register({
+      name: 'token:balance',
+      description: 'Check token balance',
+      usage:
+        'somnia-agent token:balance <address> [options]\n       sak token:balance <address> [options]',
+      options: [
+        {
+          name: 'type',
+          shortName: 't',
+          description: 'Token type (native/erc20/erc721)',
+          default: 'native',
+        },
+        {
+          name: 'token',
+          description: 'Token contract address (for ERC20/ERC721)',
+        },
+      ],
+      action: tokenBalanceCommand,
+    });
+
+    this.register({
+      name: 'token:transfer',
+      description: 'Transfer tokens',
+      usage:
+        'somnia-agent token:transfer <to> <amount> [options]\n       sak token:transfer <to> <amount> [options]',
+      options: [
+        {
+          name: 'token',
+          description: 'Token contract address (omit for native token)',
+        },
+        {
+          name: 'amount',
+          shortName: 'a',
+          description: 'Amount to transfer',
+        },
+      ],
+      action: tokenTransferCommand,
+    });
+
+    this.register({
+      name: 'token:info',
+      description: 'Get token information',
+      usage: 'somnia-agent token:info <address>\n       sak token:info <address>',
+      options: [],
+      action: tokenInfoCommand,
+    });
+
+    this.register({
+      name: 'token:approve',
+      description: 'Approve token spending',
+      usage:
+        'somnia-agent token:approve <spender> <amount> --token <address>\n       sak token:approve <spender> <amount> --token <address>',
+      options: [
+        {
+          name: 'token',
+          description: 'Token contract address',
+          required: true,
+        },
+        {
+          name: 'amount',
+          shortName: 'a',
+          description: 'Amount to approve',
+        },
+      ],
+      action: tokenApproveCommand,
+    });
+
+    // NFT commands
+    this.register({
+      name: 'nft:owner',
+      description: 'Get NFT owner',
+      usage:
+        'somnia-agent nft:owner <tokenId> --collection <address>\n       sak nft:owner <tokenId> --collection <address>',
+      options: [
+        {
+          name: 'collection',
+          shortName: 'c',
+          description: 'NFT collection address',
+          required: true,
+        },
+      ],
+      action: nftOwnerCommand,
+    });
+
+    this.register({
+      name: 'nft:transfer',
+      description: 'Transfer NFT',
+      usage:
+        'somnia-agent nft:transfer <to> <tokenId> --collection <address>\n       sak nft:transfer <to> <tokenId> --collection <address>',
+      options: [
+        {
+          name: 'collection',
+          shortName: 'c',
+          description: 'NFT collection address',
+          required: true,
+        },
+      ],
+      action: nftTransferCommand,
+    });
+
+    this.register({
+      name: 'nft:metadata',
+      description: 'Get NFT metadata',
+      usage:
+        'somnia-agent nft:metadata <tokenId> --collection <address>\n       sak nft:metadata <tokenId> --collection <address>',
+      options: [
+        {
+          name: 'collection',
+          shortName: 'c',
+          description: 'NFT collection address',
+          required: true,
+        },
+      ],
+      action: nftMetadataCommand,
+    });
+
+    // Deployment commands
+    this.register({
+      name: 'deploy:contract',
+      description: 'Deploy smart contract',
+      usage:
+        'somnia-agent deploy:contract <bytecode-file> [options]\n       sak deploy:contract <bytecode-file> [options]',
+      options: [
+        {
+          name: 'abi',
+          description: 'ABI file path',
+        },
+        {
+          name: 'args',
+          description: 'Constructor arguments (JSON array)',
+        },
+      ],
+      action: deployContractCommand,
+    });
+
+    this.register({
+      name: 'deploy:create2',
+      description: 'Deploy with CREATE2',
+      usage:
+        'somnia-agent deploy:create2 <bytecode-file> <salt> [options]\n       sak deploy:create2 <bytecode-file> <salt> [options]',
+      options: [
+        {
+          name: 'abi',
+          description: 'ABI file path',
+        },
+        {
+          name: 'args',
+          description: 'Constructor arguments (JSON array)',
+        },
+      ],
+      action: deployCreate2Command,
+    });
+
+    this.register({
+      name: 'deploy:verify',
+      description: 'Verify contract on explorer',
+      usage:
+        'somnia-agent deploy:verify <address> --source <file>\n       sak deploy:verify <address> --source <file>',
+      options: [
+        {
+          name: 'source',
+          shortName: 's',
+          description: 'Source code file',
+          required: true,
+        },
+        {
+          name: 'args',
+          description: 'Constructor arguments (JSON array)',
+        },
+      ],
+      action: verifyContractCommand,
+    });
+
+    this.register({
+      name: 'deploy:check',
+      description: 'Check verification status',
+      usage: 'somnia-agent deploy:check <address>\n       sak deploy:check <address>',
+      options: [],
+      action: checkVerificationCommand,
+    });
+
+    // Multicall commands
+    this.register({
+      name: 'multicall:batch',
+      description: 'Execute batch calls',
+      usage:
+        'somnia-agent multicall:batch <calls.json>\n       sak multicall:batch <calls.json>',
+      options: [],
+      action: multicallBatchCommand,
+    });
+
+    this.register({
+      name: 'multicall:aggregate',
+      description: 'Aggregate multiple calls',
+      usage:
+        'somnia-agent multicall:aggregate <calls.json>\n       sak multicall:aggregate <calls.json>',
+      options: [],
+      action: multicallAggregateCommand,
+    });
+
+    // IPFS commands
+    this.register({
+      name: 'ipfs:upload',
+      description: 'Upload file to IPFS',
+      usage:
+        'somnia-agent ipfs:upload <file> [options]\n       sak ipfs:upload <file> [options]',
+      options: [
+        {
+          name: 'name',
+          shortName: 'n',
+          description: 'File name',
+        },
+      ],
+      action: ipfsUploadCommand,
+    });
+
+    this.register({
+      name: 'ipfs:get',
+      description: 'Download from IPFS',
+      usage:
+        'somnia-agent ipfs:get <hash> [options]\n       sak ipfs:get <hash> [options]',
+      options: [
+        {
+          name: 'output',
+          shortName: 'o',
+          description: 'Output file path',
+        },
+      ],
+      action: ipfsGetCommand,
+    });
+
+    this.register({
+      name: 'ipfs:metadata',
+      description: 'Upload NFT metadata',
+      usage:
+        'somnia-agent ipfs:metadata <file> [options]\n       sak ipfs:metadata <file> [options]',
+      options: [
+        {
+          name: 'name',
+          shortName: 'n',
+          description: 'NFT name',
+        },
+        {
+          name: 'description',
+          shortName: 'd',
+          description: 'NFT description',
+        },
+        {
+          name: 'image',
+          shortName: 'i',
+          description: 'Image URI',
+        },
+        {
+          name: 'attributes',
+          shortName: 'a',
+          description: 'Attributes (JSON array)',
+        },
+      ],
+      action: ipfsMetadataCommand,
     });
   }
 }
