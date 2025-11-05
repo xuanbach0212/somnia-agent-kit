@@ -14,11 +14,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const short = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
 async function main() {
-  console.log('\n🚀 AI Token Monitor - Simple Demo\n');
-  console.log('This demo showcases:');
-  console.log('  ✓ Smart contract deployment');
-  console.log('  ✓ Real-time event monitoring');
-  console.log('  ✓ AI-powered transfer analysis\n');
+  console.log('\n🚀 AI Token Monitor Demo\n');
 
   // Initialize SDK
   const kit = new SomniaAgentKit({
@@ -43,11 +39,11 @@ async function main() {
     throw new Error('No signer available. Set PRIVATE_KEY in .env');
   }
   const wallet = await signer.getAddress();
-  console.log(`✅ Wallet connected: ${short(wallet)}`);
+  console.log(`✅ Wallet: ${short(wallet)}`);
 
   try {
     // Deploy token
-    console.log('\n📦 Deploying AI Test Token (AITT)...');
+    console.log('📦 Deploying token...');
     const deployer = kit.getContractDeployer();
     const result = await deployer.deployContract({
       abi: SimpleToken.abi,
@@ -57,8 +53,7 @@ async function main() {
 
     const token = result.contract;
     const tokenAddress = result.address;
-    console.log(`✅ Token deployed at: ${short(tokenAddress)}`);
-    console.log(`   Gas used: ${result.gasUsed.toLocaleString()}`);
+    console.log(`✅ Token deployed: ${short(tokenAddress)}`);
 
     // Test addresses
     const recipients = [
@@ -95,14 +90,12 @@ async function main() {
       );
       const toName = recipient ? recipient.name : short(to);
 
-      console.log(`\n${'='.repeat(70)}`);
-      console.log(`💸 Transfer #${count}`);
-      console.log(`   From: ${short(from)}`);
-      console.log(`   To:   ${toName} (${short(to)})`);
-      console.log(`   Amount: ${ethers.formatEther(amount)} AITT`);
+      console.log(
+        `\n💸 Transfer #${count}: ${ethers.formatEther(amount)} AITT → ${toName}`
+      );
 
       // AI analysis
-      console.log(`\n🧠 AI analyzing transfer...`);
+      console.log(`🧠 Analyzing...`);
       const startTime = Date.now();
 
       const response = await llm.generate(
@@ -110,9 +103,7 @@ async function main() {
       );
 
       const duration = Date.now() - startTime;
-      console.log(`💡 AI Insight (${duration}ms):`);
-      console.log(`   "${response.content}"`);
-      console.log('='.repeat(70));
+      console.log(`💡 ${response.content} (${duration}ms)`);
     }
 
     // Function to poll for events
@@ -136,26 +127,21 @@ async function main() {
     }
 
     // Mint initial tokens
-    console.log('\n💰 Minting 1,000 AITT tokens...');
+    console.log('💰 Minting tokens...');
     await token.mint(wallet, ethers.parseEther('1000'));
-    console.log('✅ Tokens minted successfully');
+    console.log('✅ Minted 1,000 AITT\n');
 
     // Start polling in background
-    console.log('\n👀 Starting event monitoring (polling every 2s)...');
+    console.log('👀 Monitoring...\n');
     const pollInterval = setInterval(pollEvents, 2000);
-
-    // Execute transfers with AI analysis
-    console.log('\n🔄 Executing test transfers...\n');
 
     for (const recipient of recipients) {
       await sleep(3000);
-      console.log(`📤 Sending ${recipient.amount} AITT to ${recipient.name}...`);
       const tx = await token.transfer(
         recipient.address,
         ethers.parseEther(recipient.amount)
       );
       await tx.wait();
-      console.log(`   ✓ Transaction confirmed`);
       await sleep(5000); // Wait for polling to catch up
     }
 
@@ -167,19 +153,8 @@ async function main() {
     clearInterval(pollInterval);
 
     // Summary
-    console.log(`\n${'='.repeat(70)}`);
-    console.log('✅ Demo Completed Successfully!');
-    console.log(`\n📊 Summary:`);
-    console.log(`   • Token deployed: ${short(tokenAddress)}`);
-    console.log(`   • Transfers monitored: ${count}`);
-    console.log(`   • AI analyses performed: ${count}`);
-    console.log(`   • Recipients: ${recipients.map((r) => r.name).join(', ')}`);
-    console.log('='.repeat(70));
-    console.log('\n💡 This demo showcased the Somnia Agent Kit capabilities:');
-    console.log('   1. Easy smart contract deployment');
-    console.log('   2. Real-time blockchain event monitoring');
-    console.log('   3. Seamless AI integration for on-chain analysis');
-    console.log('   4. Production-ready SDK for building AI agents\n');
+    console.log(`\n✅ Demo Complete!`);
+    console.log(`📊 ${count} transfers analyzed by AI\n`);
   } catch (error: any) {
     console.error('\n❌ Error:', error.message);
     if (error.stack) {
