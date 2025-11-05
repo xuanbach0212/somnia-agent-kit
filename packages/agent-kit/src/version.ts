@@ -6,12 +6,12 @@
 /**
  * Current SDK version
  */
-export const SDK_VERSION = '2.2.0';
+export const SDK_VERSION = '3.0.12';
 
 /**
  * SDK package name
  */
-export const SDK_NAME = '@somnia/agent-kit';
+export const SDK_NAME = 'somnia-agent-kit';
 
 /**
  * Build timestamp

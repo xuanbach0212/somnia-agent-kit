@@ -95,9 +95,9 @@ test_command "General help (no args)" "node dist/cli/bin.js" "pass" "Somnia Agen
 test_command "General help (help command)" "node dist/cli/bin.js help" "pass" "Somnia Agent Kit CLI"
 test_command "General help (-h)" "node dist/cli/bin.js -h" "pass" "Somnia Agent Kit CLI"
 test_command "General help (--help)" "node dist/cli/bin.js --help" "pass" "Somnia Agent Kit CLI"
-test_command "Version (version)" "node dist/cli/bin.js version" "pass" "v3.0.11"
-test_command "Version (--version)" "node dist/cli/bin.js --version" "pass" "v3.0.11"
-test_command "Version (-v)" "node dist/cli/bin.js -v" "pass" "v3.0.11"
+test_command "Version (version)" "node dist/cli/bin.js version" "pass" "v3.0.12"
+test_command "Version (--version)" "node dist/cli/bin.js --version" "pass" "v3.0.12"
+test_command "Version (-v)" "node dist/cli/bin.js -v" "pass" "v3.0.12"
 
 echo ""
 echo "  Command-specific help tests:"

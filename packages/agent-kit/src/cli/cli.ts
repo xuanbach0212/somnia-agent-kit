@@ -40,7 +40,7 @@ import {
 import { walletBalanceCommand, walletInfoCommand } from './commands/wallet.js';
 
 // Read version from package.json
-let packageVersion = '3.0.11'; // fallback
+let packageVersion = '3.0.12'; // fallback
 try {
   const pkgPath = join(__dirname, '../../package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
