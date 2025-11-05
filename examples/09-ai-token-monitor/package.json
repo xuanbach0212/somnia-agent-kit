@@ -1,0 +1,31 @@
+{
+  "name": "ai-token-monitor-demo",
+  "version": "1.0.0",
+  "description": "AI-powered real-time token transfer monitoring agent using Somnia Agent Kit",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "demo": "ts-node index.ts"
+  },
+  "keywords": [
+    "somnia",
+    "ai",
+    "token",
+    "monitoring",
+    "websocket",
+    "real-time",
+    "blockchain",
+    "agent",
+    "erc20"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "somnia-agent-kit": "file:../../packages/agent-kit"
+  },
+  "devDependencies": {
+    "hardhat": "^2.19.2"
+  }
+}
