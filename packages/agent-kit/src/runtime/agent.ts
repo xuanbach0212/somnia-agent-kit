@@ -10,6 +10,7 @@ import { ContextBuilder } from '../llm/context';
 import type { Logger } from '../monitor/logger';
 import type { AgentConfig, AgentEvents, AgentOptions, AgentTask } from '../types/agent';
 import { AgentState } from '../types/agent'; // Enum must be imported as value
+import type { TriggerEvent } from '../types/common';
 import type { IAgentExecutor, IAgentRegistry } from '../types/contracts';
 import { StorageBackend } from '../types/storage';
 import { EventEmitter } from '../utils/logger';
@@ -213,7 +214,7 @@ export class Agent extends EventEmitter<AgentEvents> {
 
     // Extract agentId from event
     const iface = this.registryContract!.interface as ethers.Interface;
-    const event = receipt?.logs.find((log: any) => {
+    const event = receipt?.logs.find((log: ethers.Log) => {
       try {
         const parsed = iface.parseLog({
           topics: log.topics as string[],
@@ -300,7 +301,7 @@ export class Agent extends EventEmitter<AgentEvents> {
     }
 
     // Subscribe to trigger events
-    this.trigger.on('triggered', async (data: any) => {
+    this.trigger.on('triggered', async (data: TriggerEvent) => {
       await this.onEvent(data);
     });
 
@@ -335,7 +336,7 @@ export class Agent extends EventEmitter<AgentEvents> {
    * @example
    * ```typescript
    * // Event structure
-   * const event = {
+   * const event: TriggerEvent = {
    *   goal: 'Transfer 1 ETH to Alice',
    *   sender: '0x...',
    *   context: 'User requested urgent transfer',
@@ -343,7 +344,7 @@ export class Agent extends EventEmitter<AgentEvents> {
    * };
    * ```
    */
-  private async onEvent(event: any): Promise<void> {
+  private async onEvent(event: TriggerEvent): Promise<void> {
     try {
       this.emit('event:received', event);
       this.logger?.debug('Event received', { event });
@@ -377,7 +378,8 @@ export class Agent extends EventEmitter<AgentEvents> {
       // 3. Plan tasks using planner with context
       // Convert string context to Context object
       const contextObj = { description: fullContext };
-      const tasks = await this.planner.plan(event.goal || event.data, contextObj);
+      const goal = event.goal || event.data || { description: 'Unknown goal' };
+      const tasks = await this.planner.plan(goal, contextObj);
       this.emit('tasks:planned', { tasks });
       this.logger?.info('Tasks planned', { taskCount: tasks.length });
 

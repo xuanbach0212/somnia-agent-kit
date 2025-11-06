@@ -108,6 +108,27 @@ export interface Context {
 }
 
 /**
+ * Trigger event data structure
+ * Represents events that trigger agent actions
+ */
+export interface TriggerEvent {
+  /** Goal or task description */
+  goal?: string | Goal;
+  /** Event data payload */
+  data?: JsonObject;
+  /** Event sender address */
+  sender?: Address;
+  /** Additional context */
+  context?: string;
+  /** Event ID */
+  id?: string;
+  /** Event type */
+  type?: string;
+  /** Additional flexible properties */
+  [key: string]: JsonValue | undefined;
+}
+
+/**
  * Validation result
  */
 export interface ValidationResult {

@@ -183,7 +183,7 @@ export class Planner {
   async createPlan(
     taskId: string,
     taskType: string,
-    taskData: any,
+    taskData: JsonObject,
     priority: number = 1 // 0=low, 1=normal, 2=high, 3=critical
   ): Promise<ExecutionPlan> {
     // Generate steps based on task type
@@ -211,7 +211,7 @@ export class Planner {
   /**
    * Decompose task into executable steps
    */
-  private async decompose(taskType: string, taskData: any): Promise<PlanStep[]> {
+  private async decompose(taskType: string, taskData: JsonObject): Promise<PlanStep[]> {
     const steps: PlanStep[] = [];
 
     // Task type specific decomposition
