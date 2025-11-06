@@ -31,6 +31,7 @@ export * from './agent';
 // Blockchain Layer Types
 // =============================================================================
 export * from './chain';
+export * from './contracts';
 
 // =============================================================================
 // Action & Execution Types (Runtime)

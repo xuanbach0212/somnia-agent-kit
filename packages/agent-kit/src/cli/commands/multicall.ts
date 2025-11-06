@@ -96,8 +96,16 @@ export async function multicallBatchCommand(
     }
 
     const args = call.args || [];
-    const batchCall = multicall.createBatch(call.target, abi, call.method, args);
-    batchCalls.push(batchCall);
+    
+    // Create contract instance and encode call data
+    const contract = kit.getChainClient().getContract(call.target, abi);
+    const callData = contract.interface.encodeFunctionData(call.method, args);
+    
+    batchCalls.push({
+      target: call.target,
+      callData,
+      allowFailure: true,
+    });
 
     console.log(`   ✓ ${call.target}.${call.method}(${args.join(', ')})`);
   }
@@ -208,8 +216,15 @@ export async function multicallAggregateCommand(
     }
 
     const args = call.args || [];
-    const batchCall = multicall.createBatch(call.target, abi, call.method, args);
-    batchCalls.push(batchCall);
+    
+    // Create contract instance and encode call data
+    const contract = kit.getChainClient().getContract(call.target, abi);
+    const callData = contract.interface.encodeFunctionData(call.method, args);
+    
+    batchCalls.push({
+      target: call.target,
+      callData,
+    });
 
     console.log(`   ✓ ${call.target}.${call.method}(${args.join(', ')})`);
   }
@@ -218,7 +233,7 @@ export async function multicallAggregateCommand(
   console.log('⏳ Aggregating calls...');
 
   try {
-    const result = await multicall.aggregate(batchCalls);
+    const result = await multicall.blockAndAggregate(batchCalls);
 
     console.log('✅ Aggregation successful!\n');
     console.log(

@@ -1,17 +1,30 @@
 import { ethers } from 'ethers';
-import type { ChainClient } from './chainClient';
 import {
-  AGENTREGISTRY_ABI,
-  AGENTMANAGER_ABI,
   AGENTEXECUTOR_ABI,
+  AGENTMANAGER_ABI,
+  AGENTREGISTRY_ABI,
   AGENTVAULT_ABI,
 } from '../abis';
+import type { ContractAddresses } from '../types/config';
+import type {
+  IAgentExecutor,
+  IAgentManager,
+  IAgentRegistry,
+  IAgentVault,
+} from '../types/contracts';
+import {
+  asAgentExecutor,
+  asAgentManager,
+  asAgentRegistry,
+  asAgentVault,
+} from '../types/contracts';
+import type { ChainClient } from './chainClient';
 
-// Contract type aliases (using ethers.Contract for simplicity)
-export type AgentRegistry = ethers.Contract;
-export type AgentManager = ethers.Contract;
-export type AgentExecutor = ethers.Contract;
-export type AgentVault = ethers.Contract;
+// Contract type aliases (using typed interfaces)
+export type AgentRegistry = IAgentRegistry;
+export type AgentManager = IAgentManager;
+export type AgentExecutor = IAgentExecutor;
+export type AgentVault = IAgentVault;
 
 export interface ContractInstances {
   agentRegistry: AgentRegistry;
@@ -20,12 +33,8 @@ export interface ContractInstances {
   agentVault: AgentVault | null;
 }
 
-export interface ContractAddresses {
-  agentRegistry: string;
-  agentExecutor: string;
-  agentManager?: string;
-  agentVault?: string;
-}
+// Re-export ContractAddresses for backward compatibility
+export type { ContractAddresses } from '../types/config';
 
 /**
  * SomniaContracts
@@ -70,11 +79,7 @@ export class SomniaContracts {
     const signerManager = client.getSignerManager();
     const signer = signerManager.hasSigner() ? signerManager.getSigner() : undefined;
 
-    return new SomniaContracts(
-      client.getProvider(),
-      addresses,
-      signer
-    );
+    return new SomniaContracts(client.getProvider(), addresses, signer);
   }
 
   /**
@@ -84,34 +89,38 @@ export class SomniaContracts {
     const signerOrProvider = this.signer || this.provider;
 
     // Initialize required contracts
-    const agentRegistry = new ethers.Contract(
-      this.addresses.agentRegistry,
-      AGENTREGISTRY_ABI,
-      signerOrProvider
+    const agentRegistry = asAgentRegistry(
+      new ethers.Contract(
+        this.addresses.agentRegistry,
+        AGENTREGISTRY_ABI,
+        signerOrProvider
+      )
     );
 
-    const agentExecutor = new ethers.Contract(
-      this.addresses.agentExecutor,
-      AGENTEXECUTOR_ABI,
-      signerOrProvider
+    const agentExecutor = asAgentExecutor(
+      new ethers.Contract(
+        this.addresses.agentExecutor,
+        AGENTEXECUTOR_ABI,
+        signerOrProvider
+      )
     );
 
     // Initialize optional contracts
     let agentManager: AgentManager | null = null;
     if (this.addresses.agentManager) {
-      agentManager = new ethers.Contract(
-        this.addresses.agentManager,
-        AGENTMANAGER_ABI,
-        signerOrProvider
+      agentManager = asAgentManager(
+        new ethers.Contract(
+          this.addresses.agentManager,
+          AGENTMANAGER_ABI,
+          signerOrProvider
+        )
       );
     }
 
     let agentVault: AgentVault | null = null;
     if (this.addresses.agentVault) {
-      agentVault = new ethers.Contract(
-        this.addresses.agentVault,
-        AGENTVAULT_ABI,
-        signerOrProvider
+      agentVault = asAgentVault(
+        new ethers.Contract(this.addresses.agentVault, AGENTVAULT_ABI, signerOrProvider)
       );
     }
 

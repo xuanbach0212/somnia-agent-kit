@@ -68,14 +68,14 @@ describe('Build Output Files', () => {
       }
     });
 
-    it('DTS output should be ~273KB', () => {
+    it('DTS output should be ~195KB', () => {
       const dtsPath = join(distDir, 'index.d.ts');
       if (existsSync(dtsPath)) {
         const stats = statSync(dtsPath);
         const sizeKB = stats.size / 1024;
-        // Allow 15% variance (increased due to new convenience getters)
-        expect(sizeKB).toBeGreaterThan(232); // 273 - 15%
-        expect(sizeKB).toBeLessThan(314); // 273 + 15%
+        // Allow 15% variance (reduced size after removing typechain types)
+        expect(sizeKB).toBeGreaterThan(165); // 195 - 15%
+        expect(sizeKB).toBeLessThan(225); // 195 + 15%
       }
     });
   });

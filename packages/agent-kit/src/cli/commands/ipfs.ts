@@ -80,7 +80,9 @@ export async function ipfsUploadCommand(options: IPFSUploadOptions): Promise<voi
   console.log('⏳ Uploading to IPFS...');
 
   try {
-    const result = await ipfsManager.uploadFile(fileContent, fileName);
+    // Convert Buffer to Blob
+    const blob = new Blob([fileContent]);
+    const result = await ipfsManager.uploadFile(blob, fileName);
 
     console.log('✅ Upload successful!\n');
     console.log(
@@ -94,9 +96,9 @@ export async function ipfsUploadCommand(options: IPFSUploadOptions): Promise<voi
     );
     console.log(`║  Hash:     ${result.hash.padEnd(61)}║`);
     console.log(`║  URI:      ${result.uri.padEnd(61)}║`);
-    console.log(`║  Gateway:  ${result.gatewayUrl.substring(0, 61).padEnd(61)}║`);
-    if (result.gatewayUrl.length > 61) {
-      console.log(`║            ${result.gatewayUrl.substring(61, 122).padEnd(61)}║`);
+    console.log(`║  Gateway:  ${result.url.substring(0, 61).padEnd(61)}║`);
+    if (result.url.length > 61) {
+      console.log(`║            ${result.url.substring(61, 122).padEnd(61)}║`);
     }
     console.log(
       '╚═══════════════════════════════════════════════════════════════════════════╝'
@@ -105,7 +107,7 @@ export async function ipfsUploadCommand(options: IPFSUploadOptions): Promise<voi
 
     console.log('💡 Access your file:');
     console.log(`   - IPFS URI: ${result.uri}`);
-    console.log(`   - Gateway:  ${result.gatewayUrl}\n`);
+    console.log(`   - Gateway:  ${result.url}\n`);
   } catch (error) {
     throw new Error(`Upload failed: ${(error as Error).message}`);
   }
@@ -130,18 +132,21 @@ export async function ipfsGetCommand(options: IPFSGetOptions): Promise<void> {
   console.log('⏳ Fetching from IPFS...');
 
   try {
-    const content = await ipfsManager.fetchFile(hash);
+    const blob = await ipfsManager.fetchFile(hash);
+    
+    // Convert Blob to Buffer
+    const buffer = Buffer.from(await blob.arrayBuffer());
 
-    console.log(`✅ Download successful! (${(content.length / 1024).toFixed(2)} KB)\n`);
+    console.log(`✅ Download successful! (${(buffer.length / 1024).toFixed(2)} KB)\n`);
 
     if (options.output) {
       // Save to file
-      fs.writeFileSync(options.output, content);
+      fs.writeFileSync(options.output, buffer);
       console.log(`💾 Saved to: ${options.output}\n`);
     } else {
       // Try to display as text
       try {
-        const text = content.toString('utf-8');
+        const text = buffer.toString('utf-8');
         console.log('📄 Content:\n');
         console.log(text);
         console.log();
@@ -225,9 +230,9 @@ export async function ipfsMetadataCommand(options: IPFSMetadataOptions): Promise
     );
     console.log(`║  Hash:     ${result.hash.padEnd(61)}║`);
     console.log(`║  URI:      ${result.uri.padEnd(61)}║`);
-    console.log(`║  Gateway:  ${result.gatewayUrl.substring(0, 61).padEnd(61)}║`);
-    if (result.gatewayUrl.length > 61) {
-      console.log(`║            ${result.gatewayUrl.substring(61, 122).padEnd(61)}║`);
+    console.log(`║  Gateway:  ${result.url.substring(0, 61).padEnd(61)}║`);
+    if (result.url.length > 61) {
+      console.log(`║            ${result.url.substring(61, 122).padEnd(61)}║`);
     }
     console.log(
       '╚═══════════════════════════════════════════════════════════════════════════╝'

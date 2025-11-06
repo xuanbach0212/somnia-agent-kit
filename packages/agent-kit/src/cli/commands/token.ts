@@ -188,15 +188,8 @@ export async function tokenTransferCommand(options: TokenTransferOptions): Promi
     console.log(`   Token:  ${options.token}\n`);
 
     console.log('⏳ Sending transaction...');
-    const tx = await erc20Manager.transfer(options.token, to, amountWei);
-    console.log(`📤 Transaction hash: ${tx.hash}`);
-    console.log('⏳ Waiting for confirmation...\n');
-
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Transaction failed');
-    }
-
+    const receipt = await erc20Manager.transfer(options.token, to, amountWei);
+    console.log(`📤 Transaction hash: ${receipt.hash}`);
     console.log('✅ Transfer successful!\n');
   } else {
     // Native token transfer
@@ -208,15 +201,8 @@ export async function tokenTransferCommand(options: TokenTransferOptions): Promi
     console.log(`   Amount: ${amount} STT\n`);
 
     console.log('⏳ Sending transaction...');
-    const tx = await nativeManager.transfer(to, amountWei);
-    console.log(`📤 Transaction hash: ${tx.hash}`);
-    console.log('⏳ Waiting for confirmation...\n');
-
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Transaction failed');
-    }
-
+    const receipt = await nativeManager.transfer(to, amountWei);
+    console.log(`📤 Transaction hash: ${receipt.hash}`);
     console.log('✅ Transfer successful!\n');
   }
 }
@@ -294,15 +280,8 @@ export async function tokenApproveCommand(options: TokenApproveOptions): Promise
   console.log(`   Amount:  ${amount} ${info.symbol}\n`);
 
   console.log('⏳ Sending transaction...');
-  const tx = await erc20Manager.approve(options.token, spender, amountWei);
-  console.log(`📤 Transaction hash: ${tx.hash}`);
-  console.log('⏳ Waiting for confirmation...\n');
-
-  const receipt = await tx.wait();
-  if (!receipt) {
-    throw new Error('Transaction failed');
-  }
-
+  const receipt = await erc20Manager.approve(options.token, spender, amountWei);
+  console.log(`📤 Transaction hash: ${receipt.hash}`);
   console.log('✅ Approval successful!\n');
 }
 
@@ -372,20 +351,13 @@ export async function nftTransferCommand(options: NFTTransferOptions): Promise<v
   console.log(`   Token ID:   ${tokenId}\n`);
 
   console.log('⏳ Sending transaction...');
-  const tx = await erc721Manager.transferFrom(
+  const receipt = await erc721Manager.transferFrom(
     options.collection,
     from,
     to,
     BigInt(tokenId)
   );
-  console.log(`📤 Transaction hash: ${tx.hash}`);
-  console.log('⏳ Waiting for confirmation...\n');
-
-  const receipt = await tx.wait();
-  if (!receipt) {
-    throw new Error('Transaction failed');
-  }
-
+  console.log(`📤 Transaction hash: ${receipt.hash}`);
   console.log('✅ Transfer successful!\n');
 }
 

@@ -23,6 +23,7 @@ export interface DeployCreate2Options {
 export interface VerifyContractOptions {
   source?: string;
   args?: string;
+  name?: string;
   _positional?: string[];
 }
 
@@ -112,19 +113,14 @@ export async function deployContractCommand(
 
   // Estimate cost
   console.log('💰 Estimating deployment cost...');
-  const cost = await deployer.estimateDeploymentCost(bytecode, abi, constructorArgs);
-  console.log(`   Estimated cost: ${ethers.formatEther(cost.totalCost)} STT`);
-  console.log(`   Gas limit: ${cost.gasLimit.toString()}\n`);
+  const gasEstimate = await deployer.estimateDeploymentCost({ abi, bytecode, constructorArgs });
+  console.log(`   Gas limit: ${gasEstimate.toString()}\n`);
 
   // Deploy
   console.log('⏳ Deploying contract...');
-  const result = await deployer.deploy(bytecode, abi, constructorArgs);
+  const result = await deployer.deployContract({ abi, bytecode, constructorArgs });
 
-  console.log(`📤 Transaction hash: ${result.transaction.hash}`);
-  console.log('⏳ Waiting for confirmation...\n');
-
-  await result.transaction.wait();
-
+  console.log(`📤 Transaction hash: ${result.txHash}`);
   console.log('✅ Contract deployed successfully!\n');
   console.log(
     '╔═══════════════════════════════════════════════════════════════════════════╗'
@@ -136,7 +132,7 @@ export async function deployContractCommand(
     '╠═══════════════════════════════════════════════════════════════════════════╣'
   );
   console.log(`║  Address:  ${result.address.padEnd(61)}║`);
-  console.log(`║  TX Hash:  ${result.transaction.hash.padEnd(61)}║`);
+  console.log(`║  TX Hash:  ${result.txHash.padEnd(61)}║`);
   console.log(`║  Deployer: ${from.padEnd(61)}║`);
   console.log(
     '╚═══════════════════════════════════════════════════════════════════════════╝'
@@ -203,41 +199,27 @@ export async function deployCreate2Command(options: DeployCreate2Options): Promi
     `   Args:     ${constructorArgs.length > 0 ? JSON.stringify(constructorArgs) : 'None'}\n`
   );
 
-  // Predict address
-  console.log('🔮 Computing deterministic address...');
-  const predictedAddress = await deployer.computeCreate2Address(
-    bytecode,
-    salt,
-    constructorArgs
-  );
-  console.log(`   Predicted address: ${predictedAddress}\n`);
+  // Note: CREATE2 deployment requires a factory contract
+  // For now, use regular deployment  
+  console.log('⚠️  CREATE2 deployment requires a factory contract.');
+  console.log('Using regular deployment instead...\n');
+  
+  const result = await deployer.deployContract({ abi, bytecode, constructorArgs });
 
-  // Deploy
-  console.log('⏳ Deploying contract...');
-  const result = await deployer.deployCreate2(bytecode, salt, abi, constructorArgs);
-
-  console.log(`📤 Transaction hash: ${result.transaction.hash}`);
-  console.log('⏳ Waiting for confirmation...\n');
-
-  await result.transaction.wait();
-
+  console.log(`📤 Transaction hash: ${result.txHash}`);
   console.log('✅ Contract deployed successfully!\n');
   console.log(
     '╔═══════════════════════════════════════════════════════════════════════════╗'
   );
   console.log(
-    `║  CREATE2 Deployment Details                                               ║`
+    `║  Deployment Details                                                       ║`
   );
   console.log(
     '╠═══════════════════════════════════════════════════════════════════════════╣'
   );
-  console.log(`║  Address:    ${result.address.padEnd(59)}║`);
-  console.log(`║  Predicted:  ${predictedAddress.padEnd(59)}║`);
-  console.log(
-    `║  Match:      ${(result.address === predictedAddress ? '✓ Yes' : '✗ No').padEnd(59)}║`
-  );
-  console.log(`║  TX Hash:    ${result.transaction.hash.padEnd(59)}║`);
-  console.log(`║  Salt:       ${salt.padEnd(59)}║`);
+  console.log(`║  Address:  ${result.address.padEnd(61)}║`);
+  console.log(`║  TX Hash:  ${result.txHash.padEnd(61)}║`);
+  console.log(`║  Salt:     ${salt.padEnd(61)}║`);
   console.log(
     '╚═══════════════════════════════════════════════════════════════════════════╝'
   );
@@ -287,7 +269,13 @@ export async function verifyContractCommand(
   console.log('⏳ Submitting verification request...');
 
   try {
-    const result = await verifier.verify(contractAddress, sourceCode, constructorArgs);
+    const result = await verifier.verifyContract({
+      address: contractAddress,
+      sourceCode,
+      contractName: options.name || 'Contract',
+      compilerVersion: 'v0.8.20+commit.a1b79de6',
+      constructorArgs: constructorArgs.length > 0 ? JSON.stringify(constructorArgs) : '',
+    });
 
     if (result.success) {
       console.log('✅ Contract verified successfully!\n');
@@ -301,9 +289,9 @@ export async function verifyContractCommand(
         '╠═══════════════════════════════════════════════════════════════════════════╣'
       );
       console.log(`║  Contract:  ${contractAddress.padEnd(59)}║`);
-      console.log(`║  Status:    ${result.message.padEnd(59)}║`);
-      if (result.explorerUrl) {
-        console.log(`║  Explorer:  ${result.explorerUrl.substring(0, 59).padEnd(59)}║`);
+      console.log(`║  Status:    ${(result.message || 'Success').padEnd(59)}║`);
+      if (result.guid) {
+        console.log(`║  GUID:      ${result.guid.padEnd(59)}║`);
       }
       console.log(
         '╚═══════════════════════════════════════════════════════════════════════════╝'
@@ -347,12 +335,9 @@ export async function checkVerificationCommand(
       '╠═══════════════════════════════════════════════════════════════════════════╣'
     );
     console.log(`║  Contract:  ${contractAddress.padEnd(59)}║`);
-    console.log(`║  Verified:  ${(status.verified ? '✓ Yes' : '✗ No').padEnd(59)}║`);
+    console.log(`║  Status:    ${status.status.padEnd(59)}║`);
     if (status.message) {
       console.log(`║  Message:   ${status.message.substring(0, 59).padEnd(59)}║`);
-    }
-    if (status.explorerUrl) {
-      console.log(`║  Explorer:  ${status.explorerUrl.substring(0, 59).padEnd(59)}║`);
     }
     console.log(
       '╚═══════════════════════════════════════════════════════════════════════════╝'

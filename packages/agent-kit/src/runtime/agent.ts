@@ -5,7 +5,7 @@
  */
 
 import { ethers } from 'ethers';
-import type { AgentRegistry, AgentExecutor } from '../../../../contracts/typechain-types';
+import type { IAgentRegistry, IAgentExecutor } from '../types/contracts';
 import { Trigger, TriggerConfig } from './trigger';
 import { Planner } from './planner';
 import { Executor } from './executor';
@@ -35,8 +35,8 @@ export { AgentState, AgentConfig, AgentTask, AgentOptions, AgentEvents };
 export class Agent extends EventEmitter<AgentEvents> {
   private state: AgentState = AgentState.Created;
   private config: AgentConfig;
-  private registryContract: AgentRegistry | null = null;
-  private executorContract: AgentExecutor | null = null;
+  private registryContract: IAgentRegistry | null = null;
+  private executorContract: IAgentExecutor | null = null;
   private agentAddress: string | null = null;
   private agentId: bigint | null = null;
   private tasks: Map<string, AgentTask> = new Map();
@@ -96,8 +96,8 @@ export class Agent extends EventEmitter<AgentEvents> {
    * Initialize agent with contracts
    */
   async initialize(
-    registry: AgentRegistry,
-    executor: AgentExecutor
+    registry: IAgentRegistry,
+    executor: IAgentExecutor
   ): Promise<void> {
     this.registryContract = registry;
     this.executorContract = executor;

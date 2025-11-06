@@ -172,7 +172,7 @@ export async function agentListCommand(options: AgentListOptions): Promise<void>
 
   for (let i = maxId; i >= startId && i >= 1; i--) {
     try {
-      const agent = await kit.contracts.registry.getAgent(i);
+      const agent = await kit.contracts.registry.getAgent(BigInt(i));
 
       // Filter by owner if specified
       if (options.owner && agent.owner.toLowerCase() !== options.owner.toLowerCase()) {
