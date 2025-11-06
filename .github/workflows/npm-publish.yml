@@ -25,6 +25,12 @@ jobs:
       - name: Compile contracts (generate typechain types)
         run: pnpm --filter contracts run compile
 
+      - name: Run tests
+        run: pnpm --filter somnia-agent-kit run test:run
+
+      - name: TypeScript type check
+        run: pnpm --filter somnia-agent-kit run typecheck
+
       - name: Build package
         run: pnpm --filter somnia-agent-kit run build
 
