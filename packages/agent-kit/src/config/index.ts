@@ -24,51 +24,46 @@
 // Internal Imports (for singleton implementation)
 // =============================================================================
 import type { AgentKitConfig } from '../types/config';
-import { loadConfig as _loadConfig } from './loader';
 import { DEFAULT_CONFIG as _DEFAULT_CONFIG } from './defaults';
+import { loadConfig as _loadConfig } from './loader';
 import { DEFAULT_NETWORK as _DEFAULT_NETWORK } from './networks';
 
 // =============================================================================
 // Type Re-exports
 // =============================================================================
 export type {
-  NetworkConfig,
+  AgentKitConfig,
+  CompleteSolutionConfig,
   ContractAddresses,
   LLMProviderConfig,
-  AgentKitConfig,
-  SDKConfig,
+  NetworkConfig,
   RuntimeConfig,
-  CompleteSolutionConfig,
+  SDKConfig,
 } from '../types/config';
 
 // =============================================================================
 // Defaults
 // =============================================================================
 export {
-  DEFAULT_CONFIG,
-  DEFAULT_SDK_CONFIG,
-  DEFAULT_RUNTIME_CONFIG,
   DEFAULT_AGENT_CONFIG,
+  DEFAULT_CONFIG,
+  DEFAULT_RUNTIME_CONFIG,
+  DEFAULT_SDK_CONFIG,
 } from './defaults';
 
 // =============================================================================
 // Networks
 // =============================================================================
-export {
-  SOMNIA_NETWORKS,
-  DEFAULT_NETWORK,
-  getNetwork,
-  isValidNetwork,
-} from './networks';
+export { DEFAULT_NETWORK, getNetwork, isValidNetwork, SOMNIA_NETWORKS } from './networks';
 
 // =============================================================================
 // Environment Loaders
 // =============================================================================
 export {
   loadAgentConfigFromEnv,
-  loadSDKConfigFromEnv,
+  loadFromEnv,
   loadRuntimeConfigFromEnv,
-  loadFromEnv, // Legacy alias
+  loadSDKConfigFromEnv,
 } from './env';
 
 // =============================================================================
@@ -76,18 +71,18 @@ export {
 // =============================================================================
 export {
   validateAgentConfig,
-  validateSDKConfig,
+  validateConfig,
   validateRuntimeConfig,
-  validateConfig, // Legacy alias
+  validateSDKConfig,
 } from './validator';
 
 // =============================================================================
 // Merging (Manual Control)
 // =============================================================================
 export {
-  mergeConfig,
   createConfigFromEnv,
-  loadConfig as mergeConfigLegacy, // Legacy alias, prefer loader's loadConfig
+  mergeConfig,
+  loadConfig as mergeConfigLegacy,
 } from './merger';
 export type { MergeOptions } from './merger';
 
@@ -95,12 +90,12 @@ export type { MergeOptions } from './merger';
 // Configuration Loader (Auto dotenv + Deep Merge) - RECOMMENDED
 // =============================================================================
 export {
-  loadConfig,
-  loadCompleteSolutionConfig,
-  loadSDKConfig as loadSDKConfigAuto,
-  loadRuntimeConfig as loadRuntimeConfigAuto,
-  reloadEnv,
   getEnvVars,
+  loadCompleteSolutionConfig,
+  loadConfig,
+  loadRuntimeConfig as loadRuntimeConfigAuto,
+  loadSDKConfig as loadSDKConfigAuto,
+  reloadEnv,
 } from './loader';
 
 // =============================================================================
@@ -143,7 +138,9 @@ export function getConfig(reload = false): AgentKitConfig {
     } catch (error: any) {
       // If env vars missing, return partial config with defaults
       console.warn('⚠️  Failed to load complete config:', error.message);
-      console.warn('Using defaults. Set SOMNIA_RPC_URL, AGENT_REGISTRY_ADDRESS, AGENT_EXECUTOR_ADDRESS in .env');
+      console.warn(
+        'Using defaults. Set SOMNIA_RPC_URL, AGENT_REGISTRY_ADDRESS, AGENT_EXECUTOR_ADDRESS in .env'
+      );
 
       // Return minimal config with defaults (will fail validation but allows SDK to load)
       _globalConfig = {
@@ -221,7 +218,7 @@ export function resetConfig(): void {
  * @example Quick start
  * ```typescript
  * import { config } from '@somnia/agent-kit/config';
- * import { SomniaAgentKit } from '@somnia/agent-kit';
+ * import { SomniaAgentKit } from 'somnia-agent-kit;
  *
  * const kit = new SomniaAgentKit(config);
  * await kit.initialize();
@@ -244,7 +241,7 @@ export const config = getConfig();
 /**
  * @example Pattern 1: Singleton (Quick Start) ⚡
  * ```typescript
- * import { SomniaAgentKit, config } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, config } from 'somnia-agent-kit;
  *
  * // Config auto-loaded from .env
  * const kit = new SomniaAgentKit(config);
@@ -252,7 +249,7 @@ export const config = getConfig();
  *
  * @example Pattern 2: Lazy Singleton (Recommended) ✅
  * ```typescript
- * import { SomniaAgentKit, getConfig } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, getConfig } from 'somnia-agent-kit;
  *
  * // Loads on first call, cached afterward
  * const config = getConfig();
@@ -261,7 +258,7 @@ export const config = getConfig();
  *
  * @example Pattern 3: Manual Loading (Full Control) 🎛️
  * ```typescript
- * import { SomniaAgentKit, loadConfig, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, loadConfig, SOMNIA_NETWORKS } from 'somnia-agent-kit;
  *
  * // Full control over loading
  * const config = loadConfig({

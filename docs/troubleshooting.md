@@ -53,7 +53,7 @@ pnpm install
 
 **Symptoms:**
 ```bash
-error TS2307: Cannot find module '@somnia/agent-kit'
+error TS2307: Cannot find module 'somnia-agent-kit
 ```
 
 **Solutions:**
@@ -87,7 +87,7 @@ npx tsc
 
 **Symptoms:**
 ```bash
-Error: Cannot find module '@somnia/agent-kit'
+Error: Cannot find module 'somnia-agent-kit
 ```
 
 **Solutions:**

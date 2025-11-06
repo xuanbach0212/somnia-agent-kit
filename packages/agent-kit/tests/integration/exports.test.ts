@@ -1,11 +1,11 @@
 /**
  * Integration Tests: Export Verification
  *
- * Verifies all exports work correctly after v2.2.0 refactoring
+ * Verifies all exports work correctly after v3.0.12 refactoring
  * This is the most critical test to ensure the package structure is correct
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 describe('Main Package Exports (@somnia/agent-kit)', () => {
   describe('Core Classes', () => {
@@ -34,16 +34,16 @@ describe('Main Package Exports (@somnia/agent-kit)', () => {
     });
   });
 
-  describe('Version Info (NEW in v2.2.0)', () => {
+  describe('Version Info (NEW in v3.0.12)', () => {
     it('should export SDK_VERSION', async () => {
       const { SDK_VERSION } = await import('../../src/index.js');
-      expect(SDK_VERSION).toBe('2.2.0');
+      expect(SDK_VERSION).toBe('3.0.12');
       expect(typeof SDK_VERSION).toBe('string');
     });
 
     it('should export SDK_NAME', async () => {
       const { SDK_NAME } = await import('../../src/index.js');
-      expect(SDK_NAME).toBe('@somnia/agent-kit');
+      expect(SDK_NAME).toBe('somnia-agent-kit');
       expect(typeof SDK_NAME).toBe('string');
     });
 
@@ -61,8 +61,8 @@ describe('Main Package Exports (@somnia/agent-kit)', () => {
       expect(typeof getVersionString).toBe('function');
 
       const versionString = getVersionString();
-      expect(versionString).toContain('@somnia/agent-kit');
-      expect(versionString).toContain('2.2.0');
+      expect(versionString).toContain('somnia-agent-kit');
+      expect(versionString).toContain('3.0.12');
     });
 
     it('should export getVersionInfo function', async () => {
@@ -71,13 +71,13 @@ describe('Main Package Exports (@somnia/agent-kit)', () => {
       expect(typeof getVersionInfo).toBe('function');
 
       const info = getVersionInfo();
-      expect(info.name).toBe('@somnia/agent-kit');
-      expect(info.version).toBe('2.2.0');
+      expect(info.name).toBe('somnia-agent-kit');
+      expect(info.version).toBe('3.0.12');
       expect(info.buildDate).toBeDefined();
     });
   });
 
-  describe('Utils Exports (NEW module in v2.2.0)', () => {
+  describe('Utils Exports (NEW module in v3.0.12)', () => {
     it('should export retry function', async () => {
       const { retry } = await import('../../src/index.js');
       expect(retry).toBeDefined();
@@ -123,7 +123,9 @@ describe('Main Package Exports (@somnia/agent-kit)', () => {
     });
 
     it('should export encoding functions', async () => {
-      const { toHex, fromHex, keccak256, formatEther, parseEther } = await import('../../src/index.js');
+      const { toHex, fromHex, keccak256, formatEther, parseEther } = await import(
+        '../../src/index.js'
+      );
       expect(toHex).toBeDefined();
       expect(fromHex).toBeDefined();
       expect(keccak256).toBeDefined();
@@ -148,7 +150,9 @@ describe('Main Package Exports (@somnia/agent-kit)', () => {
     });
 
     it('should export config functions', async () => {
-      const { loadConfig, validateConfig, createConfigFromEnv } = await import('../../src/index.js');
+      const { loadConfig, validateConfig, createConfigFromEnv } = await import(
+        '../../src/index.js'
+      );
       expect(loadConfig).toBeDefined();
       expect(validateConfig).toBeDefined();
       expect(createConfigFromEnv).toBeDefined();
@@ -204,27 +208,29 @@ describe('Module Exports - Runtime', () => {
   });
 
   it('should export trigger types', async () => {
-    const { OnChainTrigger, IntervalTrigger, WebhookTrigger } = await import('../../src/runtime/index.js');
+    const { OnChainTrigger, IntervalTrigger, WebhookTrigger } = await import(
+      '../../src/runtime/index.js'
+    );
     expect(OnChainTrigger).toBeDefined();
     expect(IntervalTrigger).toBeDefined();
     expect(WebhookTrigger).toBeDefined();
   });
 });
 
-describe('Module Exports - LLM (Reorganized in v2.2.0)', () => {
+describe('Module Exports - LLM (Reorganized in v3.0.12)', () => {
   it('should export from llm module', async () => {
     const llm = await import('../../src/llm/index.js');
     expect(llm.OpenAIAdapter).toBeDefined();
     expect(llm.OllamaAdapter).toBeDefined();
   });
 
-  it('should export LLMTaskPlanner (NEW in v2.2.0)', async () => {
+  it('should export LLMTaskPlanner (NEW in v3.0.12)', async () => {
     const { LLMTaskPlanner } = await import('../../src/llm/index.js');
     expect(LLMTaskPlanner).toBeDefined();
     expect(typeof LLMTaskPlanner).toBe('function');
   });
 
-  it('should export MultiStepReasoner (NEW in v2.2.0)', async () => {
+  it('should export MultiStepReasoner (NEW in v3.0.12)', async () => {
     const { MultiStepReasoner } = await import('../../src/llm/index.js');
     expect(MultiStepReasoner).toBeDefined();
     expect(typeof MultiStepReasoner).toBe('function');
@@ -250,14 +256,16 @@ describe('Module Exports - LLM (Reorganized in v2.2.0)', () => {
   });
 
   it('should export prompt templates', async () => {
-    const { PROMPT_TEMPLATES, ACTION_PLANNER_PROMPT } = await import('../../src/llm/prompt/index.js');
+    const { PROMPT_TEMPLATES, ACTION_PLANNER_PROMPT } = await import(
+      '../../src/llm/prompt/index.js'
+    );
     expect(PROMPT_TEMPLATES).toBeDefined();
     expect(ACTION_PLANNER_PROMPT).toBeDefined();
     expect(PROMPT_TEMPLATES.action_planner).toBeDefined();
   });
 });
 
-describe('Module Exports - Utils (NEW module in v2.2.0)', () => {
+describe('Module Exports - Utils (NEW module in v3.0.12)', () => {
   it('should export from utils module', async () => {
     const utils = await import('../../src/utils/index.js');
     expect(utils.retry).toBeDefined();
@@ -276,15 +284,8 @@ describe('Module Exports - Utils (NEW module in v2.2.0)', () => {
   });
 
   it('should export encode utilities', async () => {
-    const {
-      toHex,
-      fromHex,
-      keccak256,
-      formatEther,
-      parseEther,
-      bytesToHex,
-      hexToBytes,
-    } = await import('../../src/utils/encode.js');
+    const { toHex, fromHex, keccak256, formatEther, parseEther, bytesToHex, hexToBytes } =
+      await import('../../src/utils/encode.js');
 
     expect(toHex).toBeDefined();
     expect(fromHex).toBeDefined();
@@ -314,14 +315,16 @@ describe('Module Exports - Utils (NEW module in v2.2.0)', () => {
   });
 
   it('should export logger utilities', async () => {
-    const { EventEmitter, Logger, createLogger } = await import('../../src/utils/logger.js');
+    const { EventEmitter, Logger, createLogger } = await import(
+      '../../src/utils/logger.js'
+    );
     expect(EventEmitter).toBeDefined();
     expect(Logger).toBeDefined();
     expect(createLogger).toBeDefined();
   });
 });
 
-describe('Module Exports - Config (Enhanced in v2.2.0)', () => {
+describe('Module Exports - Config (Enhanced in v3.0.12)', () => {
   it('should export from config module', async () => {
     const config = await import('../../src/config/index.js');
     expect(config.loadConfig).toBeDefined();
@@ -408,14 +411,14 @@ describe('Cross-Module Integration', () => {
   });
 });
 
-describe('v2.2.0 Refactoring Verification', () => {
+describe('v3.0.12 Refactoring Verification', () => {
   it('should have utils/ as standalone module (extracted from core/utils.ts)', async () => {
     const utils = await import('../../src/utils/index.js');
     expect(utils.retry).toBeDefined();
 
     // Should NOT be in core anymore
     const core = await import('../../src/core/index.js');
-    expect(core.retry).toBeUndefined();
+    expect((core as any).retry).toBeUndefined();
   });
 
   it('should have memoryManager.ts (renamed from memory.ts)', async () => {
@@ -440,7 +443,7 @@ describe('v2.2.0 Refactoring Verification', () => {
 
   it('should have version.ts (NEW)', async () => {
     const { SDK_VERSION, getVersionString } = await import('../../src/version.js');
-    expect(SDK_VERSION).toBe('2.2.0');
-    expect(getVersionString()).toContain('2.2.0');
+    expect(SDK_VERSION).toBe('3.0.12');
+    expect(getVersionString()).toContain('3.0.12');
   });
 });

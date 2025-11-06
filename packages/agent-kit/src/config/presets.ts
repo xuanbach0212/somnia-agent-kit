@@ -72,7 +72,7 @@ export const SOMNIA_NETWORKS = {
  *
  * @example
  * ```typescript
- * import { SomniaAgentKit, SHARED_PLATFORM_TESTNET } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, SHARED_PLATFORM_TESTNET } from 'somnia-agent-kit;
  *
  * const kit = new SomniaAgentKit(SHARED_PLATFORM_TESTNET);
  * await kit.initialize();
@@ -91,7 +91,7 @@ export const SHARED_PLATFORM_TESTNET: Partial<AgentKitConfig> = {
  *
  * @example
  * ```typescript
- * import { SomniaAgentKit, SHARED_PLATFORM_MAINNET } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, SHARED_PLATFORM_MAINNET } from 'somnia-agent-kit;
  *
  * const kit = new SomniaAgentKit(SHARED_PLATFORM_MAINNET);
  * await kit.initialize();
@@ -135,7 +135,7 @@ export const SHARED_PLATFORM_MAINNET: Partial<AgentKitConfig> = {
  *
  * @example
  * ```typescript
- * import { SomniaAgentKit, SELF_HOSTED_CONFIG } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, SELF_HOSTED_CONFIG } from 'somnia-agent-kit;
  *
  * const kit = new SomniaAgentKit(SELF_HOSTED_CONFIG);
  * await kit.initialize();
@@ -168,7 +168,7 @@ export const SELF_HOSTED_CONFIG: Partial<AgentKitConfig> = {
  *
  * @example
  * ```typescript
- * import { SomniaAgentKit, LOCAL_DEVELOPMENT } from '@somnia/agent-kit';
+ * import { SomniaAgentKit, LOCAL_DEVELOPMENT } from 'somnia-agent-kit;
  *
  * const kit = new SomniaAgentKit(LOCAL_DEVELOPMENT);
  * await kit.initialize();

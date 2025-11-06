@@ -113,7 +113,7 @@ export async function taskCreateCommand(options: TaskCreateOptions): Promise<voi
   // Parse event to get task ID
   const event = receipt.logs.find(
     (log: any) =>
-      log.topics[0] === kit.contracts.manager.interface.getEvent('TaskCreated').topicHash
+      log.topics[0] === kit.contracts.manager.interface.getEvent('TaskCreated')?.topicHash
   );
 
   if (event) {

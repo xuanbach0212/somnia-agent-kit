@@ -8,23 +8,19 @@
  * - Validation before returning config
  */
 
-import dotenv from 'dotenv';
 import deepmerge from 'deepmerge';
+import dotenv from 'dotenv';
 import type {
   AgentKitConfig,
-  SDKConfig,
-  RuntimeConfig,
   CompleteSolutionConfig,
+  RuntimeConfig,
+  SDKConfig,
 } from '../types/config';
-import {
-  DEFAULT_CONFIG,
-  DEFAULT_SDK_CONFIG,
-  DEFAULT_RUNTIME_CONFIG,
-} from './defaults';
+import { DEFAULT_CONFIG, DEFAULT_RUNTIME_CONFIG, DEFAULT_SDK_CONFIG } from './defaults';
 import {
   loadAgentConfigFromEnv,
-  loadSDKConfigFromEnv,
   loadRuntimeConfigFromEnv,
+  loadSDKConfigFromEnv,
 } from './env';
 import { validateAgentConfig } from './validator';
 
@@ -49,7 +45,7 @@ dotenv.config();
  *
  * @example Basic usage (auto-loads from .env)
  * ```typescript
- * import { loadConfig } from '@somnia/agent-kit';
+ * import { loadConfig } from 'somnia-agent-kit;
  *
  * // Automatically loads from .env and merges with defaults
  * const config = loadConfig();
@@ -57,7 +53,7 @@ dotenv.config();
  *
  * @example With overrides
  * ```typescript
- * import { loadConfig, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+ * import { loadConfig, SOMNIA_NETWORKS } from 'somnia-agent-kit;
  *
  * const config = loadConfig({
  *   network: SOMNIA_NETWORKS.mainnet,
@@ -65,9 +61,7 @@ dotenv.config();
  * });
  * ```
  */
-export function loadConfig(
-  userConfig?: Partial<AgentKitConfig>
-): AgentKitConfig {
+export function loadConfig(userConfig?: Partial<AgentKitConfig>): AgentKitConfig {
   // Load from environment
   const envConfig = loadAgentConfigFromEnv();
 
@@ -93,7 +87,7 @@ export function loadConfig(
  *
  * @example Load everything from .env
  * ```typescript
- * import { loadCompleteSolutionConfig } from '@somnia/agent-kit';
+ * import { loadCompleteSolutionConfig } from 'somnia-agent-kit;
  *
  * const config = loadCompleteSolutionConfig();
  *
@@ -161,7 +155,7 @@ export function loadCompleteSolutionConfig(
  *
  * @example
  * ```typescript
- * import { loadSDKConfig } from '@somnia/agent-kit';
+ * import { loadSDKConfig } from 'somnia-agent-kit;
  *
  * const sdkConfig = loadSDKConfig({
  *   debug: true,
@@ -172,11 +166,7 @@ export function loadCompleteSolutionConfig(
 export function loadSDKConfig(userConfig?: Partial<SDKConfig>): SDKConfig {
   const envConfig = loadSDKConfigFromEnv();
 
-  return deepmerge.all([
-    DEFAULT_SDK_CONFIG,
-    envConfig,
-    userConfig || {},
-  ]) as SDKConfig;
+  return deepmerge.all([DEFAULT_SDK_CONFIG, envConfig, userConfig || {}]) as SDKConfig;
 }
 
 /**
@@ -187,7 +177,7 @@ export function loadSDKConfig(userConfig?: Partial<SDKConfig>): SDKConfig {
  *
  * @example
  * ```typescript
- * import { loadRuntimeConfig } from '@somnia/agent-kit';
+ * import { loadRuntimeConfig } from 'somnia-agent-kit;
  *
  * const runtimeConfig = loadRuntimeConfig({
  *   maxConcurrent: 10,
@@ -195,9 +185,7 @@ export function loadSDKConfig(userConfig?: Partial<SDKConfig>): SDKConfig {
  * });
  * ```
  */
-export function loadRuntimeConfig(
-  userConfig?: Partial<RuntimeConfig>
-): RuntimeConfig {
+export function loadRuntimeConfig(userConfig?: Partial<RuntimeConfig>): RuntimeConfig {
   const envConfig = loadRuntimeConfigFromEnv();
 
   return deepmerge.all([
@@ -215,7 +203,7 @@ export function loadRuntimeConfig(
  *
  * @example
  * ```typescript
- * import { reloadEnv, loadConfig } from '@somnia/agent-kit';
+ * import { reloadEnv, loadConfig } from 'somnia-agent-kit;
  *
  * // Modify .env file programmatically or externally
  * // ...
@@ -238,7 +226,7 @@ export function reloadEnv(): void {
  *
  * @example
  * ```typescript
- * import { getEnvVars } from '@somnia/agent-kit';
+ * import { getEnvVars } from 'somnia-agent-kit;
  *
  * const envVars = getEnvVars();
  * console.log('RPC URL:', envVars.SOMNIA_RPC_URL);
@@ -249,10 +237,25 @@ export function getEnvVars(): Record<string, string | undefined> {
   const envVars: Record<string, string | undefined> = {};
 
   // Collect all relevant environment variables
-  const prefixes = ['SOMNIA_', 'AGENT_', 'SDK_', 'RUNTIME_', 'OPENAI_', 'OLLAMA_', 'PRIVATE_KEY', 'LOG_LEVEL', 'METRICS_ENABLED'];
+  const prefixes = [
+    'SOMNIA_',
+    'AGENT_',
+    'SDK_',
+    'RUNTIME_',
+    'OPENAI_',
+    'OLLAMA_',
+    'PRIVATE_KEY',
+    'LOG_LEVEL',
+    'METRICS_ENABLED',
+  ];
 
   for (const [key, value] of Object.entries(process.env)) {
-    if (prefixes.some(prefix => key.startsWith(prefix)) || key === 'PRIVATE_KEY' || key === 'LOG_LEVEL' || key === 'METRICS_ENABLED') {
+    if (
+      prefixes.some((prefix) => key.startsWith(prefix)) ||
+      key === 'PRIVATE_KEY' ||
+      key === 'LOG_LEVEL' ||
+      key === 'METRICS_ENABLED'
+    ) {
       envVars[key] = value;
     }
   }

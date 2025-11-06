@@ -1,15 +1,15 @@
 /**
  * Integration Tests: SDK Module Integration
  *
- * Tests that modules work together correctly after v2.2.0 refactoring
+ * Tests that modules work together correctly after v3.0.12 refactoring
  * Verifies:
  * - SomniaAgentKit class integrates all modules
  * - Config loading and merging works
  * - Module dependencies are satisfied
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '../../src/index.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { SOMNIA_NETWORKS, SomniaAgentKit } from '../../src/index.js';
 
 describe('SomniaAgentKit Integration', () => {
   describe('Instance Creation', () => {
@@ -255,11 +255,13 @@ describe('Utils Module Integration', () => {
 
     const hash = keccak256('hello');
     expect(hash).toMatch(/^0x[a-f0-9]{64}$/);
-    expect(hash).toBe('0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8');
+    expect(hash).toBe(
+      '0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8'
+    );
   });
 });
 
-describe('LLM Module Integration (v2.2.0)', () => {
+describe('LLM Module Integration (v3.0.12)', () => {
   it('should export LLMTaskPlanner (NEW)', async () => {
     const { LLMTaskPlanner } = await import('../../src/llm/index.js');
     expect(LLMTaskPlanner).toBeDefined();
@@ -276,20 +278,26 @@ describe('LLM Module Integration (v2.2.0)', () => {
   });
 
   it('should have adapters submodule', async () => {
-    const { OpenAIAdapter, OllamaAdapter } = await import('../../src/llm/adapters/index.js');
+    const { OpenAIAdapter, OllamaAdapter } = await import(
+      '../../src/llm/adapters/index.js'
+    );
     expect(OpenAIAdapter).toBeDefined();
     expect(OllamaAdapter).toBeDefined();
   });
 
   it('should have prompt submodule', async () => {
-    const { buildPrompt, getTemplate, PROMPT_TEMPLATES } = await import('../../src/llm/prompt/index.js');
+    const { buildPrompt, getTemplate, PROMPT_TEMPLATES } = await import(
+      '../../src/llm/prompt/index.js'
+    );
     expect(buildPrompt).toBeDefined();
     expect(getTemplate).toBeDefined();
     expect(PROMPT_TEMPLATES).toBeDefined();
   });
 
   it('should work with prompt templates', async () => {
-    const { buildPrompt, ACTION_PLANNER_PROMPT } = await import('../../src/llm/prompt/index.js');
+    const { buildPrompt, ACTION_PLANNER_PROMPT } = await import(
+      '../../src/llm/prompt/index.js'
+    );
 
     const result = buildPrompt(ACTION_PLANNER_PROMPT.template, {
       goal: 'Send 1 ETH to Alice',
@@ -337,25 +345,27 @@ describe('Runtime Module Integration', () => {
   });
 });
 
-describe('Version Info Integration (v2.2.0)', () => {
+describe('Version Info Integration (v3.0.12)', () => {
   it('should export version info from main index', async () => {
-    const { SDK_VERSION, SDK_NAME, getVersionString, getVersionInfo } = await import('../../src/index.js');
+    const { SDK_VERSION, SDK_NAME, getVersionString, getVersionInfo } = await import(
+      '../../src/index.js'
+    );
 
-    expect(SDK_VERSION).toBe('2.2.0');
-    expect(SDK_NAME).toBe('@somnia/agent-kit');
-    expect(getVersionString()).toContain('2.2.0');
+    expect(SDK_VERSION).toBe('3.0.12');
+    expect(SDK_NAME).toBe('somnia-agent-kit');
+    expect(getVersionString()).toContain('3.0.12');
 
     const info = getVersionInfo();
-    expect(info.name).toBe('@somnia/agent-kit');
-    expect(info.version).toBe('2.2.0');
+    expect(info.name).toBe('somnia-agent-kit');
+    expect(info.version).toBe('3.0.12');
     expect(info.buildDate).toBeDefined();
   });
 
   it('should export version info from version module', async () => {
     const { SDK_VERSION, getVersionString } = await import('../../src/version.js');
 
-    expect(SDK_VERSION).toBe('2.2.0');
-    expect(getVersionString()).toContain('@somnia/agent-kit@2.2.0');
+    expect(SDK_VERSION).toBe('3.0.12');
+    expect(getVersionString()).toContain('somnia-agent-kit@3.0.12');
   });
 });
 

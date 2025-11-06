@@ -120,7 +120,7 @@ export async function agentRegisterCommand(options: AgentRegisterOptions): Promi
   const event = receipt.logs.find(
     (log: any) =>
       log.topics[0] ===
-      kit.contracts.registry.interface.getEvent('AgentRegistered').topicHash
+      kit.contracts.registry.interface.getEvent('AgentRegistered')?.topicHash
   );
 
   if (event) {

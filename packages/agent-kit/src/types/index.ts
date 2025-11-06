@@ -3,7 +3,7 @@
  * Shared TypeScript types and interfaces for Somnia Agent Kit
  *
  * Import from main package:
- *   import { AgentConfig, RuntimeAction } from '@somnia/agent-kit'
+ *   import { AgentConfig, RuntimeAction } from 'somnia-agent-kit
  *
  * Import from types namespace:
  *   import * as Types from '@somnia/agent-kit/types'
@@ -40,8 +40,8 @@ export * from './action';
 // =============================================================================
 // Runtime Module Types
 // =============================================================================
-export * from './storage';
 export * from './memory';
+export * from './storage';
 export * from './trigger';
 
 // =============================================================================

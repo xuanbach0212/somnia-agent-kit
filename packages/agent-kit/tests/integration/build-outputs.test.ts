@@ -107,8 +107,8 @@ describe('ESM Output (index.mjs)', () => {
     if (!existsSync(esmPath)) return;
 
     const mod = await import(esmPath);
-    expect(mod.SDK_VERSION).toBe('2.2.0');
-    expect(mod.SDK_NAME).toBe('@somnia/agent-kit');
+    expect(mod.SDK_VERSION).toBe('3.0.12');
+    expect(mod.SDK_NAME).toBe('somnia-agent-kit');
     expect(mod.getVersionString).toBeDefined();
   });
 
@@ -140,8 +140,8 @@ describe('ESM Output (index.mjs)', () => {
     const mod = await import(esmPath);
     expect(mod.OpenAIAdapter).toBeDefined();
     expect(mod.OllamaAdapter).toBeDefined();
-    expect(mod.LLMTaskPlanner).toBeDefined(); // NEW in v2.2.0
-    expect(mod.MultiStepReasoner).toBeDefined(); // NEW in v2.2.0
+    expect(mod.LLMTaskPlanner).toBeDefined(); // NEW in v3.0.12
+    expect(mod.MultiStepReasoner).toBeDefined(); // NEW in v3.0.12
   });
 
   it('should export runtime classes', async () => {

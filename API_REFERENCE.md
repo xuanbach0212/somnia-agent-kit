@@ -55,7 +55,7 @@ new SomniaAgentKit(userConfig?: Partial<AgentKitConfig>)
 
 **Example**:
 ```typescript
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit;
 
 const kit = new SomniaAgentKit({
   network: SOMNIA_NETWORKS.testnet,
@@ -2133,7 +2133,7 @@ Fast in-memory storage (for development/testing).
 
 **Usage**:
 ```typescript
-import { InMemoryBackend, Memory } from '@somnia/agent-kit';
+import { InMemoryBackend, Memory } from 'somnia-agent-kit;
 
 const backend = new InMemoryBackend();
 const memory = new Memory({ backend });
@@ -2158,7 +2158,7 @@ constructor(basePath: string = './data/memory')
 
 **Usage**:
 ```typescript
-import { FileBackend, Memory } from '@somnia/agent-kit';
+import { FileBackend, Memory } from 'somnia-agent-kit;
 
 const backend = new FileBackend('./agent-memory');
 const memory = new Memory({ backend });
@@ -2185,7 +2185,7 @@ new Memory(config?: MemoryConfig)
 
 **Example**:
 ```typescript
-import { Memory, FileBackend } from '@somnia/agent-kit';
+import { Memory, FileBackend } from 'somnia-agent-kit;
 
 // In-memory (default)
 const memory1 = new Memory();
@@ -2605,7 +2605,7 @@ This creates a complete memory trail of all agent interactions.
 #### Complete Usage Example
 
 ```typescript
-import { Agent, AgentConfig, Memory, FileBackend } from '@somnia/agent-kit';
+import { Agent, AgentConfig, Memory, FileBackend } from 'somnia-agent-kit;
 
 // Option 1: Memory via Agent (recommended)
 const agent = new Agent({
@@ -2677,7 +2677,7 @@ Create memory with in-memory backend.
 
 **Example**:
 ```typescript
-import { createMemory } from '@somnia/agent-kit';
+import { createMemory } from 'somnia-agent-kit;
 
 const memory = createMemory('session-123');
 ```
@@ -2690,7 +2690,7 @@ Create memory with file backend.
 
 **Example**:
 ```typescript
-import { createFileMemory } from '@somnia/agent-kit';
+import { createFileMemory } from 'somnia-agent-kit;
 
 const memory = createFileMemory('./data/memory', 'session-123');
 ```
@@ -3126,7 +3126,7 @@ Test connection to Ollama server.
 All adapters implement the same interface, making it easy to switch providers:
 
 ```typescript
-import { OpenAIAdapter, AnthropicAdapter, OllamaAdapter, LLMAdapter } from '@somnia/agent-kit';
+import { OpenAIAdapter, AnthropicAdapter, OllamaAdapter, LLMAdapter } from 'somnia-agent-kit;
 
 // Choose adapter based on environment
 let llm: LLMAdapter;
@@ -3175,7 +3175,7 @@ const adapter = new OpenAIAdapter({
 All adapters support custom loggers:
 
 ```typescript
-import { OpenAIAdapter, LLMLogger } from '@somnia/agent-kit';
+import { OpenAIAdapter, LLMLogger } from 'somnia-agent-kit;
 
 class MyLogger implements LLMLogger {
   debug(message: string, data?: any) { /* custom implementation */ }
@@ -3230,7 +3230,7 @@ Plans actions from user goals. Used by `LLMPlanner`.
 
 **Example**:
 ```typescript
-import { getTemplate, buildPrompt } from '@somnia/agent-kit';
+import { getTemplate, buildPrompt } from 'somnia-agent-kit;
 
 const template = getTemplate('action_planner');
 const prompt = buildPrompt(template.template, {
@@ -3312,7 +3312,7 @@ interface BuildOptions {
 
 **Example**:
 ```typescript
-import { buildPrompt } from '@somnia/agent-kit';
+import { buildPrompt } from 'somnia-agent-kit;
 
 const template = `You are an AI agent.
 Goal: {{goal}}
@@ -3345,7 +3345,7 @@ function buildFromTemplate(
 
 **Example**:
 ```typescript
-import { buildFromTemplate } from '@somnia/agent-kit';
+import { buildFromTemplate } from 'somnia-agent-kit;
 
 const prompt = buildFromTemplate('action_planner', {
   goal: 'Swap 1 ETH for USDC',
@@ -3368,7 +3368,7 @@ function composePrompts(
 
 **Example**:
 ```typescript
-import { composePrompts, buildFromTemplate } from '@somnia/agent-kit';
+import { composePrompts, buildFromTemplate } from 'somnia-agent-kit;
 
 const systemPrompt = buildFromTemplate('basic_agent', { goal: 'Monitor' });
 const contextPrompt = 'Current block: 1000000';
@@ -3392,7 +3392,7 @@ function injectContext(
 
 **Example**:
 ```typescript
-import { injectContext } from '@somnia/agent-kit';
+import { injectContext } from 'somnia-agent-kit;
 
 const prompt = 'Analyze the blockchain state.';
 const enhanced = injectContext(prompt, {
@@ -3429,7 +3429,7 @@ Removes:
 
 **Example**:
 ```typescript
-import { sanitizeData } from '@somnia/agent-kit';
+import { sanitizeData } from 'somnia-agent-kit;
 
 const dirty = {
   goal: 'Test\x00Goal\n',
@@ -3455,7 +3455,7 @@ function validateTemplate(
 
 **Example**:
 ```typescript
-import { getTemplate, validateTemplate } from '@somnia/agent-kit';
+import { getTemplate, validateTemplate } from 'somnia-agent-kit;
 
 const template = getTemplate('action_planner');
 const result = validateTemplate(template, {
@@ -3479,7 +3479,7 @@ function extractVariables(template: string): string[]
 
 **Example**:
 ```typescript
-import { extractVariables } from '@somnia/agent-kit';
+import { extractVariables } from 'somnia-agent-kit;
 
 const template = 'Goal: {{goal}}, Context: {{context}}';
 const vars = extractVariables(template);
@@ -3498,7 +3498,7 @@ function previewTemplate(templateName: string): string
 
 **Example**:
 ```typescript
-import { previewTemplate } from '@somnia/agent-kit';
+import { previewTemplate } from 'somnia-agent-kit;
 
 const preview = previewTemplate('action_planner');
 console.log(preview);
@@ -3521,7 +3521,7 @@ function createTemplate(
 
 **Example**:
 ```typescript
-import { createTemplate } from '@somnia/agent-kit';
+import { createTemplate } from 'somnia-agent-kit;
 
 const myTemplate = createTemplate(
   'my_custom_agent',
@@ -3548,7 +3548,7 @@ function getTemplate(name: string): PromptTemplate | undefined
 
 **Example**:
 ```typescript
-import { getTemplate } from '@somnia/agent-kit';
+import { getTemplate } from 'somnia-agent-kit;
 
 const template = getTemplate('action_planner');
 console.log(template.description);
@@ -3567,7 +3567,7 @@ function listTemplates(): string[]
 
 **Example**:
 ```typescript
-import { listTemplates } from '@somnia/agent-kit';
+import { listTemplates } from 'somnia-agent-kit;
 
 const templates = listTemplates();
 console.log(templates);
@@ -3586,7 +3586,7 @@ function getTemplateVariables(name: string): string[]
 
 **Example**:
 ```typescript
-import { getTemplateVariables } from '@somnia/agent-kit';
+import { getTemplateVariables } from 'somnia-agent-kit;
 
 const vars = getTemplateVariables('action_planner');
 console.log(vars); // ['goal', 'context']
@@ -3604,7 +3604,7 @@ import {
   validateTemplate,
   getTemplate,
   sanitizeData
-} from '@somnia/agent-kit';
+} from 'somnia-agent-kit;
 
 // 1. Get and validate template
 const template = getTemplate('action_planner');
@@ -3635,7 +3635,7 @@ const enhanced = injectContext(prompt, {
 });
 
 // 5. Use with LLM
-import { OpenAIAdapter } from '@somnia/agent-kit';
+import { OpenAIAdapter } from 'somnia-agent-kit;
 
 const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
 const response = await llm.generate(enhanced);
@@ -3649,7 +3649,7 @@ console.log(response.content);
 The `LLMPlanner` automatically uses the `ACTION_PLANNER_PROMPT` template:
 
 ```typescript
-import { LLMPlanner, OpenAIAdapter } from '@somnia/agent-kit';
+import { LLMPlanner, OpenAIAdapter } from 'somnia-agent-kit;
 
 const llm = new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY });
 const planner = new LLMPlanner(llm);
@@ -3664,7 +3664,7 @@ const actions = await planner.plan('Send 1 ETH to Alice', {
 You can override with custom prompt:
 
 ```typescript
-import { LLMPlanner, OpenAIAdapter, buildFromTemplate } from '@somnia/agent-kit';
+import { LLMPlanner, OpenAIAdapter, buildFromTemplate } from 'somnia-agent-kit;
 
 const customPrompt = buildFromTemplate('my_custom_planner', {...});
 
@@ -4320,7 +4320,7 @@ Convenience function to send telemetry using default instance.
 
 **Example**:
 ```typescript
-import { sendTelemetry } from '@somnia/agent-kit';
+import { sendTelemetry } from 'somnia-agent-kit;
 
 // Set endpoint
 process.env.TELEMETRY_ENDPOINT = 'https://my-monitoring.com/api';
@@ -4339,7 +4339,7 @@ await sendTelemetry({
 
 **Prometheus Integration**:
 ```typescript
-import { Telemetry, Metrics } from '@somnia/agent-kit';
+import { Telemetry, Metrics } from 'somnia-agent-kit;
 
 const telemetry = new Telemetry({
   endpoint: 'http://pushgateway:9091/metrics/job/my-agent',
@@ -4447,7 +4447,7 @@ Convenience function to create and start dashboard.
 
 **Example**:
 ```typescript
-import { startDashboard, logger, Metrics } from '@somnia/agent-kit';
+import { startDashboard, logger, Metrics } from 'somnia-agent-kit;
 
 const metrics = new Metrics();
 
@@ -4571,7 +4571,7 @@ import {
   logger,
   Metrics,
   startDashboard,
-} from '@somnia/agent-kit';
+} from 'somnia-agent-kit;
 
 // Initialize
 const kit = await SomniaAgentKit.create({
@@ -4610,18 +4610,18 @@ process.on('SIGINT', async () => {
 
 ```typescript
 // Main SDK
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit;
 
 // Core
-import { ChainClient, SignerManager, SomniaContracts } from '@somnia/agent-kit';
-import { loadConfig, createConfigFromEnv } from '@somnia/agent-kit';
+import { ChainClient, SignerManager, SomniaContracts } from 'somnia-agent-kit;
+import { loadConfig, createConfigFromEnv } from 'somnia-agent-kit;
 
 // Utils
 import {
   sleep, retry, delay, timeout,
   toHex, fromHex, formatEther, parseEther,
   EventEmitter, Logger, LogLevel, createLogger
-} from '@somnia/agent-kit';
+} from 'somnia-agent-kit;
 
 // Runtime (not directly exported, use via Agent)
 import { Agent } from '@somnia/agent-kit/runtime';
@@ -4640,7 +4640,7 @@ import { Logger, Metrics, EventRecorder } from '@somnia/agent-kit/monitor';
 #### Basic Setup
 
 ```typescript
-import { SomniaAgentKit, SOMNIA_NETWORKS } from '@somnia/agent-kit';
+import { SomniaAgentKit, SOMNIA_NETWORKS } from 'somnia-agent-kit;
 
 const kit = new SomniaAgentKit({
   network: SOMNIA_NETWORKS.testnet,
@@ -4710,7 +4710,7 @@ import type {
   EventListener,
   LoggerConfig,
   LogEntry,
-} from '@somnia/agent-kit';
+} from 'somnia-agent-kit;
 ```
 
 ---
