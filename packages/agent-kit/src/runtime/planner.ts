@@ -4,22 +4,22 @@
  * Includes rule-based and LLM-based planning strategies
  */
 
-import type { OpenAIAdapter } from '../llm/adapters/openaiAdapter';
-import type { OllamaAdapter } from '../llm/adapters/ollamaAdapter';
-import { ACTION_PLANNER_PROMPT, buildPrompt } from '../llm/prompt';
 import { z } from 'zod';
-import type { PlanStep, ExecutionPlan } from './executor';
+import { LIMITS } from '../constants';
+import type { OllamaAdapter } from '../llm/adapters/ollamaAdapter';
+import type { OpenAIAdapter } from '../llm/adapters/openaiAdapter';
+import { ACTION_PLANNER_PROMPT } from '../llm/prompt';
+import type { Context, Goal, JsonObject } from '../types/common';
+import { LLMResponseParser, TypeGuards } from '../utils/llm-parser';
+import type { ExecutionPlan, PlanStep } from './executor';
 
 // Import types from centralized location
-import type {
-  Action,
-  ActionPlan,
-} from '../types/llm';
+import type { Action, ActionPlan } from '../types/llm';
 import { ActionType, TaskPriority, TaskStatus } from '../types/llm';
 
 // Re-export for backward compatibility
-export type { Action, ActionPlan, PlanStep, ExecutionPlan };
 export { ActionType, TaskPriority, TaskStatus };
+export type { Action, ActionPlan, ExecutionPlan, PlanStep };
 
 // Note: PlanStep and ExecutionPlan are executor-specific types for handler-based execution
 // For LLM reasoning layer, see types/llm (PlanStep with action: Action | ActionPlan)
@@ -40,10 +40,7 @@ export const ActionSchema = z.object({
  * Zod schema for ActionPlan validation
  */
 export const ActionPlanSchema = z.object({
-  type: z.union([
-    z.nativeEnum(ActionType),
-    z.string(),
-  ]),
+  type: z.union([z.nativeEnum(ActionType), z.string()]),
   target: z.string().optional(),
   params: z.record(z.any()),
   reason: z.string(),
@@ -73,7 +70,7 @@ export function validateAction(action: any): action is Action {
     ActionSchema.parse(action);
     return true;
   } catch (error) {
-    console.error('Action validation failed:', error);
+    // Silent validation - caller should handle invalid actions
     return false;
   }
 }
@@ -86,7 +83,7 @@ export function validateActionPlan(actionPlan: any): actionPlan is ActionPlan {
     ActionPlanSchema.parse(actionPlan);
     return true;
   } catch (error) {
-    console.error('ActionPlan validation failed:', error);
+    // Silent validation - caller should handle invalid action plans
     return false;
   }
 }
@@ -99,7 +96,7 @@ export function validateActions(actions: any[]): actions is Action[] {
     ActionsArraySchema.parse(actions);
     return true;
   } catch (error) {
-    console.error('Actions array validation failed:', error);
+    // Silent validation - caller should handle invalid actions
     return false;
   }
 }
@@ -112,7 +109,7 @@ export function validateActionPlans(actionPlans: any[]): actionPlans is ActionPl
     ActionPlansArraySchema.parse(actionPlans);
     return true;
   } catch (error) {
-    console.error('ActionPlans array validation failed:', error);
+    // Silent validation - caller should handle invalid action plans
     return false;
   }
 }
@@ -120,7 +117,10 @@ export function validateActionPlans(actionPlans: any[]): actionPlans is ActionPl
 /**
  * Convert Action to ActionPlan (adds reason field)
  */
-export function actionToActionPlan(action: Action, reason: string = 'Action from plan'): ActionPlan {
+export function actionToActionPlan(
+  action: Action,
+  reason: string = 'Action from plan'
+): ActionPlan {
   return {
     type: action.type,
     params: action.params,
@@ -149,7 +149,7 @@ export interface IPlanner {
    * @param context Optional context information
    * @returns Array of actions to execute
    */
-  plan(goal: any, context?: any): Promise<Action[]>;
+  plan(goal: Goal | string, context?: Context): Promise<Action[]>;
 }
 
 // =============================================================================
@@ -171,7 +171,7 @@ export class Planner {
 
   constructor(config: PlannerConfig = {}) {
     this.config = {
-      maxSteps: config.maxSteps || 50,
+      maxSteps: config.maxSteps || LIMITS.MAX_PLAN_STEPS,
       enableOptimization: config.enableOptimization !== false,
       allowParallel: config.allowParallel !== false,
     };
@@ -190,9 +190,7 @@ export class Planner {
     const steps = await this.decompose(taskType, taskData);
 
     // Optimize if enabled
-    const optimizedSteps = this.config.enableOptimization
-      ? this.optimize(steps)
-      : steps;
+    const optimizedSteps = this.config.enableOptimization ? this.optimize(steps) : steps;
 
     // Validate plan
     this.validate(optimizedSteps);
@@ -339,8 +337,7 @@ export class Planner {
     while (processed.size < steps.length) {
       const currentLevel = steps.filter(
         (step) =>
-          !processed.has(step.id) &&
-          step.dependencies.every((dep) => processed.has(dep))
+          !processed.has(step.id) && step.dependencies.every((dep) => processed.has(dep))
       );
 
       if (currentLevel.length === 0) {
@@ -446,16 +443,20 @@ export class Planner {
    * @param context Optional context
    * @returns Array of actions
    */
-  async plan(goal: any, context?: any): Promise<Action[]> {
+  async plan(goal: Goal | string, context?: Context): Promise<Action[]> {
     // For backward compatibility, delegate to decompose
     let taskType = 'generic';
-    let taskData = goal;
+    let taskData: JsonObject = {};
 
-    // Try to infer task type from goal
-    if (typeof goal === 'object' && goal !== null) {
+    // Parse goal
+    if (typeof goal === 'string') {
+      taskData = { description: goal };
+    } else if (typeof goal === 'object' && goal !== null) {
       if (goal.type) {
         taskType = goal.type;
-        taskData = goal.data || goal;
+        taskData = (goal.data as JsonObject) || goal;
+      } else {
+        taskData = goal;
       }
     }
 
@@ -480,20 +481,24 @@ export class RulePlanner implements IPlanner {
   /**
    * Plan actions using rule-based decomposition
    */
-  async plan(goal: any, context?: any): Promise<Action[]> {
+  async plan(goal: Goal | string, context?: Context): Promise<Action[]> {
     let taskType = 'generic';
-    let taskData = goal;
+    let taskData: JsonObject = {};
 
     // Parse goal
     if (typeof goal === 'string') {
       // Try to parse as JSON
       try {
         const parsed = JSON.parse(goal);
-        if (parsed.type) {
-          taskType = parsed.type;
-          taskData = parsed.data || parsed;
+        if (typeof parsed === 'object' && parsed !== null) {
+          if (parsed.type) {
+            taskType = parsed.type;
+            taskData = (parsed.data as JsonObject) || parsed;
+          } else {
+            taskData = parsed;
+          }
         } else {
-          taskData = parsed;
+          taskData = { description: goal };
         }
       } catch {
         // Not JSON, treat as raw data
@@ -502,7 +507,7 @@ export class RulePlanner implements IPlanner {
     } else if (typeof goal === 'object' && goal !== null) {
       if (goal.type) {
         taskType = goal.type;
-        taskData = goal.data || goal;
+        taskData = (goal.data as JsonObject) || goal;
       } else {
         taskData = goal;
       }
@@ -515,7 +520,11 @@ export class RulePlanner implements IPlanner {
   /**
    * Apply rules to decompose task into actions
    */
-  private applyRules(taskType: string, taskData: any, context?: any): Action[] {
+  private applyRules(
+    taskType: string,
+    taskData: JsonObject,
+    context?: Context
+  ): Action[] {
     const actions: Action[] = [];
 
     switch (taskType) {
@@ -610,8 +619,8 @@ export interface LLMPlannerOptions {
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
-  strictValidation?: boolean;  // Throw error on invalid actions (default: false)
-  returnActionPlan?: boolean;  // Return ActionPlan[] instead of Action[] (default: false)
+  strictValidation?: boolean; // Throw error on invalid actions (default: false)
+  returnActionPlan?: boolean; // Return ActionPlan[] instead of Action[] (default: false)
 }
 
 /**
@@ -621,12 +630,15 @@ export class LLMPlanner implements IPlanner {
   private llm: OpenAIAdapter | OllamaAdapter;
   private systemPrompt: string;
   private options: Required<LLMPlannerOptions>;
+  private logger?: import('../monitor/logger').Logger;
 
   constructor(
     llm: OpenAIAdapter | OllamaAdapter,
-    options?: LLMPlannerOptions
+    options?: LLMPlannerOptions,
+    logger?: import('../monitor/logger').Logger
   ) {
     this.llm = llm;
+    this.logger = logger;
     // Use ACTION_PLANNER_PROMPT template by default
     this.systemPrompt = options?.systemPrompt || ACTION_PLANNER_PROMPT.template;
     this.options = {
@@ -641,7 +653,7 @@ export class LLMPlanner implements IPlanner {
   /**
    * Plan actions using LLM
    */
-  async plan(goal: any, context?: any): Promise<Action[]> {
+  async plan(goal: Goal | string, context?: Context): Promise<Action[]> {
     try {
       // Build prompt
       const prompt = this.buildPrompt(goal, context);
@@ -657,7 +669,7 @@ export class LLMPlanner implements IPlanner {
 
       return actions;
     } catch (error) {
-      console.error('LLMPlanner error:', error);
+      this.logger?.error('LLMPlanner error', { error });
       // Fallback to empty array or basic action
       return [
         {
@@ -672,7 +684,7 @@ export class LLMPlanner implements IPlanner {
    * Plan actions with ActionPlan support
    * Returns ActionPlan[] with full structure including reason
    */
-  async planWithReason(goal: any, context?: any): Promise<ActionPlan[]> {
+  async planWithReason(goal: Goal | string, context?: Context): Promise<ActionPlan[]> {
     try {
       // Build prompt
       const prompt = this.buildPrompt(goal, context);
@@ -688,7 +700,7 @@ export class LLMPlanner implements IPlanner {
 
       return actionPlans;
     } catch (error) {
-      console.error('LLMPlanner error:', error);
+      this.logger?.error('LLMPlanner error', { error });
       // Fallback to basic action plan
       return [
         {
@@ -703,7 +715,7 @@ export class LLMPlanner implements IPlanner {
   /**
    * Build prompt for LLM
    */
-  private buildPrompt(goal: any, context?: any): string {
+  private buildPrompt(goal: Goal | string, context?: Context): string {
     let prompt = `${this.systemPrompt}\n\n`;
 
     // Add goal
@@ -728,84 +740,66 @@ export class LLMPlanner implements IPlanner {
    */
   private parseResponse(response: string): Action[] {
     try {
-      // Clean response - remove markdown code blocks if present
-      let cleaned = response.trim();
+      // Use LLMResponseParser for parsing and validation
+      const validator = (item: unknown) =>
+        TypeGuards.hasPropertyOfType(item, 'type', 'string');
 
-      // Remove markdown json blocks
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json\s*/i, '');
-      }
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```\s*/, '');
-      }
-      if (cleaned.endsWith('```')) {
-        cleaned = cleaned.replace(/\s*```$/, '');
-      }
+      if (this.options.strictValidation) {
+        // Use strict mode - throws on parsing failure
+        const parsed = LLMResponseParser.parseStrict<any>(response, validator);
 
-      // Try to find JSON array in response
-      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        cleaned = jsonMatch[0];
-      }
-
-      // Parse JSON
-      const parsed = JSON.parse(cleaned);
-
-      // Validate format
-      if (!Array.isArray(parsed)) {
-        console.warn('LLM response is not an array, wrapping it');
-        return [
-          {
-            type: 'execute',
-            params: parsed,
-          },
-        ];
-      }
-
-      // Validate each action with zod
-      const actions: Action[] = [];
-      let invalidCount = 0;
-
-      for (const item of parsed) {
-        if (item && typeof item === 'object' && item.type) {
+        // Validate with zod
+        const actions: Action[] = [];
+        for (const item of parsed) {
           const action: Action = {
             type: String(item.type),
             params: item.params || {},
           };
 
-          // Validate with zod
           if (validateAction(action)) {
             actions.push(action);
           } else {
-            invalidCount++;
-            const message = `Invalid action format, skipping: ${JSON.stringify(item)}`;
-
-            if (this.options.strictValidation) {
-              throw new Error(message);
-            } else {
-              console.warn(message);
-            }
-          }
-        } else {
-          invalidCount++;
-          const message = `Missing type field, skipping: ${JSON.stringify(item)}`;
-
-          if (this.options.strictValidation) {
-            throw new Error(message);
-          } else {
-            console.warn(message);
+            throw new Error(`Invalid action format: ${JSON.stringify(item)}`);
           }
         }
-      }
 
-      if (actions.length === 0 && invalidCount > 0) {
-        console.error(`All ${invalidCount} actions were invalid`);
-      }
+        return actions;
+      } else {
+        // Use lenient mode - returns empty array on failure
+        const parsed = LLMResponseParser.parse<any>(response, validator);
 
-      return actions;
+        // Validate with zod and collect valid actions
+        const actions: Action[] = [];
+        for (const item of parsed) {
+          const action: Action = {
+            type: String(item.type),
+            params: item.params || {},
+          };
+
+          if (validateAction(action)) {
+            actions.push(action);
+          } else {
+            this.logger?.warn('Invalid action format, skipping', { item });
+          }
+        }
+
+        // Fallback if no valid actions
+        if (actions.length === 0) {
+          return [
+            {
+              type: 'execute',
+              params: { rawResponse: response },
+            },
+          ];
+        }
+
+        return actions;
+      }
     } catch (error) {
-      console.error('Failed to parse LLM response:', error);
-      console.error('Response was:', response);
+      this.logger?.error('Failed to parse LLM response', {
+        error,
+        responsePreview: response.substring(0, 200),
+      });
 
       if (this.options.strictValidation) {
         throw error;
@@ -827,47 +821,17 @@ export class LLMPlanner implements IPlanner {
    */
   private parseResponseToActionPlan(response: string): ActionPlan[] {
     try {
-      // Clean response - remove markdown code blocks if present
-      let cleaned = response.trim();
+      // Use LLMResponseParser for parsing and validation
+      const validator = (item: unknown) =>
+        TypeGuards.hasPropertyOfType(item, 'type', 'string');
 
-      // Remove markdown json blocks
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json\s*/i, '');
-      }
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```\s*/, '');
-      }
-      if (cleaned.endsWith('```')) {
-        cleaned = cleaned.replace(/\s*```$/, '');
-      }
+      if (this.options.strictValidation) {
+        // Use strict mode - throws on parsing failure
+        const parsed = LLMResponseParser.parseStrict<any>(response, validator);
 
-      // Try to find JSON array in response
-      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        cleaned = jsonMatch[0];
-      }
-
-      // Parse JSON
-      const parsed = JSON.parse(cleaned);
-
-      // Validate format
-      if (!Array.isArray(parsed)) {
-        console.warn('LLM response is not an array, wrapping it');
-        return [
-          {
-            type: ActionType.Execute,
-            params: parsed,
-            reason: 'Single action from LLM response',
-          },
-        ];
-      }
-
-      // Parse and validate each ActionPlan
-      const actionPlans: ActionPlan[] = [];
-      let invalidCount = 0;
-
-      for (const item of parsed) {
-        if (item && typeof item === 'object' && item.type) {
+        // Validate with zod and build ActionPlan[]
+        const actionPlans: ActionPlan[] = [];
+        for (const item of parsed) {
           const actionPlan: ActionPlan = {
             type: String(item.type),
             target: item.target,
@@ -877,39 +841,55 @@ export class LLMPlanner implements IPlanner {
             metadata: item.metadata,
           };
 
-          // Validate with zod
           if (validateActionPlan(actionPlan)) {
             actionPlans.push(actionPlan);
           } else {
-            invalidCount++;
-            const message = `Invalid ActionPlan format, skipping: ${JSON.stringify(item)}`;
-
-            if (this.options.strictValidation) {
-              throw new Error(message);
-            } else {
-              console.warn(message);
-            }
-          }
-        } else {
-          invalidCount++;
-          const message = `Missing type field in ActionPlan, skipping: ${JSON.stringify(item)}`;
-
-          if (this.options.strictValidation) {
-            throw new Error(message);
-          } else {
-            console.warn(message);
+            throw new Error(`Invalid ActionPlan format: ${JSON.stringify(item)}`);
           }
         }
-      }
 
-      if (actionPlans.length === 0 && invalidCount > 0) {
-        console.error(`All ${invalidCount} action plans were invalid`);
-      }
+        return actionPlans;
+      } else {
+        // Use lenient mode - returns empty array on failure
+        const parsed = LLMResponseParser.parse<any>(response, validator);
 
-      return actionPlans;
+        // Validate with zod and collect valid action plans
+        const actionPlans: ActionPlan[] = [];
+        for (const item of parsed) {
+          const actionPlan: ActionPlan = {
+            type: String(item.type),
+            target: item.target,
+            params: item.params || {},
+            reason: item.reason || 'No reason provided',
+            dependencies: item.dependencies,
+            metadata: item.metadata,
+          };
+
+          if (validateActionPlan(actionPlan)) {
+            actionPlans.push(actionPlan);
+          } else {
+            this.logger?.warn('Invalid ActionPlan format, skipping', { item });
+          }
+        }
+
+        // Fallback if no valid action plans
+        if (actionPlans.length === 0) {
+          return [
+            {
+              type: ActionType.Execute,
+              params: { rawResponse: response },
+              reason: 'Fallback due to parsing error',
+            },
+          ];
+        }
+
+        return actionPlans;
+      }
     } catch (error) {
-      console.error('Failed to parse LLM response to ActionPlan:', error);
-      console.error('Response was:', response);
+      this.logger?.error('Failed to parse LLM response to ActionPlan', {
+        error,
+        responsePreview: response.substring(0, 200),
+      });
 
       if (this.options.strictValidation) {
         throw error;

@@ -22,6 +22,7 @@
  */
 
 import type { ChainClient } from '../core/chainClient';
+import { TIMEOUTS } from '../constants';
 
 // =============================================================================
 // Types & Interfaces
@@ -135,7 +136,7 @@ export class ContractVerifier {
     this.config = {
       apiKey: config.apiKey || '',
       explorerUrl: config.explorerUrl || defaultExplorerUrl,
-      timeout: config.timeout || 30000,
+      timeout: config.timeout || TIMEOUTS.HTTP_REQUEST,
     };
   }
 

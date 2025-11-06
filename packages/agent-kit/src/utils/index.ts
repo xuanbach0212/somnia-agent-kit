@@ -66,3 +66,13 @@ export type {
   LoggerConfig,
   LogEntry,
 } from './logger';
+
+// LLM response parsing utilities
+export {
+  LLMResponseParser,
+  TypeGuards,
+  cleanMarkdown,
+  extractJSON,
+  safeJSONParse,
+  ensureArray,
+} from './llm-parser';

@@ -557,8 +557,31 @@ export {
   toHex,
   toUtf8Bytes,
   toUtf8String,
+  // LLM response parsing
+  LLMResponseParser,
+  TypeGuards,
+  cleanMarkdown,
+  extractJSON,
+  safeJSONParse,
+  ensureArray,
 } from './utils';
 export type { EventListener, LogEntry, LoggerConfig } from './utils';
+
+// Constants and configuration defaults
+export {
+  TIME,
+  LIMITS,
+  TIMEOUTS,
+  RETRY,
+  NETWORK,
+  STORAGE,
+  LOG,
+  RATE_LIMIT,
+  calculateBackoff,
+  addGasBuffer,
+  isWithinLimit,
+  getDefaultLogLevel,
+} from './constants';
 
 // Core blockchain layer
 export { ChainClient } from './core/chainClient';

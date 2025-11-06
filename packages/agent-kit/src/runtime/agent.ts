@@ -5,32 +5,74 @@
  */
 
 import { ethers } from 'ethers';
-import type { IAgentRegistry, IAgentExecutor } from '../types/contracts';
-import { Trigger, TriggerConfig } from './trigger';
-import { Planner } from './planner';
-import { Executor } from './executor';
-import { IStorage, MemoryStorage, FileStorage } from './storage';
-import { Policy } from './policy';
-import { Memory, MemoryBackend, InMemoryBackend, FileBackend } from './memoryManager';
-import { ContextBuilder } from '../llm/context';
-import { EventEmitter } from '../utils/logger';
-import type { Logger } from '../monitor/logger';
 import type { ChainClient } from '../core/chainClient';
-import type {
-  AgentConfig,
-  AgentTask,
-  AgentOptions,
-  AgentEvents,
-} from '../types/agent';
+import { ContextBuilder } from '../llm/context';
+import type { Logger } from '../monitor/logger';
+import type { AgentConfig, AgentEvents, AgentOptions, AgentTask } from '../types/agent';
 import { AgentState } from '../types/agent'; // Enum must be imported as value
+import type { IAgentExecutor, IAgentRegistry } from '../types/contracts';
 import { StorageBackend } from '../types/storage';
+import { EventEmitter } from '../utils/logger';
+import { Executor } from './executor';
+import { FileBackend, InMemoryBackend, Memory } from './memoryManager';
+import { Planner } from './planner';
+import { Policy } from './policy';
+import { FileStorage, IStorage, MemoryStorage } from './storage';
+import { Trigger, TriggerConfig } from './trigger';
 
 // Re-export types for backward compatibility
-export { AgentState, AgentConfig, AgentTask, AgentOptions, AgentEvents };
+export { AgentConfig, AgentEvents, AgentOptions, AgentState, AgentTask };
 
 /**
  * Agent class for managing autonomous agent lifecycle
- * Orchestrates runtime modules: Trigger, Planner, Executor, Storage, Policy
+ *
+ * Orchestrates runtime modules in a complete lifecycle:
+ * - **Trigger**: Listens for events and triggers
+ * - **Planner**: Decomposes tasks into executable actions
+ * - **Executor**: Executes actions with retry logic
+ * - **Storage**: Persists events and action history
+ * - **Policy**: Enforces access control and permissions
+ * - **Memory**: Maintains conversation and context history
+ *
+ * @fires Agent#started - Emitted when agent starts
+ * @fires Agent#paused - Emitted when agent pauses
+ * @fires Agent#terminated - Emitted when agent terminates
+ * @fires Agent#event:received - Emitted when event is received
+ * @fires Agent#tasks:planned - Emitted when tasks are planned
+ * @fires Agent#tasks:executed - Emitted when tasks are executed
+ * @fires Agent#results:stored - Emitted when results are stored
+ * @fires Agent#error - Emitted when error occurs
+ *
+ * @example
+ * ```typescript
+ * // Create agent with configuration
+ * const agent = new Agent(
+ *   {
+ *     name: 'MyAgent',
+ *     description: 'Autonomous trading agent',
+ *     owner: '0x...',
+ *   },
+ *   {
+ *     logger: new Logger(),
+ *     enableMemory: true,
+ *     storageBackend: StorageBackend.File,
+ *   }
+ * );
+ *
+ * // Initialize with contracts
+ * await agent.initialize(registryContract, executorContract);
+ *
+ * // Register on-chain
+ * await agent.register(signer);
+ *
+ * // Start execution
+ * await agent.start();
+ *
+ * // Listen to events
+ * agent.on('tasks:executed', ({ results }) => {
+ *   console.log('Tasks completed:', results);
+ * });
+ * ```
  */
 export class Agent extends EventEmitter<AgentEvents> {
   private state: AgentState = AgentState.Created;
@@ -62,21 +104,23 @@ export class Agent extends EventEmitter<AgentEvents> {
     // Initialize runtime modules
     this.trigger = new Trigger();
     this.planner = new Planner();
-    this.executor = new Executor();
+    this.executor = new Executor(undefined, undefined, {}, this.logger);
 
     // Initialize storage based on backend type
     const backend = options?.storageBackend || StorageBackend.Memory;
-    this.storage = backend === StorageBackend.File
-      ? new FileStorage(options?.storagePath || './data')
-      : new MemoryStorage();
+    this.storage =
+      backend === StorageBackend.File
+        ? new FileStorage(options?.storagePath || './data')
+        : new MemoryStorage();
 
     this.policy = new Policy();
 
     // Initialize memory
     const memoryBackendType = options?.memoryBackend || 'memory';
-    const memoryBackend = memoryBackendType === 'file'
-      ? new FileBackend(options?.memoryPath || './data/memory')
-      : new InMemoryBackend();
+    const memoryBackend =
+      memoryBackendType === 'file'
+        ? new FileBackend(options?.memoryPath || './data/memory')
+        : new InMemoryBackend();
 
     this.memory = new Memory({
       backend: memoryBackend,
@@ -93,18 +137,60 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Initialize agent with contracts
+   * Initialize agent with smart contracts
+   *
+   * Must be called before register() to connect the agent to on-chain contracts.
+   * Sets up the AgentRegistry and AgentExecutor contract interfaces.
+   *
+   * @param registry - AgentRegistry contract instance for registration
+   * @param executor - AgentExecutor contract instance for execution
+   * @returns Promise that resolves when initialization is complete
+   *
+   * @throws {Error} If contracts are invalid or already initialized
+   *
+   * @example
+   * ```typescript
+   * const registry = await chainClient.getContract(
+   *   registryAddress,
+   *   AGENT_REGISTRY_ABI
+   * ) as IAgentRegistry;
+   *
+   * const executor = await chainClient.getContract(
+   *   executorAddress,
+   *   AGENT_EXECUTOR_ABI
+   * ) as IAgentExecutor;
+   *
+   * await agent.initialize(registry, executor);
+   * ```
    */
-  async initialize(
-    registry: IAgentRegistry,
-    executor: IAgentExecutor
-  ): Promise<void> {
+  async initialize(registry: IAgentRegistry, executor: IAgentExecutor): Promise<void> {
     this.registryContract = registry;
     this.executorContract = executor;
   }
 
   /**
-   * Register agent on-chain
+   * Register agent on-chain via AgentRegistry contract
+   *
+   * Submits agent metadata to the blockchain and obtains a unique agent ID.
+   * The agent must be in `Created` state to register.
+   *
+   * Emits `AgentRegistered` event on-chain with agentId and owner address.
+   * Transitions agent state from `Created` to `Registered`.
+   *
+   * @param signer - Ethereum signer to sign the registration transaction
+   * @returns Promise resolving to the agent's on-chain address
+   *
+   * @throws {Error} If agent not initialized (call initialize() first)
+   * @throws {Error} If agent not in Created state
+   * @throws {Error} If transaction fails or is reverted
+   *
+   * @example
+   * ```typescript
+   * const signer = chainClient.getSigner();
+   * const agentAddress = await agent.register(signer);
+   * console.log('Agent registered at:', agentAddress);
+   * console.log('Agent ID:', agent.getAgentId());
+   * ```
    */
   async register(signer: ethers.Signer): Promise<string> {
     if (!this.registryContract) {
@@ -116,14 +202,12 @@ export class Agent extends EventEmitter<AgentEvents> {
     }
 
     // Register on AgentRegistry contract
-    const tx = await this.registryContract
-      .connect(signer)
-      .registerAgent(
-        this.config.name,
-        this.config.description,
-        this.config.metadata?.ipfsHash || '', // IPFS metadata hash
-        this.config.capabilities || []
-      );
+    const tx = await this.registryContract.connect(signer).registerAgent(
+      this.config.name,
+      this.config.description,
+      this.config.metadata?.ipfsHash || '', // IPFS metadata hash
+      this.config.capabilities || []
+    );
 
     const receipt = await tx.wait();
 
@@ -133,7 +217,7 @@ export class Agent extends EventEmitter<AgentEvents> {
       try {
         const parsed = iface.parseLog({
           topics: log.topics as string[],
-          data: log.data
+          data: log.data,
         });
         return parsed?.name === 'AgentRegistered';
       } catch {
@@ -144,7 +228,7 @@ export class Agent extends EventEmitter<AgentEvents> {
     if (event) {
       const parsed = iface.parseLog({
         topics: event.topics as string[],
-        data: event.data
+        data: event.data,
       });
       this.agentId = parsed?.args[0]; // agentId (uint256)
       this.agentAddress = parsed?.args[1]; // owner address
@@ -155,7 +239,39 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Start agent execution
+   * Start agent execution and begin processing events
+   *
+   * Transitions agent to Active state and starts the event processing loop.
+   * Can be called from Registered or Paused states.
+   *
+   * The agent will:
+   * 1. Subscribe to trigger events
+   * 2. Process incoming events through planner
+   * 3. Execute planned actions via executor
+   * 4. Store results in storage backend
+   * 5. Maintain conversation memory
+   *
+   * @returns Promise that resolves when agent starts successfully
+   *
+   * @throws {Error} If agent not in Registered or Paused state
+   *
+   * @fires Agent#started - When agent starts successfully
+   *
+   * @example
+   * ```typescript
+   * // Start agent after registration
+   * await agent.register(signer);
+   * await agent.start();
+   *
+   * // Listen for lifecycle events
+   * agent.on('started', ({ agentId }) => {
+   *   console.log('Agent started:', agentId);
+   * });
+   *
+   * // Resume from paused state
+   * await agent.pause();
+   * await agent.start(); // Resumes execution
+   * ```
    */
   async start(): Promise<void> {
     if (this.state !== AgentState.Registered && this.state !== AgentState.Paused) {
@@ -167,8 +283,16 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Main event processing loop
-   * Subscribes to trigger events and processes them
+   * Main event processing loop (internal)
+   *
+   * Subscribes to trigger events and processes them through the complete pipeline:
+   * Trigger → Planner → Executor → Storage → Memory
+   *
+   * This is an internal method called by start(). Use start() to begin execution.
+   *
+   * @private
+   * @returns Promise that resolves when event loop is set up
+   * @throws {Error} If agent not in Active state
    */
   private async run(): Promise<void> {
     if (!this.isActive()) {
@@ -188,8 +312,36 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Event handler - orchestrates the event → plan → execute flow
-   * @param event Event data from trigger
+   * Event handler - orchestrates the complete event processing flow (internal)
+   *
+   * Processes events through the full pipeline:
+   * 1. **Policy Check**: Verify sender permissions
+   * 2. **Context Building**: Build unified context from memory, chain state, and history
+   * 3. **Planning**: Decompose goal into executable actions
+   * 4. **Execution**: Execute actions with retry logic
+   * 5. **Storage**: Persist event and results
+   * 6. **Memory**: Update conversation history
+   *
+   * @private
+   * @param event - Event data from trigger containing goal, sender, context, etc.
+   * @returns Promise that resolves when event is fully processed
+   *
+   * @fires Agent#event:received - When event is received
+   * @fires Agent#tasks:planned - When tasks are planned
+   * @fires Agent#tasks:executed - When tasks complete
+   * @fires Agent#results:stored - When results are persisted
+   * @fires Agent#error - If processing fails
+   *
+   * @example
+   * ```typescript
+   * // Event structure
+   * const event = {
+   *   goal: 'Transfer 1 ETH to Alice',
+   *   sender: '0x...',
+   *   context: 'User requested urgent transfer',
+   *   id: 'event-123'
+   * };
+   * ```
    */
   private async onEvent(event: any): Promise<void> {
     try {
@@ -223,7 +375,9 @@ export class Agent extends EventEmitter<AgentEvents> {
         : contextString;
 
       // 3. Plan tasks using planner with context
-      const tasks = await this.planner.plan(event.goal || event.data, fullContext);
+      // Convert string context to Context object
+      const contextObj = { description: fullContext };
+      const tasks = await this.planner.plan(event.goal || event.data, contextObj);
       this.emit('tasks:planned', { tasks });
       this.logger?.info('Tasks planned', { taskCount: tasks.length });
 
@@ -245,7 +399,6 @@ export class Agent extends EventEmitter<AgentEvents> {
       const taskId = event.id || `event-${Date.now()}`;
       this.emit('results:stored', { taskId });
       this.logger?.debug('Results stored', { taskId });
-
     } catch (error) {
       this.emit('error', { error, event });
       this.logger?.error('Event processing failed', { error, event });
@@ -253,7 +406,26 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Pause agent execution
+   * Pause agent execution temporarily
+   *
+   * Transitions agent from Active to Paused state. The agent stops processing
+   * new events but maintains its state and can be resumed with start().
+   *
+   * @returns Promise that resolves when agent is paused
+   *
+   * @throws {Error} If agent not in Active state
+   *
+   * @fires Agent#paused - When agent is successfully paused
+   *
+   * @example
+   * ```typescript
+   * // Pause during execution
+   * await agent.start();
+   * await agent.pause();
+   *
+   * // Resume later
+   * await agent.start();
+   * ```
    */
   async pause(): Promise<void> {
     if (this.state !== AgentState.Active) {
@@ -264,7 +436,26 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Stop agent execution
+   * Stop agent execution gracefully
+   *
+   * Stops the agent and cleans up all triggers and subscriptions.
+   * Unlike pause(), stop() requires re-initialization to restart.
+   * The agent state is set to Stopped (different from Terminated).
+   *
+   * @returns Promise that resolves when agent is stopped
+   *
+   * @throws {Error} If agent is already terminated
+   *
+   * @fires Agent#stopped - When agent stops successfully
+   *
+   * @example
+   * ```typescript
+   * // Stop agent execution
+   * await agent.stop();
+   *
+   * // Agent can be started again after stop
+   * await agent.start();
+   * ```
    */
   async stop(): Promise<void> {
     if (this.state === AgentState.Terminated) {
@@ -281,8 +472,33 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Terminate agent permanently
-   * Deactivates the agent on-chain
+   * Terminate agent permanently and deactivate on-chain
+   *
+   * Permanently terminates the agent by:
+   * 1. Calling deactivateAgent() on the AgentRegistry contract
+   * 2. Clearing all pending tasks
+   * 3. Setting state to Terminated (cannot be restarted)
+   *
+   * This is a permanent action that deactivates the agent on-chain.
+   * Use stop() if you want to temporarily stop execution.
+   *
+   * @param signer - Ethereum signer to sign the deactivation transaction
+   * @returns Promise that resolves when agent is terminated
+   *
+   * @throws {Error} If agent not registered
+   * @throws {Error} If transaction fails
+   *
+   * @fires Agent#terminated - When agent is terminated successfully
+   *
+   * @example
+   * ```typescript
+   * // Permanently terminate agent
+   * const signer = chainClient.getSigner();
+   * await agent.terminate(signer);
+   *
+   * // Agent cannot be restarted after termination
+   * // State is now AgentState.Terminated
+   * ```
    */
   async terminate(signer: ethers.Signer): Promise<void> {
     if (!this.registryContract || this.agentId === null) {
@@ -290,9 +506,7 @@ export class Agent extends EventEmitter<AgentEvents> {
     }
 
     // Deactivate agent on contract
-    const tx = await this.registryContract
-      .connect(signer)
-      .deactivateAgent(this.agentId);
+    const tx = await this.registryContract.connect(signer).deactivateAgent(this.agentId);
 
     await tx.wait();
 
@@ -301,7 +515,32 @@ export class Agent extends EventEmitter<AgentEvents> {
   }
 
   /**
-   * Add task to agent queue
+   * Add task to agent's task queue
+   *
+   * Tasks are queued and can be retrieved for execution. This is useful for
+   * scheduling tasks that will be processed by the agent's event loop.
+   *
+   * The task is assigned a unique ID and timestamp automatically.
+   *
+   * @param task - Task details (without id and createdAt which are auto-generated)
+   * @returns Unique task ID for tracking
+   *
+   * @example
+   * ```typescript
+   * const taskId = agent.addTask({
+   *   type: 'transfer',
+   *   params: {
+   *     to: '0x...',
+   *     amount: '1.0'
+   *   },
+   *   priority: 2
+   * });
+   *
+   * console.log('Task queued:', taskId);
+   *
+   * // Retrieve task later
+   * const task = agent.getTask(taskId);
+   * ```
    */
   addTask(task: Omit<AgentTask, 'id' | 'createdAt'>): string {
     const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

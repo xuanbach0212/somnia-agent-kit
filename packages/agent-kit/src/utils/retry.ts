@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+import { RETRY, calculateBackoff } from '../constants';
+
 /**
  * Sleep for specified milliseconds
  * @param ms Milliseconds to sleep
@@ -18,8 +20,8 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Retry async function with exponential backoff
  * @param fn Function to retry
- * @param maxRetries Maximum number of retry attempts (default: 3)
- * @param delayMs Initial delay in milliseconds (default: 1000)
+ * @param maxRetries Maximum number of retry attempts (default: from RETRY.MAX_ATTEMPTS)
+ * @param delayMs Initial delay in milliseconds (default: from RETRY.INITIAL_DELAY)
  * @returns Result from function
  * @throws Last error if all retries fail
  *
@@ -32,8 +34,8 @@ export function sleep(ms: number): Promise<void> {
  */
 export async function retry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  delayMs: number = 1000
+  maxRetries: number = RETRY.MAX_ATTEMPTS,
+  delayMs: number = RETRY.INITIAL_DELAY
 ): Promise<T> {
   let lastError: Error;
 
@@ -43,8 +45,9 @@ export async function retry<T>(
     } catch (error) {
       lastError = error as Error;
       if (i < maxRetries - 1) {
-        // Exponential backoff: 1s, 2s, 4s, 8s, etc.
-        await sleep(delayMs * Math.pow(2, i));
+        // Use centralized exponential backoff with jitter
+        const backoffDelay = calculateBackoff(i, delayMs);
+        await sleep(backoffDelay);
       }
     }
   }

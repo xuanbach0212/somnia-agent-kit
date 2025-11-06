@@ -16,6 +16,9 @@ import type {
   ActionHandler,
 } from '../types/action';
 import { ExecutionStatus } from '../types/action'; // Import enum as value
+import { LIMITS, RETRY, calculateBackoff } from '../constants';
+import type { AsyncHandler, StringRecord } from '../types/common';
+import type { Logger } from '../monitor/logger';
 
 // Re-export types for backward compatibility
 export { ExecutionStatus, ExecutorConfig };
@@ -50,21 +53,24 @@ export interface ExecutionPlan {
 export class Executor {
   private config: ExecutorConfig;
   private contexts: Map<string, ExecutionContext> = new Map();
-  private handlers: Map<string, (params: any) => Promise<any>> = new Map();
+  private handlers: Map<string, AsyncHandler<StringRecord, unknown>> = new Map();
   private chainClient?: ChainClient;
   private contracts?: SomniaContracts;
+  private logger?: Logger;
 
   constructor(
     chainClient?: ChainClient,
     contracts?: SomniaContracts,
-    config: ExecutorConfig = {}
+    config: ExecutorConfig = {},
+    logger?: Logger
   ) {
     this.chainClient = chainClient;
     this.contracts = contracts;
+    this.logger = logger;
     this.config = {
-      maxRetries: config.maxRetries || 3,
-      retryDelay: config.retryDelay || 1000,
-      timeout: config.timeout || 30000,
+      maxRetries: config.maxRetries || RETRY.MAX_ATTEMPTS,
+      retryDelay: config.retryDelay || RETRY.INITIAL_DELAY,
+      timeout: config.timeout || LIMITS.MAX_RETRY_DELAY,
       enableParallel: config.enableParallel !== false,
       dryRun: config.dryRun || false,
     };
@@ -76,11 +82,11 @@ export class Executor {
   /**
    * Register action handler
    */
-  registerHandler(
+  registerHandler<TParams = StringRecord, TResult = unknown>(
     action: string,
-    handler: (params: any) => Promise<any>
+    handler: AsyncHandler<TParams, TResult>
   ): void {
-    this.handlers.set(action, handler);
+    this.handlers.set(action, handler as AsyncHandler<StringRecord, unknown>);
   }
 
   /**
@@ -108,7 +114,9 @@ export class Executor {
 
       // Dry-run mode: simulate without executing
       if (this.config.dryRun) {
-        console.log(`[DRY-RUN] Would execute ${action.type} with params:`, action.params);
+        this.logger?.info(`[DRY-RUN] Would execute ${action.type}`, { 
+          params: action.params 
+        });
         return {
           stepId: actionId,
           status: ExecutionStatus.Success,
@@ -130,6 +138,7 @@ export class Executor {
             this.config.timeout!
           );
 
+          const resultData = result as StringRecord | undefined;
           return {
             stepId: actionId,
             status: ExecutionStatus.Success,
@@ -137,7 +146,7 @@ export class Executor {
             data: result,
             retryCount,
             duration: Date.now() - startTime,
-            txReceipt: result?.txReceipt, // Extract tx receipt if present
+            txReceipt: resultData?.txReceipt as any, // Extract tx receipt if present
           };
         } catch (error) {
           lastError = error as Error;
@@ -147,7 +156,14 @@ export class Executor {
           }
 
           retryCount++;
-          await this.sleep(this.config.retryDelay! * retryCount);
+          // Use exponential backoff with jitter
+          const backoffDelay = calculateBackoff(
+            retryCount,
+            this.config.retryDelay,
+            RETRY.BACKOFF_MULTIPLIER,
+            RETRY.MAX_DELAY
+          );
+          await this.sleep(backoffDelay);
         }
       }
 
@@ -293,7 +309,14 @@ export class Executor {
         }
 
         retryCount++;
-        await this.sleep(this.config.retryDelay! * retryCount);
+        // Use exponential backoff with jitter
+        const backoffDelay = calculateBackoff(
+          retryCount,
+          this.config.retryDelay,
+          RETRY.BACKOFF_MULTIPLIER,
+          RETRY.MAX_DELAY
+        );
+        await this.sleep(backoffDelay);
       }
     }
 
@@ -389,7 +412,7 @@ export class Executor {
       const provider = this.chainClient.getProvider();
       const signerManager = this.chainClient.getSignerManager();
 
-      const address = params.address || (await signerManager.getAddress());
+      const address = (params.address as string) || (await signerManager.getAddress());
       const balance = await provider.getBalance(address);
       const required = params.amount ? ethers.parseEther(String(params.amount)) : 0n;
 
@@ -410,7 +433,7 @@ export class Executor {
 
       const signer = this.chainClient.getSignerManager().getSigner();
       const tx = await signer.sendTransaction({
-        to: params.to,
+        to: params.to as string,
         value: ethers.parseEther(String(params.amount)),
       });
 
@@ -440,7 +463,7 @@ export class Executor {
       } else {
         // Estimate for simple transfer
         gasEstimate = await provider.estimateGas({
-          to: params.to || ethers.ZeroAddress,
+          to: (params.to as string) || ethers.ZeroAddress,
           value: params.value ? ethers.parseEther(String(params.value)) : 0n,
         });
       }
